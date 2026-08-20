@@ -198,8 +198,9 @@ export class RunbookEngine {
   }
 
   private constructor() {
-    this.templatesPath = process.env.RUNBOOK_TEMPLATES_PATH || '/data/itops-agents/runbook-templates.json';
-    this.runsPath = process.env.RUNBOOK_RUNS_PATH || '/data/itops-agents/runbook-runs.json';
+    const dataDir = process.env.DATA_DIR || '/data/itops-agents';
+    this.templatesPath = process.env.RUNBOOK_TEMPLATES_PATH || path.join(dataDir, 'runbook-templates.json');
+    this.runsPath = process.env.RUNBOOK_RUNS_PATH || path.join(dataDir, 'runbook-runs.json');
     this.DEFAULT_TEMPLATE_IDS = new Set(DEFAULT_TEMPLATES.map(t => t.id));
     this._loadTemplates();
   }
