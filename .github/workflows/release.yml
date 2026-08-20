@@ -1,0 +1,189 @@
+name: Release
+
+# Triggered on annotated tag push: v1.2.3, v2.0.0-rc.1, etc.
+# A release runs the full test gate, builds + publishes a tagged
+# Docker image, and creates a GitHub Release with auto-generated
+# changelog notes.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Build & Tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22.x
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Install client
+        run: npm ci
+        working-directory: client
+
+      - name: Verify release and generate evidence
+        run: npm run release:evidence -- --publish --output release-evidence.json
+
+      - name: Generate application SBOMs
+        run: |
+          npm sbom --sbom-format=cyclonedx --sbom-type=application > server-sbom.cdx.json
+          cd client
+          npm sbom --sbom-format=cyclonedx --sbom-type=application > ../client-sbom.cdx.json
+
+      - name: Attest release evidence
+        uses: actions/attest@v4
+        with:
+          subject-path: release-evidence.json
+
+      - name: Upload application SBOMs
+        uses: actions/upload-artifact@v7
+        with:
+          name: application-sboms
+          path: |
+            server-sbom.cdx.json
+            client-sbom.cdx.json
+            THIRD_PARTY_NOTICES.md
+            release-evidence.json
+          if-no-files-found: error
+
+  publish-image:
+    name: Publish Tagged Image
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+      version: ${{ steps.meta.outputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Resolve image + version
+        id: meta
+        run: |
+          REGISTRY="${{ secrets.REGISTRY || 'ghcr.io' }}"
+          IMAGE_NAME="${{ secrets.IMAGE_NAME || github.repository }}"
+          IMAGE_NAME=$(echo "$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')
+          # Strip the leading "v" so the docker tag matches the npm
+          # version convention: v1.2.3 → 1.2.3.
+          VERSION="${GITHUB_REF_NAME#v}"
+          IMAGE="${REGISTRY}/${IMAGE_NAME}"
+          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ secrets.REGISTRY || 'ghcr.io' }}
+          username: ${{ secrets.REGISTRY_USERNAME || github.actor }}
+          password: ${{ secrets.REGISTRY_TOKEN    || secrets.GITHUB_TOKEN }}
+
+      - name: Build & push (versioned + latest)
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          provenance: mode=max
+          sbom: true
+          # Three tags: full semver, just the major (so consumers can
+          # pin to "v1" and get patches), and "latest". An RC tag
+          # (v1.2.3-rc.1) skips the major + latest aliases since it
+          # isn't stable.
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.version }}
+            ${{ contains(github.ref_name, '-') && '' || format('{0}:{1}', steps.meta.outputs.image, github.ref_name) }}
+            ${{ contains(github.ref_name, '-') && '' || format('{0}:latest', steps.meta.outputs.image) }}
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      - name: Attest container image
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ steps.meta.outputs.image }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+  release:
+    name: Create GitHub Release
+    needs: [validate, publish-image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        # Need full history so the changelog generator sees the
+        # previous tag.
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Download application SBOMs
+        uses: actions/download-artifact@v8
+        with:
+          name: application-sboms
+          path: release-artifacts
+
+      - name: Generate release notes from commit log
+        id: notes
+        run: |
+          set -euo pipefail
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep '^v' | sed -n '2p' || echo "")
+          if [ -n "$PREVIOUS_TAG" ]; then
+            RANGE="${PREVIOUS_TAG}..${GITHUB_REF_NAME}"
+            echo "## Changes since ${PREVIOUS_TAG}" > /tmp/notes.md
+          else
+            RANGE="${GITHUB_REF_NAME}"
+            echo "## Initial release" > /tmp/notes.md
+          fi
+          echo ""                                  >> /tmp/notes.md
+          echo "### Commits"                        >> /tmp/notes.md
+          # Each commit on its own bullet, "<sha7> <subject>".
+          git log --pretty=format:'- `%h` %s' "$RANGE" >> /tmp/notes.md
+          echo ""                                  >> /tmp/notes.md
+          echo ""                                  >> /tmp/notes.md
+          echo "### Image"                          >> /tmp/notes.md
+          echo "Pulled from \`${{ needs.publish-image.outputs.image }}:${{ needs.publish-image.outputs.version }}\`" >> /tmp/notes.md
+          # Surface the file path for the next step.
+          echo "notes_file=/tmp/notes.md" >> "$GITHUB_OUTPUT"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body_path: ${{ steps.notes.outputs.notes_file }}
+          # Pre-release for tags with a hyphen (rc, alpha, beta).
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: false
+          files: |
+            release-artifacts/server-sbom.cdx.json
+            release-artifacts/client-sbom.cdx.json
+            release-artifacts/THIRD_PARTY_NOTICES.md
+            release-artifacts/release-evidence.json

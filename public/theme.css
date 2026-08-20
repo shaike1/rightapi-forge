@@ -1,0 +1,357 @@
+/* ══════════════════════════════════════════════════════════
+   IT OPS — Ceefax/Teletext Theme Override for design.css
+   Softened 8-color palette, sharp edges, monospace, professional
+   Include AFTER design.css: <link rel="stylesheet" href="/theme.css">
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Color overrides ─────────────────────────────────── */
+:root {
+  --bg: #000000;
+  --bg2: #0a0a0a;
+  --bg3: #151515;
+  --bg4: #222222;
+  --border: #444444;
+  --border2: #555555;
+  --text: #e8e8d8;
+  --text2: #aaaaaa;
+  --text3: #666666;
+  --accent: #44aaaa;
+  --accent-light: #66cccc;
+  --accent-bg: #112828;
+  --accent-border: #44aaaa;
+  --success: #33aa55;
+  --success-bg: #112211;
+  --warning: #ccaa33;
+  --warning-bg: #222211;
+  --danger: #cc3333;
+  --danger-bg: #221111;
+  --info-bg: #111122;
+  --radius: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --shadow: none;
+  --shadow-lg: none;
+}
+
+/* ── Base ─────────────────────────────────────────────── */
+* { border-radius: 0 !important; }
+body {
+  background: #000 !important;
+  color: #e8e8d8 !important;
+  font-family: "Courier New", "Consolas", monospace !important;
+}
+
+/* ── Sidebar ──────────────────────────────────────────── */
+.sidebar {
+  background: #000 !important;
+  border-right: 1px solid #444 !important;
+  box-shadow: none !important;
+}
+.sidebar-logo {
+  background: #224488 !important;
+  padding: 10px 14px !important;
+  border-bottom: 1px solid #1a3366 !important;
+  flex-shrink: 0 !important;
+}
+.sidebar-logo .logo-icon {
+  display: none !important;
+}
+.sidebar-logo span {
+  font-weight: bold !important;
+  color: #e8e8d8 !important;
+  font-size: 15px !important;
+  letter-spacing: 0.08em !important;
+}
+/* Nav scrolls independently so footer never overlaps */
+.sidebar-nav {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #333 #000 !important;
+}
+.sidebar-nav::-webkit-scrollbar { width: 4px !important; }
+.sidebar-nav::-webkit-scrollbar-track { background: #000 !important; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: #333 !important; }
+.sidebar-section {
+  background: #1a1a1a !important;
+  color: #ccaa33 !important;
+  padding: 6px 14px !important;
+  margin: 0 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  font-weight: bold !important;
+  letter-spacing: 0.06em !important;
+  border-bottom: 1px solid #333 !important;
+}
+.nav-item {
+  color: #44aaaa !important;
+  padding: 6px 14px !important;
+  font-size: 13px !important;
+  border-bottom: 1px solid #1a1a1a !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  text-decoration: none !important;
+  transition: background 0.15s !important;
+}
+.nav-item:hover {
+  background: #222 !important;
+  color: #e8e8d8 !important;
+}
+.nav-item.active {
+  background: #111 !important;
+  color: #e8e8d8 !important;
+  border-left: 3px solid #44aaaa !important;
+}
+.nav-item .nav-icon {
+  width: 18px !important;
+  text-align: center !important;
+  flex-shrink: 0 !important;
+  font-size: 13px !important;
+  color: #ccaa33 !important;
+}
+/* Footer — styled like nav items, pinned at bottom, no overlap */
+.sidebar-footer {
+  background: #000 !important;
+  border-top: 1px solid #333 !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+}
+.sidebar-user {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 6px 14px !important;
+  background: transparent !important;
+  border-bottom: 1px solid #1a1a1a !important;
+}
+.sidebar-avatar {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px !important;
+  background: transparent !important;
+  color: #ccaa33 !important;
+  font-weight: bold !important;
+  font-size: 13px !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.sidebar-user-info {
+  display: flex !important;
+  gap: 6px !important;
+  align-items: center !important;
+}
+.sidebar-username {
+  color: #44aaaa !important;
+  font-weight: normal !important;
+  font-size: 13px !important;
+}
+.sidebar-role {
+  color: #666 !important;
+  font-size: 11px !important;
+}
+.sidebar-actions {
+  display: flex !important;
+  gap: 0 !important;
+}
+.sidebar-actions .btn-icon {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid #1a1a1a !important;
+  color: #44aaaa !important;
+  font-size: 13px !important;
+  padding: 6px 14px !important;
+  flex: 1 !important;
+  text-align: left !important;
+  font-family: "Courier New", "Consolas", monospace !important;
+}
+.sidebar-actions .btn-icon:hover {
+  background: #222 !important;
+  color: #e8e8d8 !important;
+}
+
+/* ── Main area ────────────────────────────────────────── */
+.main {
+  background: #000 !important;
+}
+.page-header {
+  background: #224488 !important;
+  border: none !important;
+  padding: 10px 20px !important;
+}
+.page-title {
+  color: #e8e8d8 !important;
+  font-size: 16px !important;
+  font-weight: bold !important;
+  letter-spacing: 0.06em !important;
+}
+.page-subtitle {
+  color: #44aaaa !important;
+  font-size: 12px !important;
+}
+.page-content {
+  padding: 12px 16px !important;
+}
+
+/* ── Cards ─────────────────────────────────────────────── */
+.card, .server-card, .tpl-row, .metric-card, .run-card {
+  background: #0a0a0a !important;
+  border: 1px solid #444 !important;
+  box-shadow: none !important;
+}
+.card:hover, .server-card:hover, .tpl-row:hover {
+  border-color: #555 !important;
+}
+
+/* ── Tables ────────────────────────────────────────────── */
+table {
+  border: 1px solid #444 !important;
+  border-collapse: collapse !important;
+}
+th {
+  background: #224488 !important;
+  color: #ccaa33 !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: 1px solid #444 !important;
+  padding: 6px 12px !important;
+}
+td {
+  padding: 6px 12px !important;
+  border-bottom: 1px solid #222 !important;
+  font-size: 13px !important;
+}
+tr:hover td {
+  background: #111 !important;
+}
+
+/* ── Buttons ───────────────────────────────────────────── */
+.btn, .btn-sm, button[type="submit"], .action-btn {
+  background: #44aaaa !important;
+  color: #000 !important;
+  border: none !important;
+  font-weight: bold !important;
+  font-family: inherit !important;
+  text-transform: uppercase !important;
+  font-size: 13px !important;
+}
+.btn:hover, .btn-sm:hover, button[type="submit"]:hover, .action-btn:hover {
+  background: #e8e8d8 !important;
+}
+.btn-outline, .btn-ghost {
+  background: transparent !important;
+  border: 1px solid #444 !important;
+  color: #44aaaa !important;
+}
+.btn-outline:hover, .btn-ghost:hover {
+  background: #222 !important;
+  color: #e8e8d8 !important;
+}
+.btn-danger {
+  background: #cc3333 !important;
+  color: #e8e8d8 !important;
+}
+.btn-danger:hover {
+  background: #dd4444 !important;
+}
+
+/* ── Inputs ────────────────────────────────────────────── */
+input, select, textarea {
+  background: #111 !important;
+  border: 1px solid #444 !important;
+  color: #e8e8d8 !important;
+  font-family: "Courier New", "Consolas", monospace !important;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: #44aaaa !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* ── Badges ────────────────────────────────────────────── */
+.badge, .status-badge, .pill {
+  font-weight: bold !important;
+  font-size: 11px !important;
+}
+
+/* ── Stat / metric cards ───────────────────────────────── */
+.stat-card, .metric-card {
+  background: #224488 !important;
+  border: none !important;
+}
+
+/* ── Tabs ──────────────────────────────────────────────── */
+.tab-list, .tabs {
+  background: #111 !important;
+  border: none !important;
+}
+.tab, .tab-btn {
+  background: #111 !important;
+  border: none !important;
+  border-right: 1px solid #333 !important;
+  color: #44aaaa !important;
+  font-weight: bold !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+}
+.tab:hover, .tab-btn:hover {
+  background: #222 !important;
+  color: #e8e8d8 !important;
+}
+.tab.active, .tab-btn.active {
+  background: #44aaaa !important;
+  color: #000 !important;
+}
+
+/* ── Progress bars ─────────────────────────────────────── */
+.progress, .progress-bar, .bar-track {
+  background: #222 !important;
+}
+.progress-fill, .bar-fill {
+  background: #44aaaa !important;
+}
+
+/* ── Modals / dialogs ──────────────────────────────────── */
+.modal, .dialog, .popup {
+  background: #0a0a0a !important;
+  border: 1px solid #444 !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.8) !important;
+}
+
+/* ── Toast ─────────────────────────────────────────────── */
+#toast, .toast {
+  background: #cc3333 !important;
+  color: #e8e8d8 !important;
+  border: none !important;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #000; }
+::-webkit-scrollbar-thumb { background: #444; }
+::-webkit-scrollbar-thumb:hover { background: #666; }
+
+/* ── Live indicators ───────────────────────────────────── */
+.ws-dot, .live-dot, .status-dot {
+  border-radius: 50% !important;  /* exception: dots stay round */
+}
+
+/* ── Mobile bottom nav ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .sidebar {
+    border-right: none !important;
+    border-top: 1px solid #444 !important;
+    background: #000 !important;
+  }
+  .nav-item {
+    border-bottom: none !important;
+    border-right: 1px solid #1a1a1a !important;
+  }
+}

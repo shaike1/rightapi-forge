@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 1,
+  "id": "library.security-audit",
+  "name": "Daily Security Audit",
+  "description": "Failed SSH logins (last 24h, top source IPs), unexpected listening ports, pending security package updates, and a sudo-history sanity check. Fails when failed_attempts > attemptsThreshold OR when any security updates are pending. When the threshold is breached, surfaces the top offending source IPs in a parseable form (one IP=count per line) and creates a low-severity 'review needed' incident — auto-ban is intentionally NOT performed (too risky to do unattended; needs an operator to whitelist their own IPs first).",
+  "version": "1.1.0",
+  "tags": ["library", "security", "audit", "monitoring", "remediation"],
+  "inputs": [
+    {
+      "name": "host",
+      "type": "string",
+      "default": "host.docker.internal"
+    },
+    {
+      "name": "windowHours",
+      "type": "number",
+      "default": 24
+    },
+    {
+      "name": "attemptsThreshold",
+      "type": "number",
+      "default": 100,
+      "description": "Fail when failed SSH attempts in window exceed this"
+    }
+  ],
+  "onError": "continue",
+  "steps": [
+    {
+      "id": "failed_ssh",
+      "type": "bash",
+      "description": "Count failed SSH login attempts in window",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'journalctl _COMM=sshd --since \"${inputs.windowHours} hours ago\" --no-pager 2>/dev/null | grep -E \"Failed password|Invalid user|authentication failure\" | wc -l' | awk '{ print \"failed_ssh_attempts=\"$1 }'",
+      "timeoutMs": 30000
+    },
+    {
+      "id": "top_offenders",
+      "type": "bash",
+      "description": "Top 5 source IPs of failed SSH attempts. Empty when none.",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'journalctl _COMM=sshd --since \"${inputs.windowHours} hours ago\" --no-pager 2>/dev/null | grep -E \"Failed password|Invalid user\" | grep -oE \"from [0-9.]+\" | awk \"{print \\$2}\" | sort | uniq -c | sort -rn | head -5' || echo 'no offenders'",
+      "timeoutMs": 30000
+    },
+    {
+      "id": "attempts_check",
+      "type": "bash",
+      "description": "Fail (exit 4) when failed_ssh_attempts crosses the threshold so the alerting layer reacts.",
+      "command": "N=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'journalctl _COMM=sshd --since \"${inputs.windowHours} hours ago\" --no-pager 2>/dev/null | grep -E \"Failed password|Invalid user|authentication failure\" | wc -l'); [ -z \"$N\" ] && N=0; echo \"failed=$N threshold=${inputs.attemptsThreshold}\"; [ \"$N\" -le \"${inputs.attemptsThreshold}\" ]",
+      "timeoutMs": 30000,
+      "onError": "continue"
+    },
+    {
+      "id": "listening_ports",
+      "type": "bash",
+      "description": "All listening TCP ports — bound process and address. Used by humans to spot new exposure.",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'ss -tlnp 2>/dev/null | tail -n +2 | awk \"{ print \\$4, \\$6 }\" | sort -u | head -30'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "port_count",
+      "type": "bash",
+      "description": "Total distinct listening TCP ports — handy quick metric",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} \"ss -tln 2>/dev/null | tail -n +2 | awk '{ print \\$4 }' | grep -oE ':[0-9]+$' | sort -u | wc -l\" | awk '{ print \"listening_tcp_ports=\"$1 }'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "security_updates",
+      "type": "bash",
+      "description": "Count pending APT security updates. Fails (exit 5) if any are pending.",
+      "command": "N=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'apt list --upgradable 2>/dev/null | grep -ciE \"-security|esm-(infra|apps)\" || true'); [ -z \"$N\" ] && N=0; echo \"pending_security_updates=$N\"; [ \"$N\" -eq 0 ]",
+      "timeoutMs": 30000,
+      "onError": "continue"
+    },
+    {
+      "id": "recent_sudo",
+      "type": "bash",
+      "description": "Recent sudo invocations — last 20 unique commands by user. Helps spot unexpected privilege use.",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'journalctl _COMM=sudo --since \"${inputs.windowHours} hours ago\" --no-pager 2>/dev/null | grep COMMAND= | sed -E \"s/.* (\\S+) : .* COMMAND=(.*)/\\1 \\2/\" | sort -u | head -20' || echo 'no sudo activity'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "structured_offenders",
+      "type": "bash",
+      "description": "Re-emit top offending IPs as one parseable 'OFFENDER ip=<addr> count=<n>' line per IP. Used by the audit incident description and any downstream block-suggestion tooling.",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'journalctl _COMM=sshd --since \"${inputs.windowHours} hours ago\" --no-pager 2>/dev/null | grep -E \"Failed password|Invalid user\" | grep -oE \"from [0-9.]+\" | awk \"{print \\$2}\" | sort | uniq -c | sort -rn | head -10' | awk '$1 > 0 { printf \"OFFENDER ip=%s count=%d\\n\", $2, $1 } END { if (NR == 0) print \"no_offenders_in_window\" }'",
+      "timeoutMs": 30000,
+      "onError": "continue"
+    },
+    {
+      "id": "needs_audit_incident",
+      "type": "bash",
+      "description": "Decide whether to surface a review-needed audit incident: ok=true (exit 0) when attempts threshold breached.",
+      "command": "ATT_OK='${steps.attempts_check.ok}'; echo \"attempts_within_threshold=$ATT_OK\"; if [ \"$ATT_OK\" = \"false\" ]; then echo 'audit=needed'; exit 0; else echo 'audit=skip'; exit 1; fi",
+      "timeoutMs": 5000,
+      "onError": "continue"
+    },
+    {
+      "id": "branch_audit_incident",
+      "type": "conditional",
+      "description": "Create audit incident only when failed-SSH threshold was breached.",
+      "when": "${steps.needs_audit_incident.ok}",
+      "equals": "true",
+      "then": "create_audit_incident"
+    },
+    {
+      "id": "create_audit_incident",
+      "type": "skill",
+      "description": "AUDIT TRAIL: medium-severity incident surfaces the failed-SSH spike + top offending IPs for an operator to review. Auto-ban is intentionally NOT done (too easy to lock yourself out).",
+      "skill": "incident.create",
+      "params": {
+        "title": "SSH failed-attempt threshold breached on ${inputs.host}",
+        "severity": "medium",
+        "description": "Window=${inputs.windowHours}h, threshold=${inputs.attemptsThreshold}. attempts_within_threshold=${steps.attempts_check.ok} security_updates_clean=${steps.security_updates.ok}. Top offending IPs are listed in steps.structured_offenders.data.stdout (one 'OFFENDER ip=… count=…' line each). Review and decide whether to add fail2ban rules — automation deliberately does not ban IPs unattended.",
+        "assignedTo": "system"
+      }
+    },
+    {
+      "id": "summary",
+      "type": "bash",
+      "description": "Operator rollup. attempts_check.ok=false → DDoS/brute force; security_updates.ok=false → patch the host. See top_offenders + listening_ports for context.",
+      "command": "echo \"SecurityAudit window=${inputs.windowHours}h: ssh_within_threshold=${steps.attempts_check.ok} no_pending_security_updates=${steps.security_updates.ok} | review_incident_created=${steps.create_audit_incident.ok}. Action: if ssh_within_threshold=false, see steps.structured_offenders for parseable IP list. If security updates pending, run 'unattended-upgrade --dry-run' then schedule a maintenance window.\"",
+      "timeoutMs": 5000,
+      "onError": "fail"
+    }
+  ]
+}

@@ -1,0 +1,2374 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IT Ops Dashboard</title>
+  <style>
+    /* ══════════════════════════════════════════════════════════
+       TELETEXT / CEEFAX — Professional Ops Dashboard
+       Softened 8-color palette, black bg, block headers, sharp edges
+       ══════════════════════════════════════════════════════════ */
+    :root {
+      --t-black:   #000000;
+      --t-blue:    #224488;
+      --t-red:     #cc3333;
+      --t-green:   #33aa55;
+      --t-yellow:  #ccaa33;
+      --t-magenta: #aa44aa;
+      --t-cyan:    #44aaaa;
+      --t-white:   #e8e8d8;
+      --bg: #000; --bg2: #0a0a0a; --bg3: #111;
+      --border: #444; --border-subtle: #333; --border-faint: #222;
+      --text: #e8e8d8; --text-dim: #999; --text-muted: #666;
+      --control-height: 34px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--t-black);
+      color: var(--t-white);
+      font-family: "Consolas", "Courier New", "Liberation Mono", monospace;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Shell ─────────────────────────────────────── */
+    .shell {
+      max-width: 1020px;
+      margin: 0 auto;
+      padding: 12px 16px;
+    }
+
+    /* ── Header — blue block bar ──────────────────── */
+    .header {
+      background: var(--t-blue);
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .title h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: bold;
+      color: var(--t-white);
+      letter-spacing: 0.1em;
+    }
+    .title p {
+      margin: 3px 0 0;
+      color: var(--t-cyan);
+      font-size: 12px;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Auth bar ──────────────────────────────────── */
+    .auth {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .auth > * { flex: 0 1 150px; }
+
+    /* ── Form controls ─────────────────────────────── */
+    input, select, textarea {
+      border: 1px solid #555;
+      background: #111;
+      color: var(--t-white);
+      border-radius: 0;
+      min-height: var(--control-height);
+      padding: 6px 10px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--t-cyan);
+    }
+    input::placeholder { color: var(--text-muted); }
+
+    /* ── Buttons ───────────────────────────────────── */
+    button {
+      cursor: pointer;
+      background: var(--t-cyan);
+      border: none;
+      color: var(--t-black);
+      border-radius: 0;
+      min-height: var(--control-height);
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: bold;
+      font-family: inherit;
+    }
+    button:hover {
+      background: #5cc0c0;
+    }
+    .mini-btn {
+      min-height: 28px;
+      font-size: 12px;
+      padding: 4px 12px;
+      background: #1a1a1a;
+      border: 1px solid #555;
+      color: var(--t-cyan);
+      cursor: pointer;
+      border-radius: 0;
+    }
+    .mini-btn:hover {
+      background: #2a2a2a;
+      color: var(--t-white);
+    }
+
+    /* ── Status line ───────────────────────────────── */
+    .status-line {
+      margin: 0 0 10px;
+      padding: 8px 14px;
+      background: #0a0a0a;
+      color: var(--t-green);
+      font-size: 13px;
+      border-left: 4px solid var(--t-green);
+      border-bottom: 1px solid var(--border-faint);
+    }
+    .status-line.error {
+      color: var(--t-red);
+      border-left-color: var(--t-red);
+    }
+
+    /* ── Login gate ────────────────────────────────── */
+    .login-gate {
+      margin: 10px 0;
+      padding: 12px 16px;
+      background: var(--t-red);
+      color: var(--t-white);
+      font-size: 14px;
+      font-weight: bold;
+    }
+
+    /* ── Tabs — page selector strip ────────────────── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      flex-wrap: wrap;
+      margin: 0 0 12px;
+      background: #111;
+      border-bottom: 2px solid var(--t-cyan);
+    }
+    .tab {
+      background: #111;
+      border: none;
+      border-right: 1px solid var(--border-subtle);
+      border-bottom: 2px solid var(--border-subtle);
+      color: var(--t-cyan);
+      border-radius: 0;
+      min-height: 34px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: bold;
+      font-family: inherit;
+      margin-bottom: -2px;
+    }
+    .tab:hover {
+      background: #1a1a1a;
+      color: var(--t-white);
+      border-bottom-color: var(--t-white);
+    }
+    .tab.active {
+      background: var(--t-cyan);
+      color: var(--t-black);
+      border-bottom-color: var(--t-cyan);
+    }
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* ── Meta cards — blue info blocks ─────────────── */
+    .meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 8px;
+      margin: 0 0 12px;
+    }
+    .meta-card {
+      background: var(--t-blue);
+      padding: 14px 16px;
+      border-bottom: 3px solid #1a3366;
+    }
+    .meta-card .k {
+      color: var(--t-cyan);
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: bold;
+      letter-spacing: 0.06em;
+    }
+    .meta-card .v {
+      margin-top: 6px;
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--t-yellow);
+    }
+    .meta-card .v.status-ok { color: var(--t-green); }
+    .meta-card .v.status-danger { color: var(--t-red); }
+    .meta-card .sub { color: var(--t-white); font-size: 11px; margin-top: 3px; }
+
+    /* ── Card layout ───────────────────────────────── */
+    .layout {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 10px;
+    }
+    .card {
+      border: 1px solid var(--border);
+      background: var(--t-black);
+      overflow: hidden;
+      min-height: 180px;
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 14px;
+      background: var(--t-blue);
+      border-bottom: 2px solid #1a3366;
+    }
+    .card-head h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--t-white);
+      letter-spacing: 0.04em;
+    }
+    .panel-body {
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-height: 60vh;
+      overflow: auto;
+    }
+
+    /* ── Items ──────────────────────────────────────── */
+    .item {
+      border-bottom: 1px solid var(--border-faint);
+      padding: 8px 0;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .item:last-child { border-bottom: none; }
+    .item .name {
+      font-weight: bold;
+      font-size: 13px;
+      margin-bottom: 3px;
+      color: var(--t-cyan);
+    }
+    .sub {
+      color: var(--text-dim);
+      line-height: 1.5;
+      font-size: 12px;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: bold;
+      background: #1a1a1a;
+      color: var(--t-cyan);
+      border: 1px solid var(--border-subtle);
+      margin-right: 4px;
+      white-space: nowrap;
+    }
+
+    /* ── Controls ──────────────────────────────────── */
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .controls select, .controls input { min-width: 120px; }
+
+    /* ── Config form ───────────────────────────────── */
+    .config-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .config-form label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--t-green);
+    }
+    .config-form input { width: 100%; }
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .ascii-bar {
+      font-size: 11px;
+      color: var(--t-magenta);
+      margin-bottom: 6px;
+    }
+    pre.codebox {
+      margin: 0;
+      padding: 12px;
+      border: 1px solid var(--border);
+      background: #0a0a0a;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 60vh;
+      overflow: auto;
+      color: var(--t-green);
+    }
+
+    /* ── Factory — magenta accent ──────────────────── */
+    .factory-shell {
+      margin-top: 10px;
+      border: 1px solid var(--t-magenta);
+      background: var(--t-black);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .factory-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      background: var(--t-magenta);
+      padding: 10px 14px;
+      margin: -14px -14px 6px;
+      border-bottom: 2px solid #773377;
+    }
+    .factory-header h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--t-white);
+    }
+    .factory-header p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--t-yellow);
+    }
+    .factory-columns {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 8px;
+    }
+    .factory-column {
+      border: 1px solid var(--border);
+      background: var(--t-black);
+      display: flex;
+      flex-direction: column;
+      min-height: 160px;
+    }
+    .factory-column-head {
+      padding: 8px 12px;
+      background: #1a1a1a;
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: var(--t-yellow);
+      border-bottom: 2px solid var(--border);
+      letter-spacing: 0.04em;
+    }
+    .factory-column-body {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+    .factory-card {
+      border: 1px solid var(--border-subtle);
+      padding: 8px;
+      background: #0a0a0a;
+      font-size: 12px;
+    }
+    .factory-card-title {
+      font-weight: bold;
+      font-size: 12px;
+      color: var(--t-cyan);
+    }
+    .factory-card-details {
+      margin-top: 4px;
+      color: var(--text-dim);
+      font-size: 11px;
+    }
+    .factory-card-refs {
+      margin-top: 6px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .factory-card-refs .pill { font-size: 10px; }
+    .factory-status {
+      border: 1px solid var(--border);
+      padding: 12px;
+      min-height: 60px;
+      background: #0a0a0a;
+    }
+    .factory-status-body {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+    }
+    .factory-working-panel {
+      border: 1px solid var(--border);
+      background: #0a0a0a;
+    }
+    .factory-working-list .item { color: var(--t-cyan); }
+    .factory-note {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-dim);
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 8px;
+    }
+    .factory-note a { color: var(--t-yellow); }
+
+    /* ── Chat / terminal — green on dark ───────────── */
+    .chat-layout {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) 240px;
+      gap: 10px;
+      align-items: start;
+    }
+    .chat-sidebar { display: flex; flex-direction: column; gap: 8px; }
+    .chat-task-card .panel-body { padding: 0; gap: 2px; }
+    .chat-task-panel .item { margin: 0; }
+    .chat-note-card .panel-body { font-size: 12px; }
+    @media (max-width: 1100px) { .chat-layout { grid-template-columns: 1fr; } }
+
+    .terminal-shell {
+      background: #040804;
+      border: 1px solid #1a3a1a;
+      padding: 14px;
+    }
+    .terminal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      color: var(--t-green);
+      font-size: 13px;
+      border-bottom: 1px solid #1a3a1a;
+      padding-bottom: 8px;
+    }
+    .terminal-badge {
+      background: var(--t-green);
+      padding: 3px 10px;
+      font-size: 11px;
+      color: var(--t-black);
+      font-weight: bold;
+    }
+    .terminal-log {
+      padding: 12px;
+      background: #030603;
+      border: 1px solid #1a3a1a;
+      height: 260px;
+      overflow-y: auto;
+      font-size: 12px;
+      color: var(--t-green);
+      line-height: 1.6;
+    }
+    .terminal-log pre {
+      margin: 0;
+      font-family: inherit;
+      white-space: pre-wrap;
+    }
+    .terminal-input {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+    }
+    .terminal-input textarea {
+      flex: 1;
+      border: 1px solid #1a3a1a;
+      background: #030603;
+      color: var(--t-green);
+      padding: 10px;
+      resize: vertical;
+      min-height: 60px;
+    }
+    .terminal-input .mini-btn { align-self: flex-end; }
+
+    /* ── Responsive ────────────────────────────────── */
+    @media (max-width: 900px) { .auth > * { flex: 1 1 100%; } }
+    @media (max-width: 1050px) {
+      .layout { grid-template-columns: 1fr; }
+      .meta { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 700px) { .meta { grid-template-columns: 1fr; } }
+
+    /* ── Scrollbar ─────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #000; }
+    ::-webkit-scrollbar-thumb { background: #444; }
+    ::-webkit-scrollbar-thumb:hover { background: #666; }
+  </style>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    /* ══════════════════════════════════════════════════
+       Sidebar & shell overrides (design.css compat)
+       ══════════════════════════════════════════════════ */
+
+    /* Sidebar container */
+    .sidebar {
+      background: #000 !important;
+      border-right: 1px solid var(--border) !important;
+      box-shadow: none !important;
+      font-family: "Consolas", "Courier New", monospace !important;
+    }
+
+    /* Logo block */
+    .sidebar-logo {
+      background: var(--t-blue) !important;
+      border-radius: 0 !important;
+      padding: 12px 16px !important;
+      border-bottom: 2px solid #1a3366 !important;
+    }
+    .sidebar-logo .logo-icon {
+      color: var(--t-yellow) !important;
+      font-weight: bold !important;
+    }
+    .sidebar-logo span {
+      font-weight: bold !important;
+      color: var(--t-white) !important;
+      font-size: 15px !important;
+      letter-spacing: 0.1em !important;
+    }
+
+    /* Section headers */
+    .sidebar-section {
+      background: #1a1a1a !important;
+      color: var(--t-yellow) !important;
+      padding: 8px 16px !important;
+      margin: 0 !important;
+      font-size: 11px !important;
+      text-transform: uppercase !important;
+      font-weight: bold !important;
+      border-radius: 0 !important;
+      letter-spacing: 0.08em !important;
+      border-bottom: 1px solid var(--border-subtle) !important;
+    }
+
+    /* Nav items — each with bottom border */
+    .nav-item {
+      color: var(--t-cyan) !important;
+      border-radius: 0 !important;
+      padding: 9px 16px !important;
+      font-size: 13px !important;
+      border-bottom: 1px solid var(--border-subtle) !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 12px !important;
+      text-decoration: none !important;
+      transition: background 0.1s !important;
+    }
+    .nav-item:hover {
+      background: #222 !important;
+      color: var(--t-white) !important;
+    }
+    .nav-item.active {
+      background: #1a1a1a !important;
+      color: var(--t-white) !important;
+      border-left: 3px solid var(--t-cyan) !important;
+      padding-left: 13px !important;
+    }
+
+    /* Nav icons */
+    .nav-icon {
+      width: 20px !important;
+      text-align: center !important;
+      flex-shrink: 0 !important;
+      font-size: 14px !important;
+      color: var(--t-yellow) !important;
+      font-weight: bold !important;
+    }
+
+    /* Footer */
+    .sidebar-footer {
+      background: #0a0a0a !important;
+      border-top: 1px solid var(--border) !important;
+      border-radius: 0 !important;
+      padding: 10px 16px !important;
+    }
+    .sidebar-avatar {
+      background: var(--t-blue) !important;
+      color: var(--t-white) !important;
+      border-radius: 0 !important;
+      font-weight: bold !important;
+      font-size: 12px !important;
+    }
+    .sidebar-username {
+      color: var(--t-white) !important;
+      font-weight: bold !important;
+    }
+    .sidebar-role {
+      color: var(--t-cyan) !important;
+      font-size: 11px !important;
+    }
+    .sidebar-actions .btn-icon {
+      background: #1a1a1a !important;
+      border: 1px solid var(--border) !important;
+      border-radius: 0 !important;
+      color: var(--t-cyan) !important;
+      font-size: 12px !important;
+      font-family: inherit !important;
+    }
+    .sidebar-actions .btn-icon:hover {
+      background: #2a2a2a !important;
+      color: var(--t-white) !important;
+    }
+
+    /* Main area */
+    .main { background: #000 !important; }
+
+    /* Page header — blue block matching shell header */
+    .page-header {
+      background: var(--t-blue) !important;
+      border-radius: 0 !important;
+      padding: 12px 20px !important;
+      border: none !important;
+      border-bottom: 2px solid #1a3366 !important;
+    }
+    .page-title {
+      color: var(--t-white) !important;
+      font-size: 16px !important;
+      font-weight: bold !important;
+      letter-spacing: 0.08em !important;
+    }
+    .page-subtitle {
+      color: var(--t-cyan) !important;
+      font-size: 12px !important;
+    }
+    .page-content { padding: 0 12px !important; }
+
+    /* Toast */
+    #toast {
+      background: var(--t-red) !important;
+      color: var(--t-white) !important;
+      border-radius: 0 !important;
+      border: none !important;
+      font-family: "Consolas", "Courier New", monospace !important;
+    }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo"><div class="logo-icon">[=]</div><span>IT Ops</span></div>
+  <nav class="sidebar-nav">
+    <span class="sidebar-section">Operations</span>
+    <a href="/incidents" class="nav-item"><span class="nav-icon">!</span>Incidents</a>
+    <a href="/workflows" class="nav-item"><span class="nav-icon">></span>Workflows</a>
+    <a href="/runbooks.html" class="nav-item"><span class="nav-icon">#</span>Runbooks</a>
+    <a href="/servers" class="nav-item"><span class="nav-icon">@</span>Servers</a>
+    <a href="/monitoring.html" class="nav-item"><span class="nav-icon">%</span>Monitoring</a>
+    <span class="sidebar-section">Integrations</span>
+    <a href="/jira.html" class="nav-item"><span class="nav-icon">*</span>Jira</a>
+    <a href="/a2a.html" class="nav-item"><span class="nav-icon">&amp;</span>A2A Mesh</a>
+    <span class="sidebar-section">System</span>
+    <a href="/agent-details.html" class="nav-item"><span class="nav-icon">$</span>Agents</a>
+    <a href="/scheduler" class="nav-item"><span class="nav-icon">~</span>Scheduler</a>
+    <a href="/security.html" class="nav-item"><span class="nav-icon">^</span>Security</a>
+    <a href="/users.html" class="nav-item" id="nav-users" style="display:none"><span class="nav-icon">+</span>Users</a>
+    <span class="sidebar-section">Communication</span>
+    <a href="/agent-chat.html" class="nav-item"><span class="nav-icon">&lt;</span>Agent Chat</a>
+    <a href="/agent-bridge" class="nav-item"><span class="nav-icon">&lt;&gt;</span>Agent Bridge</a>
+    <span class="sidebar-section">Tools</span>
+    <a href="/dashboard" class="nav-item active"><span class="nav-icon">=</span>Dashboard</a>
+    <a href="/cicd" class="nav-item"><span class="nav-icon">|</span>CI/CD</a>
+    <a href="/audit" class="nav-item"><span class="nav-icon">.</span>Audit</a>
+    <a href="/rbac" class="nav-item"><span class="nav-icon">:</span>RBAC</a>
+    <a href="/plugin-manager" class="nav-item"><span class="nav-icon">,</span>Plugins</a>
+    <a href="/agent-runtime" class="nav-item"><span class="nav-icon">&gt;&gt;</span>Agent Runtime</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="user-avatar">?</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-username" id="user-name">Loading…</div>
+        <div class="sidebar-role" id="user-role"></div>
+      </div>
+    </div>
+    <div class="sidebar-actions">
+      <button class="btn-icon" onclick="toggleTheme()">[T]</button>
+      <button class="btn-icon" onclick="doLogout()">[X]</button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div><h1 class="page-title">Dashboard</h1><p class="page-subtitle">Legacy operations overview</p></div>
+    <div style="display:flex;gap:10px"></div>
+  </div>
+  <div class="page-content">
+  <div class="shell">
+    <div class="header">
+      <div class="title">
+        <h1>IT OPS DASH</h1>
+        <p class="subtitle">P100 BEACON IT OPS</p>
+      </div>
+      <div class="auth">
+        <input id="username" placeholder="username" />
+        <input id="password" type="password" placeholder="password" />
+        <button id="loginBtn">Login</button>
+        <button id="logoutBtn" style="display:none">Logout</button>
+        <button id="refreshBtn">Refresh</button>
+      </div>
+    </div>
+    <div id="statusLine" class="status-line">Not authenticated</div>
+    <div id="loginGate" class="login-gate">Login required to access dashboard menus and controls.</div>
+      <div id="tabsNav" class="tabs">
+        <button class="tab" data-section="overview">Overview</button>
+        <button class="tab" data-section="agents">Agents</button>
+        <button class="tab" data-section="skills">Skills</button>
+        <button class="tab" data-section="factory">Factory</button>
+        <button class="tab" data-section="orchestrator">Orchestrator</button>
+        <button class="tab active" data-section="chats">Chats</button>
+        <button class="tab" data-section="configuration">Configuration</button>
+        <a href="/incidents" class="tab" style="text-decoration:none;color:inherit" id="tab-incidents">! Incidents <span id="tab-incident-badge" style="display:none;background:var(--tt-red);color:#fff;border-radius:0;padding:1px 6px;font-size:11px;margin-left:4px">0</span></a>
+        <a href="/servers" class="tab" style="text-decoration:none;color:inherit">@ Servers</a>
+      </div>
+    <section id="section-overview" class="section">
+    <div class="meta">
+      <div class="meta-card"><div class="k">Total Tasks</div><div id="m-total" class="v">-</div></div>
+      <div class="meta-card"><div class="k">Active Tasks</div><div id="m-active" class="v">-</div></div>
+      <div class="meta-card"><div class="k">Running Delegations</div><div id="m-delegations" class="v">-</div></div>
+      <div class="meta-card"><div class="k">Generated</div><div id="m-generated" class="v">-</div></div>
+      <div class="meta-card">
+        <div class="k">Backup Health</div>
+        <div id="m-backup" class="v">-</div>
+        <div id="m-backup-detail" class="sub">-</div>
+      </div>
+    </div>
+      <div class="layout">
+      <div class="card">
+        <div class="card-head">
+          <h3>Tasks</h3>
+          <button id="refreshTasksBtn">Refresh Tasks</button>
+        </div>
+        <div id="tasksPanel" class="panel-body"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3>Running Operations</h3>
+          <button id="refreshRunningBtn">Refresh Running</button>
+        </div>
+        <div id="runningPanel" class="panel-body"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3>Delegations</h3>
+          <button id="refreshDelegationsBtn">Refresh Delegations</button>
+        </div>
+        <div id="delegationsPanel" class="panel-body"></div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3>Backups</h3>
+          <button id="refreshBackupsBtn">Refresh Backups</button>
+        </div>
+        <div class="panel-body">
+          <div class="controls">
+            <input id="backupLabel" placeholder="backup label" />
+            <button class="mini-btn" id="createBackupBtn">Create</button>
+          </div>
+          <div class="controls">
+            <select id="backupSelect">
+              <option value="">Select backup...</option>
+            </select>
+            <button class="mini-btn" id="verifyBackupBtn">Verify</button>
+            <button class="mini-btn" id="dryRunRestoreBtn">Dry-Run Restore</button>
+          </div>
+          <div id="backupsPanel" class="panel-body"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h3>System Pulse</h3>
+        </div>
+        <div class="panel-body">
+          <div class="item"><div class="name">Uptime</div><div class="sub">Awaiting data...</div></div>
+          <div class="item"><div class="name">Chat Threads</div><div id="pulseThreads" class="sub">-</div></div>
+          <div class="item"><div class="name">Last Message</div><div id="pulseMessage" class="sub">-</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+    <section id="section-agents" class="section">
+      <div class="layout">
+        <div class="card">
+          <div class="card-head">
+            <h3>Agents</h3>
+            <button id="refreshAgentsBtn">Refresh Agents</button>
+          </div>
+          <div id="agentsPanel" class="panel-body"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3>Agent Capabilities</h3>
+            <button id="refreshCapabilitiesBtn">Refresh Capabilities</button>
+          </div>
+          <div id="capabilitiesPanel" class="panel-body"></div>
+        </div>
+      </div>
+    </section>
+    <section id="section-skills" class="section">
+      <div class="layout">
+        <div class="card">
+          <div class="card-head">
+            <h3>Skills</h3>
+            <button id="refreshSkillsBtn">Refresh Skills</button>
+          </div>
+          <div id="skillsPanel" class="panel-body"></div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3>Tools Catalog</h3>
+            <button id="refreshToolsBtn">Refresh Tools</button>
+          </div>
+          <div id="toolsPanel" class="panel-body"></div>
+        </div>
+      </div>
+    </section>
+    <section id="section-orchestrator" class="section">
+      <div class="layout">
+        <div class="card">
+          <div class="card-head">
+            <h3>Orchestrator Status</h3>
+            <div class="controls">
+              <input id="orchestratorTickReason" placeholder="heartbeat reason" />
+              <button class="mini-btn" id="orchestratorTickBtn">Tick now</button>
+              <button class="mini-btn" id="refreshOrchestratorBtn">Refresh</button>
+            </div>
+          </div>
+          <div id="orchestratorStatusPanel" class="panel-body">
+            <div class="item"><div class="sub">Login to unlock the orchestrator heartbeat.</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3>Queue Snapshot</h3>
+          </div>
+          <div id="orchestratorQueueList" class="panel-body">
+            <div class="item"><div class="sub">Queue is empty or requires login.</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3>Task Graph</h3>
+          </div>
+          <div class="panel-body">
+            <div class="controls">
+              <input id="orchestratorGraphInput" placeholder="task id" />
+              <button class="mini-btn" id="orchestratorGraphBtn">Load graph</button>
+            </div>
+            <pre id="orchestratorGraphPanel" class="codebox">Task graph data will appear here.</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="section-chats" class="section">
+      <div class="chat-layout">
+        <div class="terminal-shell">
+          <div class="terminal-header">
+            <span>CHAT STATUS</span>
+            <span class="terminal-badge">~ ASCII ~</span>
+          </div>
+          <div id="threadsPanel" class="terminal-log ascii-panel">
+            NO THREADS LOADED
+          </div>
+          <div class="terminal-input">
+            <select id="chatAgentSelect">
+              <option value="">Select agent...</option>
+            </select>
+            <button class="mini-btn" id="refreshChatAgentsBtn">Reload Agents</button>
+            <button class="mini-btn" id="loadChatThreadsBtn">Sync Channels</button>
+          </div>
+          <div class="terminal-log ascii-panel" id="messagesPanel">
+            NO MESSAGES YET
+          </div>
+          <div class="terminal-input">
+            <textarea id="chatMessageInput" placeholder="type / command" rows="3"></textarea>
+            <button id="sendChatBtn" class="mini-btn">SEND</button>
+          </div>
+          <div class="terminal-input">
+            <button class="mini-btn" id="refreshChatsBtn">Refresh Channels</button>
+            <button class="mini-btn" id="refreshMessagesBtn">Refresh Log</button>
+          </div>
+        </div>
+        <div class="chat-sidebar">
+          <div class="card chat-task-card">
+            <div class="card-head">
+              <h3>Thread Tasks</h3>
+              <button class="mini-btn" id="refreshChatTasksBtn">Refresh</button>
+            </div>
+            <div id="chatTaskReference" class="panel-body">
+              <div class="item">
+                <div class="sub">Refresh chat threads to see linked task context.</div>
+              </div>
+            </div>
+          </div>
+          <div class="card chat-note-card">
+            <div class="card-head">
+              <h3>Task Trace Notes</h3>
+            </div>
+            <div class="panel-body">
+              <div class="item">
+                <div class="sub">New tasks created via chat will show up in this pane so you can track their running steps without leaving the terminal view.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="section-factory" class="section">
+      <div class="factory-shell">
+        <div class="factory-header">
+          <div>
+            <h3>Software Factory Board</h3>
+            <p>FlowBoard-inspired kanban for agents, tasks, and bridges between chat and execution.</p>
+          </div>
+          <button id="refreshFactoryBtn" class="mini-btn">Refresh Board</button>
+        </div>
+        <div class="factory-status">
+          <div class="factory-status-body" id="factoryStatusPanel">
+            Login to view factory status.
+          </div>
+        </div>
+        <div class="factory-columns" id="factoryColumns">
+          <div class="factory-column">
+            <div class="factory-column-head">Board awaiting authentication</div>
+            <div class="factory-column-body">
+              <div class="factory-card">
+                <div class="factory-card-title">Sign in to populate kanban</div>
+                <div class="factory-card-details">Authenticated sessions gap the FlowBoard view into this system.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="factory-working-panel">
+          <div class="card-head">
+            <h3>Working Features</h3>
+          </div>
+          <div class="panel-body factory-working-list" id="factoryWorkingList">
+            <div class="item">Working feature list will appear once the board snapshot is loaded.</div>
+          </div>
+        </div>
+        <div class="factory-note">
+          Inspired by FlowBoard (<a href="https://github.com/rasimme/FlowBoard" target="_blank" rel="noreferrer">rasimme/FlowBoard</a>), this panel keeps the factory plan beside the ops chat for a single point of view.
+        </div>
+      </div>
+    </section>
+    <section id="section-configuration" class="section">
+      <div class="layout">
+        <div class="card">
+          <div class="card-head">
+            <h3>Runtime Configuration</h3>
+            <button id="refreshConfigBtn">Refresh Config</button>
+          </div>
+        <div class="panel-body config-form">
+          <div class="form-row">
+            <label>Anthropic Key
+              <input id="anthropicKey" placeholder="••••••••" type="password" />
+            </label>
+            <label>OpenAI Key
+              <input id="openaiKey" placeholder="••••••••" type="password" />
+            </label>
+          </div>
+          <div class="form-row">
+            <label>Ollama URL
+              <input id="ollamaUrl" placeholder="http://localhost:11434" />
+            </label>
+            <label>Org Name
+              <input id="orgName" placeholder="IT Ops" />
+            </label>
+          </div>
+          <button id="saveConfigBtn" class="mini-btn">Save Settings</button>
+          <pre id="configPanel" class="codebox">{}</pre>
+        </div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h3>Security Status</h3>
+            <button id="refreshSecurityBtn">Refresh Security</button>
+          </div>
+          <div class="panel-body">
+            <pre id="securityPanel" class="codebox">{}</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div><!-- /.shell -->
+  </div><!-- /.page-content -->
+</main>
+
+<div id="toast"></div>
+<script>
+function toggleTheme(){const t=document.documentElement.classList.toggle('light');localStorage.setItem('theme',t?'light':'dark');}
+function initTheme(){if(localStorage.getItem('theme')==='light')document.documentElement.classList.add('light');}
+initTheme();
+const token=sessionStorage.getItem('itops_token')||localStorage.getItem('itops_token');
+function doLogout(){sessionStorage.removeItem('itops_token');localStorage.removeItem('itops_token');window.location.href='/';}
+fetch('/api/auth/me',{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()).then(u=>{
+  document.getElementById('user-name').textContent=u.username;
+  document.getElementById('user-role').textContent=u.role;
+  document.getElementById('user-avatar').textContent=u.username[0].toUpperCase();
+  if(u.role==='admin')document.getElementById('nav-users').style.display='flex';
+}).catch(()=>{});
+</script>
+<script>
+    // Toast notification (standard design system)
+    function showToast(msg,type){
+      if(!type) type='info';
+      var t=document.getElementById('toast');
+      t.textContent=msg;t.style.display='block';
+      t.style.borderColor=type==='error'?'var(--danger)':type==='success'?'var(--success)':'var(--border)';
+      clearTimeout(t._to);t._to=setTimeout(function(){t.style.display='none';},3500);
+    }
+
+    var tokenKeys = ['itops_token', 'dashboard.ops.token', 'itops_global_token'];
+    function readStoredToken() {
+      try {
+        for (var i = 0; i < tokenKeys.length; i++) {
+          var found = localStorage.getItem(tokenKeys[i]);
+          if (found) return found;
+        }
+      } catch (_error) {}
+      return '';
+    }
+    function persistToken(value) {
+      legacyToken = value || '';
+      try {
+        for (var i = 0; i < tokenKeys.length; i++) {
+          if (legacyToken) localStorage.setItem(tokenKeys[i], legacyToken);
+          else localStorage.removeItem(tokenKeys[i]);
+        }
+      } catch (_error) {}
+    }
+    var legacyToken = readStoredToken();
+    var delegationsCache = [];
+    var backupsCache = [];
+    var agentsCache = [];
+    var threadsCache = [];
+    var messagesCache = [];
+    var taskSummariesCache = [];
+    var configCache = {};
+    var chatAgentId = '';
+    var currentSection = 'overview';
+    var orchestratorStatusCache = null;
+    var orchestratorQueueCache = [];
+    var orchestratorGraphCache = null;
+    var statusLine = document.getElementById('statusLine');
+    var factorySnapshotCache = null;
+    var factoryStatusCache = null;
+    var sendChatBtn = document.getElementById('sendChatBtn');
+    var tabsNav = document.getElementById('tabsNav');
+    var loginGate = document.getElementById('loginGate');
+    var usernameInput = document.getElementById('username');
+    var passwordInput = document.getElementById('password');
+    var loginBtnNode = document.getElementById('loginBtn');
+    var logoutBtnNode = document.getElementById('logoutBtn');
+    function isAuthenticated() {
+      return !!legacyToken;
+    }
+    function applyAuthUi(session) {
+      var authed = isAuthenticated();
+      if (authed) {
+        if (usernameInput) usernameInput.style.display = 'none';
+        if (passwordInput) {
+          passwordInput.value = '';
+          passwordInput.style.display = 'none';
+        }
+        if (loginBtnNode) loginBtnNode.style.display = 'none';
+        if (logoutBtnNode) logoutBtnNode.style.display = '';
+        if (tabsNav) tabsNav.style.display = '';
+        if (loginGate) loginGate.style.display = 'none';
+        if (session && session.username) {
+          setStatus('Authenticated as ' + session.username + ' (' + (session.role || 'unknown') + ')', false);
+          // Populate standard header user-badge
+          var badge = document.getElementById('user-badge');
+          if (badge) badge.textContent = session.username + ' \u00b7 ' + (session.role || 'user');
+          if (session.role === 'admin') {
+            var navUsers = document.getElementById('nav-users');
+            if (navUsers) navUsers.style.display = '';
+          }
+        }
+        showSection(currentSection);
+      } else {
+        if (usernameInput) usernameInput.style.display = '';
+        if (passwordInput) passwordInput.style.display = '';
+        if (loginBtnNode) loginBtnNode.style.display = '';
+        if (logoutBtnNode) logoutBtnNode.style.display = 'none';
+        if (tabsNav) tabsNav.style.display = 'none';
+        if (loginGate) loginGate.style.display = 'block';
+        var badge = document.getElementById('user-badge');
+        if (badge) badge.textContent = '';
+        document.querySelectorAll('.section').forEach(function(node) {
+          node.classList.remove('active');
+        });
+      }
+      setChatControls(authed);
+    }
+    function setStatus(msg, isError) {
+      statusLine.textContent = msg;
+      statusLine.className = isError ? 'status-line error' : 'status-line';
+    }
+    function setChatControls(enabled) {
+      if (!sendChatBtn) return;
+      sendChatBtn.disabled = !enabled;
+    }
+    var apiBridgeOrigin = '';
+    if (window.location.port && window.location.port !== '19123' && window.location.port !== '443' && window.location.port !== '80') {
+      apiBridgeOrigin = window.location.protocol + '//' + window.location.hostname + ':19123';
+      console.warn('dashboard: using API fallback origin', apiBridgeOrigin);
+    }
+    function jsonErrorResponse(message, statusCode) {
+      return new Response(
+        JSON.stringify({ error: message }),
+        {
+          status: statusCode || 502,
+          headers: { 'content-type': 'application/json' }
+        }
+      );
+    }
+    var nativeFetch = window.fetch.bind(window);
+    window.fetch = async function(resource, init) {
+      var isString = typeof resource === 'string';
+      var url = isString ? resource : (resource && resource.url ? resource.url : '');
+      var isApiRelative = isString && url.indexOf('/api/') === 0;
+      var response = await nativeFetch(resource, init);
+      if (isApiRelative && apiBridgeOrigin) {
+        var contentType = String(response.headers.get('content-type') || '').toLowerCase();
+        if (contentType.indexOf('text/html') !== -1) {
+          try {
+            var retry = await nativeFetch(apiBridgeOrigin + url, init);
+            var retryType = String(retry.headers.get('content-type') || '').toLowerCase();
+            if (retryType.indexOf('text/html') !== -1) {
+              return jsonErrorResponse(
+                'API returned HTML instead of JSON for ' + url + '. Open http://' + window.location.hostname + ':19123/dashboard directly.',
+                502
+              );
+            }
+            return retry;
+          } catch (_error) {
+            return jsonErrorResponse(
+              'API bridge retry failed for ' + url + '. Open http://' + window.location.hostname + ':19123/dashboard directly.',
+              502
+            );
+          }
+        }
+      }
+      if (isApiRelative) {
+        var finalType = String(response.headers.get('content-type') || '').toLowerCase();
+        if (finalType.indexOf('text/html') !== -1) {
+          return jsonErrorResponse(
+            'API returned HTML instead of JSON for ' + url + '.',
+            response.status || 502
+          );
+        }
+      }
+      return response;
+    };
+    function authHeaders() {
+      if (!legacyToken) legacyToken = readStoredToken();
+      return legacyToken ? { Authorization: 'Bearer ' + legacyToken } : {};
+    }
+    setChatControls(!!legacyToken);
+    function writeBox(id, value) {
+      var node = document.getElementById(id);
+      if (!node) return;
+      node.textContent = JSON.stringify(value, null, 2);
+    }
+    function showSection(sectionName) {
+      currentSection = sectionName;
+      document.querySelectorAll('.section').forEach(function(node) {
+        node.classList.toggle('active', node.id === 'section-' + sectionName);
+      });
+      document.querySelectorAll('.tab').forEach(function(node) {
+        node.classList.toggle('active', node.getAttribute('data-section') === sectionName);
+      });
+    }
+    function populateConfigForm(config) {
+      configCache = config || {};
+      var anthropicInput = document.getElementById('anthropicKey');
+      var openaiInput = document.getElementById('openaiKey');
+      var ollamaInput = document.getElementById('ollamaUrl');
+      var orgInput = document.getElementById('orgName');
+      if (anthropicInput) anthropicInput.value = config.anthropicKey ? '••••••••' : '';
+      if (openaiInput) openaiInput.value = config.openaiKey ? '••••••••' : '';
+      if (ollamaInput) ollamaInput.value = config.ollamaUrl || '';
+      if (orgInput) orgInput.value = config.orgName || '';
+    }
+    async function saveConfig() {
+      if (!legacyToken) throw new Error('Login to update configuration');
+      var anthropicInput = document.getElementById('anthropicKey');
+      var openaiInput = document.getElementById('openaiKey');
+      var ollamaInput = document.getElementById('ollamaUrl');
+      var orgInput = document.getElementById('orgName');
+      var payload = { ...configCache };
+      if (anthropicInput) {
+        var v = anthropicInput.value.trim();
+        payload.anthropicKey = v && v !== '••••••••' ? v : configCache.anthropicKey;
+      }
+      if (openaiInput) {
+        var v2 = openaiInput.value.trim();
+        payload.openaiKey = v2 && v2 !== '••••••••' ? v2 : configCache.openaiKey;
+      }
+      if (ollamaInput) payload.ollamaUrl = ollamaInput.value.trim();
+      if (orgInput) payload.orgName = orgInput.value.trim() || configCache.orgName;
+      var res = await fetch('/api/config', {
+        method: 'POST',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+        body: JSON.stringify(payload)
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Save failed');
+      populateConfigForm(data.config || payload);
+      writeBox('configPanel', data.config || payload);
+      setStatus('LLM settings saved', false);
+    }
+    function esc(v) {
+      return String(v || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+    async function login() {
+      var username = document.getElementById('username').value.trim();
+      var password = document.getElementById('password').value;
+      if (!username || !password) {
+        setStatus('Username and password are required', true);
+        return false;
+      }
+      console.log('login: attempting', username);
+      var res;
+      try {
+        res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: username, password: password })
+        });
+      } catch (error) {
+        console.error('login: fetch error', error);
+        setStatus('Login request failed: ' + (error && error.message ? error.message : 'network error'), true);
+        return false;
+      }
+      console.log('login: response', res.status, res.statusText);
+      var resClone = res.clone();
+      var data;
+      try {
+        data = await res.json();
+      } catch (error) {
+        var raw = '';
+        try { raw = await resClone.text(); } catch (_error) {}
+        var hint = window.location.port !== '19123'
+          ? ('Try opening http://' + window.location.hostname + ':19123/dashboard directly.')
+          : 'Response is not JSON.';
+        console.error('login: non-json response', { status: res.status, sample: raw.slice(0, 200) });
+        setStatus('Login failed: unexpected response format. ' + hint, true);
+        return false;
+      }
+      if (!res.ok) {
+        setStatus(data.error || 'Login failed', true);
+        return false;
+      }
+      if (!data.session || !data.session.token) {
+        setStatus('Login failed: token missing in response', true);
+        return false;
+      }
+      persistToken(data.session.token || '');
+      applyAuthUi({ username: data.session.username, role: data.session.role });
+      try {
+        await loadBackupHealth();
+      } catch (error) {
+        console.warn('Backup health refresh failed', error);
+      }
+      return true;
+    }
+    async function validateSessionToken() {
+      if (!legacyToken) return false;
+      try {
+        var res = await fetch('/api/auth/me', { headers: authHeaders() });
+        var data = await res.json();
+        if (!res.ok || !data.authenticated) throw new Error(data.error || 'Session invalid');
+        applyAuthUi({ username: data.username, role: data.role });
+        return true;
+      } catch (_error) {
+        persistToken('');
+        applyAuthUi(null);
+        return false;
+      }
+    }
+    function logout() {
+      persistToken('');
+      applyAuthUi(null);
+      setStatus('Logged out', false);
+    }
+    function renderTasks(tasks) {
+      var panel = document.getElementById('tasksPanel');
+      if (!Array.isArray(tasks) || tasks.length === 0) {
+        panel.innerHTML = '<div class="item"><div class="sub">No tasks found</div></div>';
+        return;
+      }
+      var html = '';
+      tasks.slice(0, 80).forEach(function(t) {
+        html += '<div class="item">';
+        html += '<div class="name">' + esc(t.title) + '</div>';
+        html += '<div class="sub"><span class="pill">' + esc(t.status) + '</span><span class="pill">' + esc(t.priority) + '</span><span class="pill">' + esc(t.category) + '</span></div>';
+        html += '<div class="sub">id: ' + esc(t.id) + '</div>';
+        if (t.assignedTo) html += '<div class="sub">assigned: ' + esc(t.assignedTo) + '</div>';
+        html += '</div>';
+      });
+      panel.innerHTML = html;
+      document.getElementById('m-total').textContent = String(tasks.length);
+      var active = tasks.filter(function(t) {
+        return ['completed','failed','cancelled','dropped','rolled_back'].indexOf(String(t.status)) === -1;
+      }).length;
+      document.getElementById('m-active').textContent = String(active);
+    }
+    function renderRunning(data) {
+      var panel = document.getElementById('runningPanel');
+      var delegations = Array.isArray(data.activeDelegations) ? data.activeDelegations : [];
+      var tasks = Array.isArray(data.activeTasks) ? data.activeTasks : [];
+      var slots = Array.isArray(data.executionSlots) ? data.executionSlots : [];
+      document.getElementById('m-delegations').textContent = String((data.summary && data.summary.activeDelegationCount) || delegations.length || 0);
+      var html = '';
+      html += '<div class="item"><div class="name">Summary</div>';
+      html += '<div class="sub">active tasks: ' + String((data.summary && data.summary.activeTaskCount) || tasks.length || 0) + '</div>';
+      html += '<div class="sub">blocked tasks: ' + String((data.summary && data.summary.blockedTaskCount) || 0) + '</div>';
+      html += '<div class="sub">stalled delegations: ' + String((data.summary && data.summary.stalledDelegationCount) || 0) + '</div>';
+      html += '</div>';
+      if (tasks.length > 0) {
+        html += '<div class="item"><div class="name">Top Active Tasks</div>';
+        tasks.slice(0, 6).forEach(function(t) {
+          html += '<div class="sub">• ' + esc(t.title) + ' (' + esc(t.status) + ', idle ' + esc(t.idleMinutes) + 'm)</div>';
+        });
+        html += '</div>';
+      }
+      if (delegations.length > 0) {
+        html += '<div class="item"><div class="name">Top Delegations</div>';
+        delegations.slice(0, 6).forEach(function(d) {
+          html += '<div class="sub">• ' + esc(d.state) + ' / ' + esc(d.riskLevel) + ' / idle ' + esc(d.idleMinutes) + 'm</div>';
+        });
+        html += '</div>';
+      }
+      if (slots.length > 0) {
+        html += '<div class="item"><div class="name">Execution Slots</div>';
+        slots.slice(0, 6).forEach(function(s) {
+          html += '<div class="sub">• ' + esc(s.command) + ': ' + esc(s.active) + '/' + esc(s.limit) + '</div>';
+        });
+        html += '</div>';
+      }
+      panel.innerHTML = html;
+    }
+    function renderDelegations(data) {
+      var panel = document.getElementById('delegationsPanel');
+      var rows = Array.isArray(data) ? data : [];
+      delegationsCache = rows;
+      if (rows.length === 0) {
+        panel.innerHTML = '<div class="item"><div class="sub">No delegations found</div></div>';
+        return;
+      }
+      var html = '';
+      rows.slice(0, 80).forEach(function(d) {
+        html += '<div class="item">';
+        html += '<div class="name">' + esc(d.objective || 'delegation') + '</div>';
+        html += '<div class="sub"><span class="pill">' + esc(d.state) + '</span><span class="pill">' + esc(d.riskLevel || 'n/a') + '</span></div>';
+        html += '<div class="sub">id: ' + esc(d.id) + '</div>';
+        html += '<div class="sub">task: ' + esc(d.parentTaskId || '-') + '</div>';
+        html += '<div class="sub">requester: ' + esc(d.requesterAgentId || '-') + ' → assignee: ' + esc(d.assigneeAgentId || '-') + '</div>';
+        if (d.deadline) html += '<div class="sub">deadline: ' + esc(d.deadline) + '</div>';
+        html += '</div>';
+      });
+      panel.innerHTML = html;
+    }
+    function renderBackups(backups) {
+      var panel = document.getElementById('backupsPanel');
+      var select = document.getElementById('backupSelect');
+      var rows = Array.isArray(backups) ? backups : [];
+      backupsCache = rows;
+      if (select) {
+        var previous = select.value;
+        var options = '<option value="">Select backup...</option>';
+        rows.forEach(function(b) {
+          options += '<option value="' + esc(b.id) + '">' + esc(b.id) + ' | ' + esc(b.createdAt) + '</option>';
+        });
+        select.innerHTML = options;
+        if (previous && rows.some(function(b) { return b.id === previous; })) select.value = previous;
+        else if (rows.length > 0) select.value = rows[0].id;
+      }
+      if (rows.length === 0) {
+        panel.innerHTML = '<div class="item"><div class="sub">No backups found</div></div>';
+        return;
+      }
+      var html = '';
+      rows.slice(0, 30).forEach(function(b) {
+        html += '<div class="item">';
+        html += '<div class="name">' + esc(b.id) + '</div>';
+        html += '<div class="sub"><span class="pill">files ' + esc(b.existingFileCount) + '/' + esc(b.fileCount) + '</span></div>';
+        html += '<div class="sub">created: ' + esc(b.createdAt) + '</div>';
+        if (b.label) html += '<div class="sub">label: ' + esc(b.label) + '</div>';
+        if (b.actorId) html += '<div class="sub">actor: ' + esc(b.actorId) + '</div>';
+        html += '</div>';
+      });
+      panel.innerHTML = html;
+    }
+
+    function formatDurationLabel(totalSeconds) {
+      if (totalSeconds === null || totalSeconds === undefined) return 'unknown';
+      var seconds = Math.max(0, Math.floor(Number(totalSeconds)));
+      var hours = Math.floor(seconds / 3600);
+      var minutes = Math.floor((seconds % 3600) / 60);
+      var remainder = seconds % 60;
+      if (hours > 0) return hours + 'h ' + minutes + 'm';
+      if (minutes > 0) return minutes + 'm ' + remainder + 's';
+      return remainder + 's';
+    }
+
+    function renderBackupHealthCard(data) {
+      var valueNode = document.getElementById('m-backup');
+      var detailNode = document.getElementById('m-backup-detail');
+      if (!valueNode || !detailNode) return;
+      if (!data) {
+        valueNode.textContent = 'locked';
+        valueNode.classList.remove('status-ok', 'status-danger');
+        detailNode.textContent = 'Log in to unlock backup health data.';
+        return;
+      }
+      if (!data.latestBackup) {
+        valueNode.textContent = 'missing';
+        valueNode.classList.remove('status-ok', 'status-danger');
+        detailNode.textContent = 'No backup bundles found. Trigger ./scripts/backup-state.sh run.';
+        return;
+      }
+      var primaryState = data.stale ? 'stale' : 'fresh';
+      valueNode.textContent = primaryState;
+      valueNode.classList.toggle('status-ok', !data.stale);
+      valueNode.classList.toggle('status-danger', data.stale);
+      var ageLabel = formatDurationLabel(data.backupAgeSeconds);
+      var detail = 'Last: ' + data.latestBackup.id + ' (' + ageLabel + ' ago · threshold ' + data.thresholdHours + 'h)';
+      if (data.verification) {
+        if (data.verification.ok) {
+          detail += ' · verification OK';
+        } else {
+          detail += ' · verification failed' + (data.verification.error ? ': ' + data.verification.error : '');
+        }
+      }
+      detailNode.textContent = detail;
+    }
+
+    async function loadBackupHealth() {
+      if (!legacyToken) {
+        renderBackupHealthCard(null);
+        return;
+      }
+      var res = await fetch('/api/system/backups/health', { headers: authHeaders() });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading backup health');
+      renderBackupHealthCard(data);
+    }
+    async function loadTasks() {
+      var res = await fetch('/api/task-queue', legacyToken ? { headers: authHeaders() } : undefined);
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading tasks');
+      var tasks = Array.isArray(data)
+        ? data
+        : (Array.isArray(data.tasks) ? data.tasks : []);
+      renderTasks(tasks);
+    }
+    async function loadRunning() {
+      if (!legacyToken) {
+        throw new Error('Please login to load running operations');
+      }
+      var res = await fetch('/api/operations/running?limit=100', { headers: authHeaders() });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading running operations');
+      renderRunning(data);
+      document.getElementById('m-generated').textContent = new Date().toISOString().replace('T', ' ').replace('Z', 'Z');
+    }
+    async function loadDelegations() {
+      if (!legacyToken) throw new Error('Please login to load delegations');
+      var res = await fetch('/api/delegations?limit=200', { headers: authHeaders() });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading delegations');
+      renderDelegations(Array.isArray(data.delegations) ? data.delegations : []);
+    }
+    async function loadBackups() {
+      if (!legacyToken) throw new Error('Please login to load backups');
+      var res = await fetch('/api/system/backups?limit=80', { headers: authHeaders() });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading backups');
+      renderBackups(Array.isArray(data.backups) ? data.backups : []);
+    }
+    function selectedBackupId() {
+      var select = document.getElementById('backupSelect');
+      var id = (select && select.value) ? select.value : '';
+      if (!id) throw new Error('Select a backup first');
+      return id;
+    }
+    async function createBackup() {
+      if (!legacyToken) throw new Error('Please login to create backup');
+      var label = (document.getElementById('backupLabel').value || '').trim();
+      var res = await fetch('/api/system/backups/create', {
+        method: 'POST',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+        body: JSON.stringify({ label: label || undefined })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Create backup failed');
+      await loadBackups();
+      setStatus('Backup created: ' + (data.backup && data.backup.id ? data.backup.id : 'ok'), false);
+    }
+    async function verifyBackup() {
+      if (!legacyToken) throw new Error('Please login to verify backup');
+      var id = selectedBackupId();
+      var res = await fetch('/api/system/backups/' + encodeURIComponent(id) + '/verify', { headers: authHeaders() });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verify backup failed');
+      setStatus('Backup verify ' + id + ': ' + (data.ok ? 'ok' : 'failed'), !data.ok);
+    }
+    async function dryRunRestore() {
+      if (!legacyToken) throw new Error('Please login to restore backup');
+      var id = selectedBackupId();
+      var res = await fetch('/api/system/backups/' + encodeURIComponent(id) + '/restore', {
+        method: 'POST',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+        body: JSON.stringify({ dryRun: true })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Dry-run restore failed');
+      var actions = Array.isArray(data.result && data.result.files) ? data.result.files.length : 0;
+      setStatus('Dry-run restore ' + id + ' succeeded (' + actions + ' file actions)', false);
+    }
+    function renderAgents(rows) {
+      var panel = document.getElementById('agentsPanel');
+      var agents = Array.isArray(rows) ? rows : [];
+      agentsCache = agents;
+      updateChatAgentSelect();
+      if (agents.length === 0) {
+        panel.innerHTML = '<div class="item"><div class="sub">No agents found</div></div>';
+        return;
+      }
+      var html = '';
+      agents.forEach(function(a) {
+        html += '<div class="item">';
+        html += '<div class="name">' + esc(a.name || a.id || 'agent') + '</div>';
+        html += '<div class="sub">id: ' + esc(a.id || '-') + '</div>';
+        html += '<div class="sub">type: ' + esc(a.type || '-') + ' | provider: ' + esc(a.provider || '-') + '</div>';
+        if (Array.isArray(a.skills) && a.skills.length > 0) {
+          html += '<div class="sub">skills: ' + esc(a.skills.join(', ')) + '</div>';
+        }
+        if (a.role !== 'director') {
+          html += '<div class="sub"><button class="mini-btn" data-delete-agent="' + esc(a.id || '') + '">Delete agent</button></div>';
+        }
+        html += '</div>';
+      });
+      panel.innerHTML = html;
+    }
+    function updateChatAgentSelect() {
+      var select = document.getElementById('chatAgentSelect');
+      if (!select) return;
+      var previous = select.value || '';
+      var options = '<option value="">All agents</option>';
+      agentsCache.forEach(function(agent) {
+        options += '<option value="' + esc(agent.id || '') + '">' + esc(agent.name || agent.id || agent.role || 'agent') + '</option>';
+      });
+      select.innerHTML = options;
+      if (previous && agentsCache.some(function(a) { return a.id === previous; })) {
+        select.value = previous;
+      } else {
+        select.value = '';
+      }
+      chatAgentId = select.value || '';
+    }
+    function renderCapabilities(rows) {
+      var panel = document.getElementById('capabilitiesPanel');
+      var capabilities = Array.isArray(rows) ? rows : [];
+      if (capabilities.length === 0) {
+        panel.innerHTML = '<div class="item"><div class="sub">No capability data (login may be required)</div></div>';
+        return;
+      }
+      var html = '';
+      capabilities.forEach(function(c) {
+        html += '<div class="item">';
+        html += '<div class="name">' + esc(c.agentName || c.agentId || 'agent') + '</div>';
+        html += '<div class="sub">risk: ' + esc(c.riskTier || '-') + '</div>';
+        html += '<div class="sub">tools: ' + esc((c.tools || []).length) + ' | skills: ' + esc((c.skills || []).length) + '</div>';
+        html += '</div>';
+      });
+      panel.innerHTML = html;
+    }
+    function renderSkills(rows) {
+      var panel = document.getElementById('skillsPanel');
+      var skills = Array.isArray(rows) ? rows : [];
+      if (skills.length === 0) {
+        panel.innerHTML = '<div class="item"><div class="sub">No skills registered</div></div>';
+        return;
+      }
+      var html = '';
+      skills.forEach(function(s) {
+        html += '<div class="item">';
+        html += '<div class="name">' + esc(s.name || 'skill') + '</div>';
+        html += '<div class="sub">' + esc(s.description || '') + '</div>';
+        html += '</div>';
+      });
+      panel.innerHTML = html;
+    }
+    function renderTools(rows) {
+      var panel = document.getElementById('toolsPanel');
+      var tools = Array.isArray(rows) ? rows : [];
+      if (tools.length === 0) {
+        panel.innerHTML = '<div class="item"><div class="sub">No tools in catalog</div></div>';
+        return;
+      }
+      var html = '';
+      tools.slice(0, 120).forEach(function(t) {
+        html += '<div class="item">';
+        html += '<div class="name">' + esc(t.id || t.name || 'tool') + '</div>';
+        html += '<div class="sub">sandbox: ' + esc(t.sandbox || '-') + '</div>';
+        if (t.description) html += '<div class="sub">' + esc(t.description) + '</div>';
+        html += '</div>';
+      });
+      panel.innerHTML = html;
+    }
+
+    var factoryColumnDefs = [
+      { key: 'done', title: 'Done', description: 'Completed and validated' },
+      { key: 'inProgress', title: 'In Progress', description: 'Currently executing' },
+      { key: 'next', title: 'Next', description: 'Ready for a builder' },
+      { key: 'backlog', title: 'Backlog', description: 'Parked or waiting' }
+    ];
+
+    function renderFactoryStatus(status) {
+      var panel = document.getElementById('factoryStatusPanel');
+      if (!panel) return;
+      if (!status) {
+        panel.innerHTML =
+          '<div class="factory-card">' +
+          '<div class="factory-card-title">Factory locked</div>' +
+          '<div class="factory-card-details">Log in to load the FlowBoard snapshot.</div>' +
+          '</div>';
+        return;
+      }
+      var queueDepth = 0;
+      if (status.queue) {
+        queueDepth = (status.queue.done || 0) + (status.queue.inProgress || 0) + (status.queue.next || 0) + (status.queue.backlog || 0);
+      }
+      var metrics = [
+        ['Active phase', status.activePhase],
+        ['Active track', status.activeTrack],
+        ['Platform status', status.platformStatus],
+        ['Board source', status.sourcePath],
+        ['Queue depth', queueDepth]
+      ];
+      var html = '';
+      metrics.forEach(function(metric) {
+        html += '<div class="factory-card">';
+        html += '<div class="factory-card-title">' + esc(metric[0]) + '</div>';
+        html += '<div class="factory-card-details">' + esc(metric[1] || 'n/a') + '</div>';
+        html += '</div>';
+      });
+      panel.innerHTML = html;
+    }
+
+    function renderFactoryColumns(snapshot) {
+      var container = document.getElementById('factoryColumns');
+      if (!container) return;
+      if (!snapshot || !snapshot.columns) {
+        container.innerHTML =
+          '<div class="factory-column">' +
+          '<div class="factory-column-head">Board unavailable</div>' +
+          '<div class="factory-column-body">' +
+          '<div class="factory-card">' +
+          '<div class="factory-card-title">Authentication required</div>' +
+          '<div class="factory-card-details">Sign in to /api/factory/board for live data.</div>' +
+          '</div>' +
+          '</div>' +
+          '</div>';
+        return;
+      }
+      var html = '';
+      factoryColumnDefs.forEach(function(col) {
+        var items = Array.isArray(snapshot.columns[col.key]) ? snapshot.columns[col.key] : [];
+        html += '<div class="factory-column">';
+        html += '<div class="factory-column-head">' + esc(col.title + ' · ' + items.length) + '</div>';
+        html += '<div class="factory-column-body">';
+        if (items.length === 0) {
+          html += '<div class="factory-card">';
+          html += '<div class="factory-card-title">' + esc(col.description) + '</div>';
+          html += '<div class="factory-card-details">No entries yet.</div>';
+          html += '</div>';
+        } else {
+          items.slice(0, 6).forEach(function(item) {
+            html += '<div class="factory-card">';
+            html += '<div class="factory-card-title">' + esc(item.title || 'untitled') + '</div>';
+            if (Array.isArray(item.details) && item.details.length > 0) {
+              html += '<div class="factory-card-details">' + esc(item.details.join(' · ')) + '</div>';
+            }
+            if (Array.isArray(item.refs) && item.refs.length > 0) {
+              html += '<div class="factory-card-refs">';
+              item.refs.slice(0, 3).forEach(function(ref) {
+                html += '<span class="pill">' + esc(ref) + '</span>';
+              });
+              if (item.refs.length > 3) {
+                html += '<span class="pill">+' + (item.refs.length - 3) + ' more</span>';
+              }
+              html += '</div>';
+            }
+            html += '</div>';
+          });
+        }
+        html += '</div></div>';
+      });
+      container.innerHTML = html;
+    }
+
+    function renderFactoryWorking(snapshot) {
+      var panel = document.getElementById('factoryWorkingList');
+      if (!panel) return;
+      if (!snapshot || !Array.isArray(snapshot.workingFeatures) || snapshot.workingFeatures.length === 0) {
+        panel.innerHTML = '<div class="item">Working feature list will populate after the board loads.</div>';
+        return;
+      }
+      var html = '';
+      snapshot.workingFeatures.slice(0, 10).forEach(function(feature, index) {
+        html += '<div class="item">' + esc(index + 1 + '. ' + feature) + '</div>';
+      });
+      panel.innerHTML = html;
+    }
+
+    function showFactoryBoardLocked() {
+      renderFactoryStatus(null);
+      renderFactoryColumns(null);
+      renderFactoryWorking(null);
+    }
+
+    function renderOrchestratorStatus(snapshot) {
+      var panel = document.getElementById('orchestratorStatusPanel');
+      if (!panel) return;
+      if (!snapshot) {
+        panel.innerHTML = '<div class="item"><div class="sub">Login to unlock the orchestrator heartbeat.</div></div>';
+        return;
+      }
+      var countsLine = Object.keys(snapshot.queueCounts || {})
+        .map(function(phase) {
+          return phase + ': ' + snapshot.queueCounts[phase];
+        })
+        .join(' · ');
+      var html = '';
+      html += '<div class="item"><div class="name">Queue depth</div><div class="sub">' + snapshot.queue.length + '</div></div>';
+      html += '<div class="item"><div class="name">Active agents</div><div class="sub">' + snapshot.activeAgents + '</div></div>';
+      html += '<div class="item"><div class="name">Stuck entries</div><div class="sub">' + snapshot.stuckEntries.length + '</div></div>';
+      html += '<div class="item"><div class="name">Last tick</div><div class="sub">' + (snapshot.lastTickAt || 'n/a') + (snapshot.lastTickReason ? ' (' + esc(snapshot.lastTickReason) + ')' : '') + '</div></div>';
+      html += '<div class="item"><div class="name">Phase counts</div><div class="sub">' + countsLine + '</div></div>';
+      panel.innerHTML = html;
+    }
+
+    function renderOrchestratorQueue(queue) {
+      var panel = document.getElementById('orchestratorQueueList');
+      if (!panel) return;
+      if (!Array.isArray(queue) || queue.length === 0) {
+        panel.innerHTML = '<div class="item"><div class="sub">Queue is empty or requires login.</div></div>';
+        return;
+      }
+      var html = '';
+      queue.slice(0, 12).forEach(function(entry) {
+        html += '<div class="item">';
+        html += '<div class="name">#' + entry.queuePosition + ' ' + esc(entry.title) + '</div>';
+        html += '<div class="sub">';
+        html += '<span class="pill">phase: ' + esc(entry.orchestratorPhase) + '</span>';
+        html += '<span class="pill">priority: ' + esc(entry.priority) + '</span>';
+        html += '<span class="pill">project: ' + esc(entry.projectId) + '</span>';
+        html += '</div>';
+        html += '<div class="sub">assigned: ' + esc(entry.assignedTo || 'unassigned') + ' | owner: ' + esc(entry.ownerId) + '</div>';
+        html += '<div class="sub">updated: ' + esc(entry.lastUpdated) + '</div>';
+        html += '</div>';
+      });
+      panel.innerHTML = html;
+    }
+
+    function renderOrchestratorGraph(graph) {
+      var panel = document.getElementById('orchestratorGraphPanel');
+      if (!panel) return;
+      if (!graph || typeof graph !== 'object' || !Array.isArray(graph.nodes) || graph.nodes.length === 0) {
+        panel.textContent = 'Task graph data will appear here.';
+        return;
+      }
+      var lines = [];
+      lines.push('Nodes:');
+      graph.nodes.forEach(function(node) {
+        var label = '[' + node.type + '] ' + node.label + ' (' + (node.status || node.state || 'unknown') + ')';
+        lines.push('- ' + label + ' · ' + node.id);
+      });
+      lines.push('');
+      lines.push('Edges:');
+      graph.edges.forEach(function(edge) {
+        lines.push('- ' + edge.from + ' → ' + edge.to + ' (' + edge.type + ')');
+      });
+      panel.textContent = lines.join('\\n');
+    }
+
+    function showOrchestratorLocked() {
+      renderOrchestratorStatus(null);
+      renderOrchestratorQueue([]);
+      var panel = document.getElementById('orchestratorGraphPanel');
+      if (panel) panel.textContent = 'Login to view task graph.';
+    }
+
+    async function loadOrchestratorStatus() {
+      if (!legacyToken) {
+        orchestratorStatusCache = null;
+        renderOrchestratorStatus(null);
+        renderOrchestratorQueue([]);
+        return;
+      }
+      var res = await fetch('/api/orchestrator/status', { headers: authHeaders() });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading orchestrator status');
+      orchestratorQueueCache = data.queue || [];
+      orchestratorStatusCache = data;
+      renderOrchestratorStatus(data);
+      renderOrchestratorQueue(orchestratorQueueCache);
+    }
+
+    async function runOrchestratorTick() {
+      if (!legacyToken) throw new Error('Login to tick orchestrator');
+      var reasonInput = document.getElementById('orchestratorTickReason');
+      var reason = reasonInput ? reasonInput.value.trim() : '';
+      var res = await fetch('/api/orchestrator/tick', {
+        method: 'POST',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+        body: JSON.stringify({ reason: reason || undefined })
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Tick failed');
+      orchestratorStatusCache = data.snapshot;
+      orchestratorQueueCache = data.snapshot.queue || [];
+      renderOrchestratorStatus(data.snapshot);
+      renderOrchestratorQueue(orchestratorQueueCache);
+      setStatus('Orchestrator ticked' + (reason ? ': ' + reason : ''), false);
+    }
+
+    async function loadOrchestratorGraph(taskId) {
+      if (!legacyToken) {
+        showOrchestratorLocked();
+        throw new Error('Login to load graphs');
+      }
+      if (!taskId) {
+        throw new Error('Task id is required');
+      }
+      var res = await fetch('/api/tasks/' + encodeURIComponent(taskId) + '/graph', { headers: authHeaders() });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading graph');
+      orchestratorGraphCache = data;
+      renderOrchestratorGraph(data);
+    }
+
+
+    async function loadFactoryStatus() {
+      if (!legacyToken) {
+        renderFactoryStatus(null);
+        return;
+      }
+      var res = await fetch('/api/factory/status', { headers: authHeaders() });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading factory status');
+      factoryStatusCache = data;
+      renderFactoryStatus(data);
+    }
+
+    async function loadFactoryBoard() {
+      if (!legacyToken) {
+        renderFactoryColumns(null);
+        renderFactoryWorking(null);
+        return;
+      }
+      var res = await fetch('/api/factory/board', { headers: authHeaders() });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading factory board');
+      factorySnapshotCache = data && data.board ? data.board : null;
+      renderFactoryColumns(factorySnapshotCache);
+      renderFactoryWorking(factorySnapshotCache);
+    }
+
+    async function refreshFactoryView() {
+      await loadFactoryStatus();
+      await loadFactoryBoard();
+    }
+
+    function renderThreads(rows) {
+      var panel = document.getElementById('threadsPanel');
+      var threads = Array.isArray(rows) ? rows : [];
+      threadsCache = threads;
+      if (threads.length === 0) {
+        panel.textContent = 'NO THREADS FOUND — LOG IN TO SYNC';
+        return;
+      }
+      var lines = ['#  THREAD ID     | AGENT         | TASK         | MESSAGES'];
+      threads.slice(0, 16).forEach(function(t, index) {
+        var id = (t.threadId || t.id || '??').padEnd(12);
+        var agent = (t.agentName || 'unknown').padEnd(12);
+        var task = (t.taskId || '-').padEnd(8);
+        var count = String(t.messageCount || 0).padStart(4);
+        var activeMark = (chatAgentId && (t.threadId || t.id) === chatAgentId) ? '>' : ' ';
+        var line = activeMark + (index + 1).toString().padStart(2) + ' ' + id + ' | ' + agent + ' | ' + task + ' | ' + count;
+        lines.push(line);
+      });
+      panel.textContent = lines.join('\n');
+      var pulseThreads = document.getElementById('pulseThreads');
+      if (pulseThreads) pulseThreads.textContent = String(threads.length);
+    }
+    function renderMessages(rows) {
+      var panel = document.getElementById('messagesPanel');
+      var messages = Array.isArray(rows) ? rows : [];
+      messagesCache = messages;
+      if (messages.length === 0) {
+        panel.textContent = 'NO MESSAGES YET — SEND A COMMAND';
+        return;
+      }
+      var lines = [];
+      messages.slice(-28).forEach(function(m, index) {
+        var timestamp = new Date(m.timestamp || Date.now()).toISOString().split('T')[1].split('.')[0];
+        var author = (m.fromAgentId || 'user').padEnd(8);
+        var role = (m.role || 'agent').padStart(7);
+        var content = esc(m.content || '');
+        lines.push('[' + timestamp + '] ' + author + ' ' + role + ' | ' + content);
+      });
+      panel.textContent = lines.join('\n');
+      var latestLine = messages[messages.length - 1];
+      if (latestLine) {
+        var pulseMessage = document.getElementById('pulseMessage');
+        if (pulseMessage) pulseMessage.textContent = (latestLine.content || '').slice(0, 40);
+      }
+      panel.scrollTop = panel.scrollHeight;
+    }
+
+    function renderChatTaskReference(rows) {
+      var panel = document.getElementById('chatTaskReference');
+      if (!panel) return;
+      var tasks = Array.isArray(rows) ? rows : [];
+      taskSummariesCache = tasks;
+      if (tasks.length === 0) {
+        panel.innerHTML = '<div class="item"><div class="sub">No tasks available for this agent—select an agent and refresh.</div></div>';
+        return;
+      }
+      var html = '';
+      tasks.slice(0, 6).forEach(function(task) {
+        html += '<div class="item">';
+        html += '<div class="name">' + esc(task.title || 'Untitled task') + '</div>';
+        html += '<div class="sub">status: ' + esc(task.status) + ' | priority: ' + esc(task.priority) + '</div>';
+        html += '<div class="sub">owner: ' + esc(task.ownerId) + (task.assignedTo ? ' → ' + esc(task.assignedTo) : '') + '</div>';
+        html += '<div class="sub">category: ' + esc(task.category || '-') + ' | id: ' + esc(task.id) + '</div>';
+        html += '</div>';
+      });
+      panel.innerHTML = html;
+    }
+
+    async function loadChatTaskReference(agentId) {
+      if (!legacyToken) {
+        renderChatTaskReference([]);
+        return;
+      }
+      var targetAgentId = agentId || chatAgentId || getDirectorAgentId();
+      if (!targetAgentId) {
+        renderChatTaskReference([]);
+        return;
+      }
+      var res = await fetch('/api/agents/' + encodeURIComponent(targetAgentId) + '/tasks', { headers: authHeaders() });
+      var data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed loading agent tasks');
+      }
+      renderChatTaskReference(Array.isArray(data.tasks) ? data.tasks : []);
+    }
+    function getDirectorAgentId() {
+      var director = agentsCache.find(function(agent) {
+        return agent && agent.role === 'director';
+      });
+      return director ? director.id : '';
+    }
+    async function loadAgents() {
+      var res = await fetch('/api/agents');
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading agents');
+      var agentList = [];
+      if (data.director) agentList.push({ ...data.director, type: 'director' });
+      (Array.isArray(data.sysadmins) ? data.sysadmins : []).forEach(function(sys) {
+        agentList.push({ ...sys, type: 'sysadmin' });
+      });
+      (Array.isArray(data.specialists) ? data.specialists : []).forEach(function(sp) {
+        agentList.push({ ...sp, type: 'specialist' });
+      });
+      renderAgents(agentList);
+    }
+    async function deleteAgent(agentId) {
+      if (!legacyToken) throw new Error('Please login to delete agents');
+      if (!agentId) throw new Error('Agent id is required');
+      var res = await fetch('/api/agents/' + encodeURIComponent(agentId), {
+        method: 'DELETE',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders())
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Delete agent failed');
+      setStatus('Agent deleted: ' + (data.agentId || agentId), false);
+      await loadAgents();
+    }
+    async function loadCapabilities() {
+      if (!legacyToken) {
+        renderCapabilities([]);
+        return;
+      }
+      var res = await fetch('/api/agents/capabilities', { headers: authHeaders() });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading capabilities');
+      renderCapabilities(Array.isArray(data.capabilities) ? data.capabilities : []);
+    }
+    async function loadSkills() {
+      var res = await fetch('/api/skills');
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading skills');
+      renderSkills(Array.isArray(data.skills) ? data.skills : []);
+    }
+    async function loadTools() {
+      var res = await fetch('/api/tools/catalog');
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading tools');
+      renderTools(data);
+    }
+    async function loadThreads(agentId) {
+      if (!legacyToken) {
+        renderThreads([]);
+        renderMessages([]);
+        return;
+      }
+      var params = new URLSearchParams({ limit: '100' });
+      if (agentId) {
+        params.set('agentId', agentId);
+      }
+      var res = await fetch('/api/agent-bus/threads?' + params.toString(), { headers: authHeaders() });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading chat threads');
+      var threads = Array.isArray(data.threads) ? data.threads : [];
+      renderThreads(threads);
+      chatAgentId = agentId || '';
+      if (threads.length > 0) {
+        await loadMessages(threads[0].threadId || threads[0].id);
+      } else {
+        renderMessages([]);
+      }
+      await loadChatTaskReference(agentId);
+    }
+    async function sendChatMessage() {
+      if (!legacyToken) throw new Error('Login to send chat messages');
+      var select = document.getElementById('chatAgentSelect');
+      var toAgentId = select ? select.value : '';
+      if (!toAgentId) throw new Error('Choose an agent to message');
+      var messageNode = document.getElementById('chatMessageInput');
+      var messageText = messageNode ? messageNode.value.trim() : '';
+      if (!messageText) throw new Error('Enter a message');
+      var directorId = getDirectorAgentId();
+      if (!directorId) throw new Error('Director agent is missing');
+      var preview = {
+        fromAgentId: 'You',
+        role: 'user',
+        content: messageText,
+        timestamp: Date.now()
+      };
+      renderMessages([preview].concat(messagesCache));
+      setStatus('Sending to ' + toAgentId + '...', false);
+      var res = await fetch('/api/agent-bus/send', {
+        method: 'POST',
+        headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+        body: JSON.stringify({
+          fromAgentId: directorId,
+          toAgentId: toAgentId,
+          content: messageText,
+          expectReply: true
+        })
+      });
+      var data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Send failed');
+      }
+      if (messageNode) messageNode.value = '';
+      chatAgentId = toAgentId;
+      setStatus('Message queued to ' + toAgentId, false);
+      var threadId = data && data.message ? data.message.threadId || '' : '';
+      await loadThreads(toAgentId);
+      if (threadId) {
+        await loadMessages(threadId);
+      } else {
+        var firstId = threadsCache[0] ? (threadsCache[0].threadId || threadsCache[0].id) : '';
+        await loadMessages(firstId);
+      }
+      await loadChatTaskReference(toAgentId);
+    }
+    async function loadMessages(threadId) {
+      if (!legacyToken) {
+        renderMessages([]);
+        return;
+      }
+      var tid = threadId || (threadsCache[0] && (threadsCache[0].threadId || threadsCache[0].id)) || '';
+      if (!tid) {
+        renderMessages([]);
+        return;
+      }
+      var res = await fetch('/api/agent-bus/messages?limit=200&threadId=' + encodeURIComponent(tid), { headers: authHeaders() });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading thread messages');
+      renderMessages(Array.isArray(data.messages) ? data.messages : []);
+    }
+    async function loadConfig() {
+      var res = await fetch('/api/config', legacyToken ? { headers: authHeaders() } : undefined);
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading config');
+      writeBox('configPanel', data);
+      populateConfigForm(data);
+    }
+    async function loadSecurity() {
+      var res = await fetch('/api/security/status', legacyToken ? { headers: authHeaders() } : undefined);
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed loading security status');
+      writeBox('securityPanel', data);
+    }
+    async function refreshCurrentSection() {
+      if (currentSection === 'overview') {
+        await loadAgents();
+        await refreshAll();
+        return;
+      }
+      if (currentSection === 'agents') {
+        await loadAgents();
+        await loadCapabilities();
+        return;
+      }
+      if (currentSection === 'skills') {
+        await loadSkills();
+        await loadTools();
+        return;
+      }
+      if (currentSection === 'factory') {
+        await refreshFactoryView();
+        return;
+      }
+      if (currentSection === 'orchestrator') {
+        await loadOrchestratorStatus();
+        return;
+      }
+      if (currentSection === 'chats') {
+        await loadAgents();
+        await loadThreads(chatAgentId);
+        return;
+      }
+      if (currentSection === 'configuration') {
+        await loadConfig();
+        await loadSecurity();
+      }
+    }
+    async function refreshAll() {
+      try {
+        await loadTasks();
+        await loadRunning();
+        await loadDelegations();
+        await loadBackups();
+        if (legacyToken) {
+          await loadBackupHealth();
+        } else {
+          renderBackupHealthCard(null);
+        }
+        if (legacyToken) {
+          await refreshFactoryView();
+        } else {
+          showFactoryBoardLocked();
+        }
+        if (legacyToken) {
+          await loadOrchestratorStatus();
+        } else {
+          showOrchestratorLocked();
+        }
+        if (!statusLine.textContent || statusLine.textContent === 'Not authenticated') {
+          setStatus('Data loaded', false);
+        }
+        loadIncidentBadge();
+      } catch (e) {
+        setStatus(e.message || 'Refresh failed', true);
+      }
+    }
+    async function loadIncidentBadge() {
+      try {
+        const r = await fetch('/api/incidents/stats', { headers: authHeaders() });
+        if (!r.ok) return;
+        const d = await r.json();
+        const open = (d.open || 0) + (d.investigating || 0);
+        const el = document.getElementById('tab-incident-badge');
+        if (el) { el.textContent = open; el.style.display = open > 0 ? '' : 'none'; }
+      } catch (_) {}
+    }
+    function safeAddClick(id, handler) {
+      var node = document.getElementById(id);
+      if (!node) return;
+      node.addEventListener('click', handler);
+    }
+    safeAddClick('loginBtn', async function() {
+      var ok = await login();
+      if (ok) refreshCurrentSection();
+    });
+    safeAddClick('logoutBtn', function() {
+      logout();
+    });
+    safeAddClick('refreshBtn', async function() {
+      if (!isAuthenticated()) {
+        setStatus('Login required', true);
+        return;
+      }
+      try { await refreshCurrentSection(); } catch (e) { setStatus(e.message || 'Refresh failed', true); }
+    });
+    safeAddClick('refreshTasksBtn', async function() {
+      try { await loadTasks(); } catch (e) { setStatus(e.message || 'Task refresh failed', true); }
+    });
+    safeAddClick('refreshRunningBtn', async function() {
+      try { await loadRunning(); } catch (e) { setStatus(e.message || 'Running refresh failed', true); }
+    });
+    safeAddClick('refreshDelegationsBtn', async function() {
+      try { await loadDelegations(); } catch (e) { setStatus(e.message || 'Delegations refresh failed', true); }
+    });
+    safeAddClick('refreshBackupsBtn', async function() {
+      try { await loadBackups(); } catch (e) { setStatus(e.message || 'Backups refresh failed', true); }
+    });
+    safeAddClick('refreshOrchestratorBtn', async function() {
+      try { await loadOrchestratorStatus(); } catch (e) { setStatus(e.message || 'Orchestrator refresh failed', true); }
+    });
+    safeAddClick('orchestratorTickBtn', async function() {
+      try { await runOrchestratorTick(); } catch (e) { setStatus(e.message || 'Orchestrator tick failed', true); }
+    });
+    safeAddClick('orchestratorGraphBtn', async function() {
+      try {
+        var input = document.getElementById('orchestratorGraphInput');
+        var taskId = input ? input.value.trim() : '';
+        await loadOrchestratorGraph(taskId);
+      } catch (e) {
+        setStatus(e.message || 'Graph load failed', true);
+      }
+    });
+    safeAddClick('createBackupBtn', async function() {
+      try { await createBackup(); } catch (e) { setStatus(e.message || 'Create backup failed', true); }
+    });
+    safeAddClick('verifyBackupBtn', async function() {
+      try { await verifyBackup(); } catch (e) { setStatus(e.message || 'Verify backup failed', true); }
+    });
+    document.getElementById('dryRunRestoreBtn').addEventListener('click', async function() {
+      try { await dryRunRestore(); } catch (e) { setStatus(e.message || 'Dry-run restore failed', true); }
+    });
+    document.getElementById('refreshAgentsBtn').addEventListener('click', async function() {
+      try { await loadAgents(); } catch (e) { setStatus(e.message || 'Agent refresh failed', true); }
+    });
+    var agentsPanel = document.getElementById('agentsPanel');
+    if (agentsPanel) {
+      agentsPanel.addEventListener('click', async function(event) {
+        var target = event.target;
+        var agentId = target && target.getAttribute ? target.getAttribute('data-delete-agent') : null;
+        if (!agentId && target && target.dataset) {
+          agentId = target.dataset.deleteAgent || '';
+        }
+        if (!agentId) return;
+        try {
+          await deleteAgent(agentId);
+        } catch (e) {
+          setStatus(e.message || 'Agent deletion failed', true);
+        }
+      });
+    }
+    document.getElementById('refreshCapabilitiesBtn').addEventListener('click', async function() {
+      try { await loadCapabilities(); } catch (e) { setStatus(e.message || 'Capabilities refresh failed', true); }
+    });
+    document.getElementById('refreshSkillsBtn').addEventListener('click', async function() {
+      try { await loadSkills(); } catch (e) { setStatus(e.message || 'Skills refresh failed', true); }
+    });
+    document.getElementById('refreshToolsBtn').addEventListener('click', async function() {
+      try { await loadTools(); } catch (e) { setStatus(e.message || 'Tools refresh failed', true); }
+    });
+    document.getElementById('refreshFactoryBtn').addEventListener('click', async function() {
+      try {
+        await refreshFactoryView();
+        setStatus('Factory board refreshed', false);
+      } catch (e) {
+        setStatus(e.message || 'Factory refresh failed', true);
+      }
+    });
+    document.getElementById('refreshChatsBtn').addEventListener('click', async function() {
+      try { await loadThreads(chatAgentId); } catch (e) { setStatus(e.message || 'Threads refresh failed', true); }
+    });
+    document.getElementById('refreshMessagesBtn').addEventListener('click', async function() {
+      try { await loadMessages(); } catch (e) { setStatus(e.message || 'Messages refresh failed', true); }
+    });
+    document.getElementById('refreshChatAgentsBtn').addEventListener('click', async function() {
+      try { await loadAgents(); } catch (e) { setStatus(e.message || 'Agent refresh failed', true); }
+    });
+    document.getElementById('loadChatThreadsBtn').addEventListener('click', async function() {
+      try { await loadThreads(chatAgentId); } catch (e) { setStatus(e.message || 'Threads load failed', true); }
+    });
+    var chatAgentSelect = document.getElementById('chatAgentSelect');
+    if (chatAgentSelect) {
+      chatAgentSelect.addEventListener('change', async function() {
+        chatAgentId = chatAgentSelect.value || '';
+        try { await loadThreads(chatAgentId); } catch (e) { setStatus(e.message || 'Threads refresh failed', true); }
+      });
+    }
+    document.getElementById('sendChatBtn').addEventListener('click', async function() {
+      try { await sendChatMessage(); } catch (e) { setStatus(e.message || 'Send failed', true); }
+    });
+    document.getElementById('refreshConfigBtn').addEventListener('click', async function() {
+      try { await loadConfig(); } catch (e) { setStatus(e.message || 'Config refresh failed', true); }
+    });
+    var saveConfigBtn = document.getElementById('saveConfigBtn');
+    if (saveConfigBtn) {
+      saveConfigBtn.addEventListener('click', async function() {
+        try { await saveConfig(); } catch (e) { setStatus(e.message || 'Save failed', true); }
+      });
+    }
+    document.getElementById('refreshSecurityBtn').addEventListener('click', async function() {
+      try { await loadSecurity(); } catch (e) { setStatus(e.message || 'Security refresh failed', true); }
+    });
+    document.querySelectorAll('.tab').forEach(function(node) {
+      node.addEventListener('click', async function() {
+        if (!isAuthenticated()) {
+          setStatus('Login required', true);
+          return;
+        }
+        showSection(node.getAttribute('data-section') || 'overview');
+        try {
+          await refreshCurrentSection();
+        } catch (e) {
+          setStatus(e.message || 'Section refresh failed', true);
+        }
+      });
+    });
+    showFactoryBoardLocked();
+    applyAuthUi(null);
+    (async function initDashboard() {
+      if (await validateSessionToken()) {
+        setStatus('Session restored', false);
+        refreshCurrentSection();
+      } else {
+        setStatus('Not authenticated', false);
+        showOrchestratorLocked();
+      }
+    })();
+  </script>
+</body>
+</html>

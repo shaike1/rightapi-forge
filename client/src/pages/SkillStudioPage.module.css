@@ -1,0 +1,332 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   SkillStudio — list • editor • metadata + test runner
+   ────────────────────────────────────────────────────────────────────────── */
+
+.shell {
+  display: grid;
+  grid-template-columns: 280px 1fr 360px;
+  grid-template-rows: 1fr auto;
+  height: calc(100vh - 56px);
+  min-height: 600px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg2);
+}
+@media (max-width: 1280px) {
+  .shell { grid-template-columns: 240px 1fr 320px; }
+}
+
+/* ── Left: skill list, grouped by source ───────────────────────────────── */
+.list {
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  grid-row: 1 / span 2;
+}
+.listHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  font-weight: 600;
+}
+.listSearch {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.listSearch input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.listSearch input:focus { outline: none; border-color: var(--accent); }
+
+.section {
+  padding: 12px 14px 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  font-weight: 600;
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+}
+.section:first-of-type { border-top: none; margin-top: 0; }
+
+.entry {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  margin: 2px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.entry:hover { background: var(--bg3); }
+.entryActive {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--text);
+}
+.entryName { font-weight: 500; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+.entryDot { width: 6px; height: 6px; border-radius: 50%; }
+.entryMeta { font-size: 10px; color: var(--text3); display: flex; gap: 10px; }
+.cbDot {
+  display: inline-block;
+  width: 6px; height: 6px; border-radius: 50%;
+  margin-left: 6px;
+}
+
+/* ── Centre: editor + metadata ─────────────────────────────────────────── */
+.editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.editorTabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+.editorTab {
+  background: transparent;
+  border: none;
+  color: var(--text3);
+  font-size: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  font-weight: 500;
+}
+.editorTab:hover { color: var(--text2); }
+.editorTabActive {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+.editorBody {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.editorEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text3);
+  text-align: center;
+  padding: 40px;
+}
+.editorEmptyTitle { color: var(--text2); font-size: 14px; margin-bottom: 8px; }
+
+.editorTopBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+.editorTopBar h2 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  flex: 1;
+}
+.editorTopBar .id {
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  color: var(--text3);
+}
+.editorBadge {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--bg5);
+  color: var(--text2);
+  margin-right: 4px;
+}
+.editorBadge.builtin      { background: var(--info-bg);    color: var(--info); }
+.editorBadge.plugin       { background: var(--purple-bg);  color: var(--purple); }
+.editorBadge.sandboxed    { background: var(--warning-bg); color: var(--warning); }
+.editorBadge.crystallized { background: var(--success-bg); color: var(--success); }
+
+/* Code area: Monaco lives in a flexed container so the editor's own
+   ResizeObserver picks up height changes. */
+.editorMonaco {
+  flex: 1;
+  min-height: 0;
+}
+
+.editorMeta {
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  overflow-y: auto;
+}
+.editorMeta .field { display: flex; flex-direction: column; gap: 4px; }
+.editorMeta .field.full { grid-column: 1 / -1; }
+.editorMeta label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  font-weight: 600;
+}
+.editorMeta input, .editorMeta textarea {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  padding: 7px 10px;
+  font-family: inherit;
+}
+.editorMeta textarea { resize: vertical; min-height: 70px; font-family: ui-monospace, monospace; }
+.editorMeta input:focus, .editorMeta textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.editorMeta input:disabled { color: var(--text3); }
+
+/* ── Right pane: skill commands list + crystallized info ──────────────── */
+.right {
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+.rightHeader {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.command {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.commandName {
+  color: var(--text);
+  font-weight: 500;
+  font-family: ui-monospace, monospace;
+}
+.commandDesc {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 4px;
+}
+
+/* Crystallized skill specifics */
+.crystalDetails {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.crystalRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 4px 0;
+}
+.crystalRow span:first-child { color: var(--text3); }
+.crystalRow span:last-child { color: var(--text); font-family: ui-monospace, monospace; }
+.crystalActions {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+/* ── Bottom: test runner ───────────────────────────────────────────────── */
+.runner {
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  min-height: 0;
+}
+.runnerInputs {
+  border-right: 1px solid var(--border);
+  padding: 12px 14px;
+  overflow-y: auto;
+  max-height: 300px;
+}
+.runnerInputs h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.runnerInputs select {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+}
+.runnerOutput {
+  padding: 12px 14px;
+  overflow-y: auto;
+  max-height: 300px;
+}
+.runnerOutput h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  font-weight: 600;
+  margin: 0 0 8px;
+  display: flex;
+  justify-content: space-between;
+}
+.runnerOutput pre {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+  max-height: 240px;
+  overflow-y: auto;
+}
+.runnerOutput pre.success { border-color: var(--success); }
+.runnerOutput pre.error { border-color: var(--danger); }

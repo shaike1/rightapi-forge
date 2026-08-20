@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — Server Monitor</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .sv-container { max-width: 1200px; margin: 0 auto; }
+    .sv-summary { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .sv-stat { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 20px; text-align: center; min-width: 100px; }
+    .sv-stat-val { font-size: 1.6rem; font-weight: 700; }
+    .sv-stat-val.online { color: var(--success); }
+    .sv-stat-val.offline { color: var(--danger); }
+    .sv-stat-val.unknown { color: var(--text3); }
+    .sv-stat-lbl { font-size: .65rem; color: var(--text3); text-transform: uppercase; margin-top: 2px; }
+
+    .sv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; margin-bottom: 24px; }
+
+    .sv-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .2s; }
+    .sv-card:hover { border-color: var(--accent); }
+    .sv-card.online { border-left: 3px solid var(--success); }
+    .sv-card.offline { border-left: 3px solid var(--danger); }
+    .sv-card.unknown { border-left: 3px solid var(--text3); }
+
+    .sv-card-header { padding: 12px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--bg3); }
+    .sv-card-header .sv-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .sv-dot.online { background: var(--success); }
+    .sv-dot.offline { background: var(--danger); }
+    .sv-dot.unknown { background: var(--text3); }
+    .sv-card-header .sv-name { font-size: .85rem; font-weight: 600; color: var(--text); flex: 1; }
+    .sv-card-header .sv-host { font-size: .7rem; color: var(--text3); font-family: monospace; }
+
+    .sv-card-body { padding: 12px 14px; }
+    .sv-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+    .sv-metric { text-align: center; }
+    .sv-metric-val { font-size: 1rem; font-weight: 600; color: var(--text); }
+    .sv-metric-val.warn { color: var(--warning); }
+    .sv-metric-val.crit { color: var(--danger); }
+    .sv-metric-lbl { font-size: .6rem; color: var(--text3); text-transform: uppercase; }
+    .sv-meta { font-size: .65rem; color: var(--text3); display: flex; justify-content: space-between; }
+    .sv-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+    .sv-tag { padding: 1px 6px; background: var(--bg3); border-radius: 8px; font-size: .6rem; color: var(--text2); }
+
+    .sv-card-actions { padding: 8px 14px; border-top: 1px solid var(--bg3); display: flex; gap: 6px; }
+    .sv-card-actions button { padding: 4px 10px; font-size: .7rem; border: 1px solid var(--border); border-radius: 3px; background: var(--bg); color: var(--text2); cursor: pointer; }
+    .sv-card-actions button:hover { border-color: var(--accent); color: var(--accent); }
+    .sv-card-actions button.check { border-color: var(--success); color: var(--success); }
+    .sv-card-actions button.del { border-color: var(--danger); color: var(--danger); }
+
+    .sv-create { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 24px; display: none; }
+    .sv-create.visible { display: block; }
+    .sv-create h3 { margin: 0 0 12px; font-size: .9rem; color: var(--text); }
+    .sv-form { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .sv-form .full { grid-column: 1 / -1; }
+    .sv-form .span2 { grid-column: span 2; }
+    .sv-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-family: inherit; font-size: .8rem; width: 100%; box-sizing: border-box; }
+    .sv-input:focus { border-color: var(--accent); outline: none; }
+    .sv-btn { padding: 8px 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-size: .8rem; cursor: pointer; }
+    .sv-btn:hover { opacity: .9; }
+    .sv-btn.secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+    .toolbar { display: flex; gap: 10px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+<script src="/sidebar.js"></script>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Server Monitor</h1>
+      <p class="page-subtitle">Multi-server SSH health monitoring</p>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="sv-container">
+
+      <div class="sv-summary" id="sv-summary">
+        <div class="sv-stat"><div class="sv-stat-val" id="sv-total">-</div><div class="sv-stat-lbl">Total</div></div>
+        <div class="sv-stat"><div class="sv-stat-val online" id="sv-online">-</div><div class="sv-stat-lbl">Online</div></div>
+        <div class="sv-stat"><div class="sv-stat-val offline" id="sv-offline">-</div><div class="sv-stat-lbl">Offline</div></div>
+        <div class="sv-stat"><div class="sv-stat-val unknown" id="sv-unknown">-</div><div class="sv-stat-lbl">Unknown</div></div>
+      </div>
+
+      <div class="toolbar">
+        <button class="sv-btn" onclick="toggleCreate()">+ Add Server</button>
+        <button class="sv-btn secondary" onclick="checkAll()">Check All Now</button>
+      </div>
+
+      <div class="sv-create" id="sv-create">
+        <h3 id="form-title">Add Server</h3>
+        <div class="sv-form">
+          <input type="text" class="sv-input" id="sv-name" placeholder="Server name">
+          <input type="text" class="sv-input" id="sv-host" placeholder="Host / IP">
+          <input type="number" class="sv-input" id="sv-port" placeholder="SSH Port" value="22">
+          <input type="text" class="sv-input" id="sv-username" placeholder="Username" value="root">
+          <select class="sv-input" id="sv-auth">
+            <option value="key">SSH Key</option>
+            <option value="password">Password</option>
+          </select>
+          <input type="text" class="sv-input" id="sv-keypath" placeholder="Key path (default: /root/.ssh/id_rsa)">
+          <input type="text" class="sv-input span2" id="sv-description" placeholder="Description">
+          <input type="text" class="sv-input" id="sv-tags" placeholder="Tags (comma-separated)">
+          <div class="full" style="display:flex;gap:8px;margin-top:8px;">
+            <button class="sv-btn" onclick="saveServer()">Save</button>
+            <button class="sv-btn secondary" onclick="toggleCreate()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sv-grid" id="sv-grid">
+        <div style="color:var(--text3);padding:20px;text-align:center;">Loading servers...</div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="/auth-guard.js"></script>
+<script>
+(function() {
+  var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token');
+  if (!token) window.location.href = '/';
+  function hdr() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
+
+  var editingId = null;
+
+  function metricClass(val) { return val > 85 ? 'crit' : val > 65 ? 'warn' : ''; }
+  function formatUptime(s) { if (!s) return '-'; var d = Math.floor(s/86400); var h = Math.floor((s%86400)/3600); return d > 0 ? d+'d '+h+'h' : h+'h'; }
+  function timeAgo(ts) { if (!ts) return 'Never'; var d = Date.now()-new Date(ts).getTime(); if(d<60000)return Math.round(d/1000)+'s ago'; if(d<3600000)return Math.round(d/60000)+'m ago'; if(d<86400000)return Math.round(d/3600000)+'h ago'; return Math.round(d/86400000)+'d ago'; }
+
+  function loadSummary() {
+    fetch('/api/monitored-servers/summary', { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        document.getElementById('sv-total').textContent = d.total || 0;
+        document.getElementById('sv-online').textContent = d.online || 0;
+        document.getElementById('sv-offline').textContent = d.offline || 0;
+        document.getElementById('sv-unknown').textContent = d.unknown || 0;
+      }).catch(function(){});
+  }
+
+  function loadServers() {
+    fetch('/api/monitored-servers', { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var el = document.getElementById('sv-grid');
+        var servers = data.servers || [];
+        if (servers.length === 0) {
+          el.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center;">No servers configured. Add one to start monitoring.</div>';
+          return;
+        }
+        el.innerHTML = servers.map(function(s) {
+          var m = s.lastMetrics || {};
+          var tags = s.tags || [];
+          return '<div class="sv-card ' + s.status + '">' +
+            '<div class="sv-card-header">' +
+              '<span class="sv-dot ' + s.status + '"></span>' +
+              '<span class="sv-name">' + s.name + '</span>' +
+              '<span class="sv-host">' + s.host + ':' + s.port + '</span>' +
+            '</div>' +
+            '<div class="sv-card-body">' +
+              '<div class="sv-metrics">' +
+                '<div class="sv-metric"><div class="sv-metric-val ' + metricClass(m.cpu||0) + '">' + (m.cpu != null ? m.cpu+'%' : '-') + '</div><div class="sv-metric-lbl">CPU</div></div>' +
+                '<div class="sv-metric"><div class="sv-metric-val ' + metricClass(m.memory||0) + '">' + (m.memory != null ? m.memory+'%' : '-') + '</div><div class="sv-metric-lbl">Memory</div></div>' +
+                '<div class="sv-metric"><div class="sv-metric-val ' + metricClass(m.disk||0) + '">' + (m.disk != null ? m.disk+'%' : '-') + '</div><div class="sv-metric-lbl">Disk</div></div>' +
+                '<div class="sv-metric"><div class="sv-metric-val">' + formatUptime(m.uptime) + '</div><div class="sv-metric-lbl">Uptime</div></div>' +
+              '</div>' +
+              '<div class="sv-meta"><span>Load: ' + (m.loadAvg || '-') + '</span><span>Checked: ' + timeAgo(s.lastCheck) + '</span></div>' +
+              (tags.length > 0 ? '<div class="sv-tags">' + tags.map(function(t){return '<span class="sv-tag">'+t+'</span>';}).join('') + '</div>' : '') +
+            '</div>' +
+            '<div class="sv-card-actions">' +
+              '<button class="check" onclick="checkServer(\'' + s.id + '\')">Check Now</button>' +
+              '<button onclick="editServer(\'' + s.id + '\')">Edit</button>' +
+              '<button class="del" onclick="deleteServer(\'' + s.id + '\')">Delete</button>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+        loadSummary();
+      });
+  }
+
+  window.toggleCreate = function() {
+    var el = document.getElementById('sv-create');
+    el.classList.toggle('visible');
+    if (!el.classList.contains('visible')) { editingId = null; clearForm(); }
+  };
+
+  function clearForm() {
+    document.getElementById('sv-name').value = '';
+    document.getElementById('sv-host').value = '';
+    document.getElementById('sv-port').value = '22';
+    document.getElementById('sv-username').value = 'root';
+    document.getElementById('sv-auth').value = 'key';
+    document.getElementById('sv-keypath').value = '';
+    document.getElementById('sv-description').value = '';
+    document.getElementById('sv-tags').value = '';
+    document.getElementById('form-title').textContent = 'Add Server';
+    editingId = null;
+  }
+
+  window.saveServer = function() {
+    var name = document.getElementById('sv-name').value.trim();
+    var host = document.getElementById('sv-host').value.trim();
+    var port = parseInt(document.getElementById('sv-port').value) || 22;
+    var username = document.getElementById('sv-username').value.trim() || 'root';
+    var authMethod = document.getElementById('sv-auth').value;
+    var keyPath = document.getElementById('sv-keypath').value.trim();
+    var description = document.getElementById('sv-description').value.trim();
+    var tags = document.getElementById('sv-tags').value.split(',').map(function(t){return t.trim();}).filter(Boolean);
+
+    if (!name || !host) { alert('Name and host are required'); return; }
+
+    var body = { name: name, host: host, port: port, username: username, authMethod: authMethod, keyPath: keyPath || undefined, description: description, tags: tags };
+
+    if (editingId) {
+      fetch('/api/monitored-servers/' + editingId, { method: 'PATCH', headers: hdr(), body: JSON.stringify(body) })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { if (d.error) { alert(d.error); return; } toggleCreate(); loadServers(); });
+    } else {
+      fetch('/api/monitored-servers', { method: 'POST', headers: hdr(), body: JSON.stringify(body) })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { if (d.error) { alert(d.error); return; } toggleCreate(); loadServers(); });
+    }
+  };
+
+  window.editServer = function(id) {
+    fetch('/api/monitored-servers/' + id, { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(s) {
+        editingId = id;
+        document.getElementById('sv-name').value = s.name || '';
+        document.getElementById('sv-host').value = s.host || '';
+        document.getElementById('sv-port').value = s.port || 22;
+        document.getElementById('sv-username').value = s.username || 'root';
+        document.getElementById('sv-auth').value = s.authMethod || 'key';
+        document.getElementById('sv-keypath').value = '';
+        document.getElementById('sv-description').value = s.description || '';
+        document.getElementById('sv-tags').value = (s.tags || []).join(', ');
+        document.getElementById('form-title').textContent = 'Edit: ' + s.name;
+        document.getElementById('sv-create').classList.add('visible');
+      });
+  };
+
+  window.deleteServer = function(id) {
+    if (!confirm('Remove this server from monitoring?')) return;
+    fetch('/api/monitored-servers/' + id, { method: 'DELETE', headers: hdr() })
+      .then(function() { loadServers(); });
+  };
+
+  window.checkServer = function(id) {
+    fetch('/api/monitored-servers/' + id + '/check', { method: 'POST', headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        alert('Status: ' + d.status + (d.metrics ? '\nCPU: ' + d.metrics.cpu + '%  Mem: ' + d.metrics.memory + '%  Disk: ' + d.metrics.disk + '%' : ''));
+        loadServers();
+      });
+  };
+
+  window.checkAll = function() {
+    var servers = document.querySelectorAll('.sv-card');
+    // Just reload after a short delay to trigger checks
+    fetch('/api/monitored-servers', { headers: hdr() }).then(function(r){return r.json();}).then(function(data) {
+      var promises = (data.servers || []).map(function(s) {
+        return fetch('/api/monitored-servers/' + s.id + '/check', { method: 'POST', headers: hdr() });
+      });
+      Promise.all(promises).then(function() { loadServers(); });
+    });
+  };
+
+  loadServers();
+  loadSummary();
+  setInterval(loadServers, 30000);
+})();
+</script>
+</body>
+</html>

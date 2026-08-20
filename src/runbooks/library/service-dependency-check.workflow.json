@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "id": "library.service-dependency-check",
+  "name": "Service Dependency Check",
+  "description": "Verifies a configurable set of systemd services AND a configurable set of Docker containers are running and healthy. Reports each as state=running/inactive/failed; lists everything that is NOT in the desired state. Fails when any required service or container isn't running so the alert pipeline reacts immediately.",
+  "version": "1.0.0",
+  "tags": ["library", "services", "monitoring", "health"],
+  "inputs": [
+    {
+      "name": "host",
+      "type": "string",
+      "default": "host.docker.internal"
+    },
+    {
+      "name": "requiredServices",
+      "type": "string",
+      "default": "ssh docker",
+      "description": "Space-separated systemd unit names that must be active"
+    },
+    {
+      "name": "requiredContainers",
+      "type": "string",
+      "default": "itops-agents",
+      "description": "Space-separated container names that must be Up"
+    }
+  ],
+  "onError": "continue",
+  "steps": [
+    {
+      "id": "systemd_states",
+      "type": "bash",
+      "description": "is-active for each required systemd unit; reports name=state per line",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'for s in ${inputs.requiredServices}; do printf \"%s=%s \" \"$s\" \"$(systemctl is-active \"$s\" 2>/dev/null || echo missing)\"; done; echo'",
+      "timeoutMs": 30000
+    },
+    {
+      "id": "systemd_check",
+      "type": "bash",
+      "description": "Fail (exit 6) when any required systemd unit isn't active. Lists offenders.",
+      "command": "BAD=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'for s in ${inputs.requiredServices}; do st=$(systemctl is-active \"$s\" 2>/dev/null || echo missing); [ \"$st\" = \"active\" ] || printf \"%s(%s) \" \"$s\" \"$st\"; done'); if [ -n \"$BAD\" ]; then echo \"NOT_ACTIVE: $BAD\"; exit 6; else echo 'all required systemd units active'; fi",
+      "timeoutMs": 30000,
+      "onError": "continue"
+    },
+    {
+      "id": "container_states",
+      "type": "bash",
+      "description": "Inspect each required container's State.Status + Health (when present)",
+      "command": "for c in ${inputs.requiredContainers}; do S=$(docker inspect -f '{{.State.Status}}' \"$c\" 2>/dev/null || echo missing); H=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \"$c\" 2>/dev/null || echo none); printf \"%s=%s/%s \" \"$c\" \"$S\" \"$H\"; done; echo",
+      "timeoutMs": 30000
+    },
+    {
+      "id": "container_check",
+      "type": "bash",
+      "description": "Fail (exit 7) when any required container isn't running, or is unhealthy",
+      "command": "BAD=''; for c in ${inputs.requiredContainers}; do S=$(docker inspect -f '{{.State.Status}}' \"$c\" 2>/dev/null || echo missing); H=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' \"$c\" 2>/dev/null || echo none); if [ \"$S\" != \"running\" ] || [ \"$H\" = \"unhealthy\" ]; then BAD=\"$BAD$c($S/$H) \"; fi; done; if [ -n \"$BAD\" ]; then echo \"NOT_HEALTHY: $BAD\"; exit 7; else echo 'all required containers running + healthy'; fi",
+      "timeoutMs": 30000,
+      "onError": "continue"
+    },
+    {
+      "id": "summary",
+      "type": "bash",
+      "description": "Rollup. systemd_check.ok=false → restart the unit; container_check.ok=false → docker restart / inspect logs.",
+      "command": "echo \"ServiceDependencyCheck on ${inputs.host}: systemd_ok=${steps.systemd_check.ok} containers_ok=${steps.container_check.ok}. If systemd_ok=false, action: 'sudo systemctl restart <unit>'. If containers_ok=false, action: 'docker logs <name>' then 'docker restart <name>'.\"",
+      "timeoutMs": 5000,
+      "onError": "fail"
+    }
+  ]
+}

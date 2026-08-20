@@ -1,0 +1,328 @@
+/* Shared layout primitives for the management pages.
+   Used by AgentDesigner, ToolManager, and LiveConsole. */
+
+.shell {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  height: calc(100vh - 56px);
+  min-height: 600px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg2);
+}
+@media (max-width: 1280px) { .shell { grid-template-columns: 280px 1fr; } }
+
+.sidebar {
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+.sidebarHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  font-weight: 600;
+}
+.sidebarSearch {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebarSearch input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.sidebarSearch input:focus { outline: none; border-color: var(--accent); }
+
+.entry {
+  display: block;
+  width: calc(100% - 16px);
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.entry:hover { background: var(--bg3); }
+.entryActive {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+.entryName {
+  font-weight: 500;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.entryDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.entryMeta {
+  font-size: 10px;
+  color: var(--text3);
+  display: flex;
+  gap: 10px;
+}
+
+.main {
+  overflow-y: auto;
+  background: var(--bg);
+}
+.mainHeader {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mainHeader h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  flex: 1;
+}
+.mainHeader .id {
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  color: var(--text3);
+}
+.mainBody {
+  padding: 20px;
+}
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  color: var(--text3);
+  padding: 40px;
+}
+.emptyTitle { color: var(--text2); font-size: 14px; margin-bottom: 8px; }
+
+/* ── Form primitives ────────────────────────────────────────────────────── */
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.formGrid .full { grid-column: 1 / -1; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  font-weight: 600;
+}
+.field input, .field textarea, .field select {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  padding: 7px 10px;
+  font-family: inherit;
+}
+.field textarea { resize: vertical; min-height: 70px; }
+.field input:focus, .field textarea:focus, .field select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Personality slider — used by Agent Designer */
+.slider {
+  display: grid;
+  grid-template-columns: 120px 1fr 40px;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.slider label { color: var(--text2); font-size: 11px; }
+.slider input[type=range] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+.slider .value {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--text);
+  text-align: right;
+}
+
+/* Section heading inside the main pane */
+.section {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  font-weight: 600;
+  margin: 16px 0 8px;
+}
+
+/* Stat strip used by Agent Designer + Tool Manager */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.statCard {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.statLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  font-weight: 600;
+}
+.statValue {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  margin-top: 4px;
+}
+.statSub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* Skill chip — multi-select grid in Agent Designer */
+.skillGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 6px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.skillChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text2);
+  padding: 4px 6px;
+  cursor: pointer;
+  user-select: none;
+}
+.skillChip input { accent-color: var(--accent); }
+.skillChip.checked { color: var(--text); }
+
+/* ── Status pill ────────────────────────────────────────────────────────── */
+.pill {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--bg5);
+  color: var(--text2);
+}
+.pill.success { background: var(--success-bg); color: var(--success); }
+.pill.warning { background: var(--warning-bg); color: var(--warning); }
+.pill.danger  { background: var(--danger-bg);  color: var(--danger); }
+.pill.info    { background: var(--info-bg);    color: var(--info); }
+
+/* ── Live Console ────────────────────────────────────────────────────── */
+.consoleFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+}
+.consoleFilters input, .consoleFilters select {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  padding: 5px 8px;
+}
+.consoleFilters input:focus, .consoleFilters select:focus { outline: none; border-color: var(--accent); }
+
+.eventList {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+.event {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 100px 130px 110px 1fr;
+  gap: 10px;
+  align-items: start;
+  cursor: pointer;
+  transition: background 80ms ease;
+}
+.event:hover { background: var(--bg3); }
+.event .ts { color: var(--text3); }
+.event .agg { color: var(--text2); }
+.event .type { color: var(--accent-light); }
+.event .actor { color: var(--text3); font-size: 10px; }
+.eventOpen { background: var(--bg3); }
+.eventDetails {
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 14px 16px 134px;
+}
+.eventDetails pre {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.consoleStatusBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+  font-size: 11px;
+  color: var(--text3);
+}
+.consoleStatusBar.live { color: var(--success); }

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/manifest.json">
+  <title>AI Intelligence — RightAPI Forge</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5}
+    .nav{background:#1a1a2e;color:white;padding:14px 24px;display:flex;align-items:center;gap:16px}
+    .nav h1{font-size:18px}
+    .nav-tabs{display:flex;gap:6px;margin-left:auto}
+    .nav-tab{padding:6px 14px;border-radius:4px;cursor:pointer;font-size:13px;color:#ccc;border:none;background:transparent}
+    .nav-tab.active{background:#6f42c1;color:white}
+    .main{padding:24px;max-width:1300px;margin:0 auto}
+    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px}
+    .kpi{background:white;padding:18px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+    .kpi-val{font-size:28px;font-weight:700;color:#6f42c1}
+    .kpi-lbl{font-size:12px;color:#888;margin-top:4px}
+    .section{display:none}.section.active{display:block}
+    .card{background:white;border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:16px}
+    .card-title{font-size:16px;font-weight:600;margin-bottom:14px}
+    button{padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:13px}
+    .btn{background:#6f42c1;color:white}.btn-secondary{background:#6c757d;color:white}
+    .btn-sm{padding:4px 10px;font-size:12px}
+    textarea,input,select{padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;width:100%}
+    textarea{height:80px;resize:vertical;font-family:inherit}
+    .result-box{background:#f8f9fa;border-radius:6px;padding:16px;font-size:13px;margin-top:12px;border-left:4px solid #6f42c1}
+    .badge{display:inline-block;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:600}
+    .badge-critical{background:#f8d7da;color:#721c24}
+    .badge-high{background:#fff3cd;color:#856404}
+    .badge-medium{background:#cce5ff;color:#004085}
+    .badge-low{background:#d4edda;color:#155724}
+    .badge-optimal{background:#d4edda;color:#155724}
+    .badge-scale-up{background:#fff3cd;color:#856404}
+    .badge-scale-down{background:#cce5ff;color:#004085}
+    .badge-critical2{background:#f8d7da;color:#721c24}
+    .agent-card{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #eee;border-radius:8px;margin-bottom:8px}
+    .agent-avatar{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#6f42c1,#007bff);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:16px;flex-shrink:0}
+    .load-bar{background:#e9ecef;border-radius:4px;height:8px;margin-top:6px;width:100%}
+    .load-fill{background:#6f42c1;border-radius:4px;height:8px;transition:width .3s}
+    .suggestion-card{padding:14px;border-radius:8px;margin-bottom:10px;border-left:4px solid}
+    .suggestion-card.warning{background:#fff8e1;border-color:#ffc107}
+    .suggestion-card.info{background:#e8f4fd;border-color:#17a2b8}
+    .suggestion-card.tip{background:#f0f7f0;border-color:#28a745}
+    .memory-entry{padding:10px;border-bottom:1px solid #f5f5f5;font-size:13px}
+    .memory-type{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;background:#e2e3e5;color:#383d41;margin-right:6px}
+    .conf-bar{display:inline-block;width:80px;height:6px;background:#e9ecef;border-radius:4px;vertical-align:middle;margin-left:6px}
+    .conf-fill{height:6px;border-radius:4px;background:#6f42c1}
+  </style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>🤖 AI Intelligence</h1>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showTab('nlp')">NLP Tasks</button>
+    <button class="nav-tab" onclick="showTab('workload')">Workload</button>
+    <button class="nav-tab" onclick="showTab('memory')">Agent Memory</button>
+    <button class="nav-tab" onclick="showTab('suggestions')">Suggestions</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-val" id="kAgents">0</div><div class="kpi-lbl">Agents</div></div>
+    <div class="kpi"><div class="kpi-val" id="kMemories">0</div><div class="kpi-lbl">Memories</div></div>
+    <div class="kpi"><div class="kpi-val" id="kFeatures">5</div><div class="kpi-lbl">AI Features</div></div>
+    <div class="kpi"><div class="kpi-val" id="kOptimal">0</div><div class="kpi-lbl">Optimal Agents</div></div>
+  </div>
+
+  <!-- NLP Tab -->
+  <div id="tab-nlp" class="section active">
+    <div class="card">
+      <div class="card-title">🗣️ Natural Language Task Creation</div>
+      <p style="color:#666;font-size:13px;margin-bottom:12px">Describe a task in plain English and AI will parse it, determine priority, suggest skills, and route to the best agent.</p>
+      <div style="display:flex;gap:10px">
+        <textarea id="nlpInput" placeholder="e.g. The production database is running slow, we need to urgently check and optimize the queries..."></textarea>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="parseTask()">🚀 Parse & Route</button>
+        <button class="btn-secondary btn-sm" onclick="fillExample(1)">Example 1</button>
+        <button class="btn-secondary btn-sm" onclick="fillExample(2)">Example 2</button>
+        <button class="btn-secondary btn-sm" onclick="fillExample(3)">Example 3</button>
+      </div>
+      <div id="nlpResult" style="display:none" class="result-box">
+        <div id="nlpContent"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workload Tab -->
+  <div id="tab-workload" class="section">
+    <div class="card">
+      <div class="card-title">📊 Workload Prediction</div>
+      <div id="workloadContent"><div style="text-align:center;padding:40px;color:#999">Loading...</div></div>
+    </div>
+  </div>
+
+  <!-- Memory Tab -->
+  <div id="tab-memory" class="section">
+    <div class="card">
+      <div class="card-title">🧠 Agent Memory</div>
+      <div style="display:flex;gap:10px;margin-bottom:14px">
+        <select id="memAgentId" onchange="loadMemory()" style="width:auto">
+          <option value="director">IT Director</option>
+          <option value="alice">Alice (SysAdmin)</option>
+          <option value="bob">Bob (SysAdmin)</option>
+          <option value="charlie">Charlie (Security)</option>
+          <option value="diana">Diana (DBA)</option>
+          <option value="eve">Eve (DevOps)</option>
+        </select>
+        <input id="memQuery" placeholder="Search memories..." style="flex:1" oninput="loadMemory()">
+        <button class="btn-secondary" onclick="addMemory()">➕ Add Memory</button>
+      </div>
+      <div id="memoryContent"></div>
+    </div>
+  </div>
+
+  <!-- Suggestions Tab -->
+  <div id="tab-suggestions" class="section">
+    <div class="card">
+      <div class="card-title">💡 AI Suggestions</div>
+      <div id="suggestionsContent"><div style="text-align:center;padding:40px;color:#999">Loading...</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const EXAMPLES = [
+  'The production database is running slow with high CPU usage — we need to urgently investigate and optimize the queries',
+  'Deploy the latest release to staging environment and run smoke tests before the 5pm deadline',
+  'Check SSL certificates for all domains — some might be expiring soon and we need to renew them'
+];
+
+function showTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+  if (tab === 'workload') loadWorkload();
+  if (tab === 'memory') loadMemory();
+  if (tab === 'suggestions') loadSuggestions();
+}
+
+function fillExample(n) { document.getElementById('nlpInput').value = EXAMPLES[n-1]; }
+
+async function loadStatus() {
+  try {
+    const s = await fetch('/api/ai/status').then(r => r.json());
+    document.getElementById('kAgents').textContent = s.agentCount;
+    document.getElementById('kMemories').textContent = s.totalMemories;
+    document.getElementById('kFeatures').textContent = s.features.length;
+  } catch(e) {}
+}
+
+async function loadWorkload() {
+  try {
+    const data = await fetch('/api/ai/workload').then(r => r.json());
+    document.getElementById('kOptimal').textContent = data.summary.optimal;
+    const html = data.predictions.map(p => {
+      const color = { critical: '#dc3545', 'scale-up': '#ffc107', optimal: '#28a745', 'scale-down': '#17a2b8' }[p.recommendation] || '#6c757d';
+      return '<div class="agent-card">' +
+        '<div class="agent-avatar">' + p.agentId[0].toUpperCase() + '</div>' +
+        '<div style="flex:1">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center">' +
+            '<strong>' + esc(p.agentId) + '</strong>' +
+            '<span class="badge badge-' + p.recommendation + '" style="background:' + color + '20;color:' + color + '">' + p.recommendation + '</span>' +
+          '</div>' +
+          '<div class="load-bar"><div class="load-fill" style="width:' + p.currentLoad + '%;background:' + color + '"></div></div>' +
+          '<div style="display:flex;gap:16px;margin-top:6px;font-size:12px;color:#666">' +
+            '<span>Now: <strong>' + p.currentLoad + '%</strong></span>' +
+            '<span>+1h: <strong>' + p.predictedLoad1h + '%</strong></span>' +
+            '<span>+4h: <strong>' + p.predictedLoad4h + '%</strong></span>' +
+            '<span>Queue: <strong>' + p.pendingTasks + '</strong></span>' +
+          '</div>' +
+        '</div></div>';
+    }).join('');
+    document.getElementById('workloadContent').innerHTML = html;
+  } catch(e) {}
+}
+
+async function parseTask() {
+  const text = document.getElementById('nlpInput').value.trim();
+  if (!text) return;
+
+  const data = await fetch('/api/ai/parse-task', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text })
+  }).then(r => r.json());
+
+  const p = data.parsed;
+  const r = data.routing;
+
+  const confPct = Math.round(p.confidence * 100);
+
+  document.getElementById('nlpContent').innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">' +
+      '<div>' +
+        '<div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:4px">Parsed Task</div>' +
+        '<div style="font-size:16px;font-weight:600;margin-bottom:8px">' + esc(p.title) + '</div>' +
+        '<div style="margin-bottom:8px"><span class="badge badge-' + p.priority + '">' + p.priority.toUpperCase() + '</span></div>' +
+        '<div style="font-size:12px;color:#666;margin-bottom:6px">Skills: <strong>' + (p.suggestedSkills.join(', ') || '—') + '</strong></div>' +
+        '<div style="font-size:12px;color:#666;margin-bottom:6px">Est. duration: <strong>' + p.estimatedDurationMin + ' min</strong></div>' +
+        '<div style="font-size:12px;color:#666">Tags: ' + p.tags.map(t => '<span style="background:#e2e3e5;padding:1px 7px;border-radius:8px;font-size:11px;margin-right:4px">' + esc(t) + '</span>').join('') + '</div>' +
+        '<div style="font-size:12px;color:#666;margin-top:8px">Confidence: <span style="color:#6f42c1;font-weight:600">' + confPct + '%</span>' +
+          '<span class="conf-bar"><span class="conf-fill" style="width:' + confPct + '%"></span></span></div>' +
+      '</div>' +
+      (r ? '<div>' +
+        '<div style="font-size:11px;color:#888;text-transform:uppercase;margin-bottom:4px">Routing Decision</div>' +
+        '<div style="font-size:20px;font-weight:700;color:#6f42c1;margin-bottom:4px">→ ' + esc(r.agentName) + '</div>' +
+        '<div style="font-size:12px;color:#666;margin-bottom:10px">' + esc(r.reason) + '</div>' +
+        '<div style="font-size:11px;color:#888;margin-bottom:6px">Score: <strong>' + r.score + '/100</strong></div>' +
+        (r.alternatives.length ? '<div style="font-size:11px;color:#888">Alternatives:<br>' +
+          r.alternatives.map(a => '<span style="color:#666">• ' + esc(a.agentName) + ' (' + a.score + ')</span><br>').join('') +
+        '</div>' : '') +
+      '</div>' : '<div style="color:#888;padding:20px">No agents available</div>') +
+    '</div>';
+
+  document.getElementById('nlpResult').style.display = 'block';
+}
+
+async function loadMemory() {
+  const agentId = document.getElementById('memAgentId').value;
+  const query = document.getElementById('memQuery').value;
+  try {
+    const data = await fetch('/api/ai/memory/' + agentId + '?limit=20' + (query ? '&query=' + encodeURIComponent(query) : '')).then(r => r.json());
+    const ins = data.insights;
+
+    const html =
+      '<div style="display:flex;gap:12px;margin-bottom:14px">' +
+        '<div style="background:#f0f0ff;padding:10px 16px;border-radius:8px;text-align:center">' +
+          '<div style="font-size:20px;font-weight:700;color:#6f42c1">' + ins.totalMemories + '</div>' +
+          '<div style="font-size:11px;color:#666">Total</div>' +
+        '</div>' +
+        '<div style="background:#f0fff4;padding:10px 16px;border-radius:8px;text-align:center">' +
+          '<div style="font-size:20px;font-weight:700;color:#28a745">' + ins.successRate + '%</div>' +
+          '<div style="font-size:11px;color:#666">Success</div>' +
+        '</div>' +
+        '<div style="background:#fff8f0;padding:10px 16px;border-radius:8px;text-align:center">' +
+          '<div style="font-size:20px;font-weight:700;color:#fd7e14">' + ins.learnedPatterns + '</div>' +
+          '<div style="font-size:11px;color:#666">Patterns</div>' +
+        '</div>' +
+      '</div>' +
+      (data.memories.length
+        ? data.memories.map(m => '<div class="memory-entry"><span class="memory-type">' + m.type + '</span>' + esc(m.content) + '<span style="color:#aaa;font-size:11px;margin-left:8px">' + timeAgo(m.createdAt) + '</span></div>').join('')
+        : '<div style="text-align:center;padding:30px;color:#999"><div style="font-size:40px;margin-bottom:8px">🧠</div>No memories yet for this agent</div>');
+
+    document.getElementById('memoryContent').innerHTML = html;
+  } catch(e) {}
+}
+
+async function addMemory() {
+  const agentId = document.getElementById('memAgentId').value;
+  const content = prompt('Memory content:');
+  if (!content) return;
+  await fetch('/api/ai/memory/' + agentId, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'pattern', content, relevanceScore: 0.7 })
+  });
+  loadMemory();
+}
+
+async function loadSuggestions() {
+  try {
+    const data = await fetch('/api/ai/suggestions').then(r => r.json());
+    const html = data.suggestions.map(s => {
+      return '<div class="suggestion-card ' + s.type + '">' +
+        '<div style="font-weight:600;margin-bottom:4px">' +
+          (s.type === 'warning' ? '⚠️' : s.type === 'info' ? 'ℹ️' : '💡') + ' ' + esc(s.title) +
+        '</div>' +
+        '<div style="font-size:13px;color:#555">' + esc(s.description) + '</div>' +
+        (s.action ? '<div style="font-size:12px;color:#007bff;margin-top:6px">→ ' + esc(s.action) + '</div>' : '') +
+      '</div>';
+    }).join('');
+    document.getElementById('suggestionsContent').innerHTML = html;
+  } catch(e) {}
+}
+
+function timeAgo(d) {
+  const diff = (Date.now() - new Date(d).getTime()) / 1000;
+  if (diff < 60) return Math.floor(diff) + 's ago';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  return Math.floor(diff/3600) + 'h ago';
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = String(s||''); return d.innerHTML; }
+
+loadStatus();
+setInterval(loadStatus, 20000);
+</script>
+<script>if("serviceWorker"in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{})}</script>
+<script src="/sidebar.js"></script>
+</body>
+</html>

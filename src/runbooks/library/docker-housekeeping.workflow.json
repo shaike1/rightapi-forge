@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "id": "library.docker-housekeeping",
+  "name": "Docker Housekeeping",
+  "description": "Real container & image health audit + safe auto-remediation. Detects unhealthy / flapping containers, dangling images, and reclaimable disk; then prunes dangling images and stopped containers when thresholds are crossed. Each remediation step is idempotent and only runs after its detection step confirms a breach. Creates a low-severity incident as the audit trail when any cleanup actually happened.",
+  "version": "1.1.0",
+  "tags": ["library", "docker", "health", "cleanup", "remediation"],
+  "inputs": [
+    {
+      "name": "reclaimWarnGb",
+      "type": "number",
+      "default": 2,
+      "description": "Fail the audit when docker can reclaim more than this many GB"
+    },
+    {
+      "name": "danglingThreshold",
+      "type": "number",
+      "default": 0,
+      "description": "Run image prune when dangling image count is strictly greater than this"
+    },
+    {
+      "name": "stoppedContainerThreshold",
+      "type": "number",
+      "default": 0,
+      "description": "Run container prune when stopped container count is strictly greater than this"
+    }
+  ],
+  "onError": "continue",
+  "steps": [
+    {
+      "id": "container_states",
+      "type": "bash",
+      "description": "Tally containers by state (running / exited / restarting / paused / dead)",
+      "command": "docker ps -a --format '{{.State}}' | sort | uniq -c | awk '{ printf \"%s=%d \", $2, $1 } END { print \"\" }'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "unhealthy",
+      "type": "bash",
+      "description": "List unhealthy containers by name; non-zero exit when any are found so the alert pipeline picks this up",
+      "command": "U=$(docker ps --filter health=unhealthy --format '{{.Names}}'); if [ -n \"$U\" ]; then echo \"UNHEALTHY: $U\" | tr '\\n' ',' | sed 's/,$//'; echo; exit 1; else echo 'no unhealthy containers'; fi",
+      "timeoutMs": 15000,
+      "onError": "continue"
+    },
+    {
+      "id": "flapping",
+      "type": "bash",
+      "description": "Containers with high restart counts — name=restartCount for any container restarted >5 times. Pulls RestartCount from inspect for accuracy (rather than fragile status string scraping).",
+      "command": "F=''; for c in $(docker ps -a --format '{{.Names}}'); do RC=$(docker inspect -f '{{.RestartCount}}' \"$c\" 2>/dev/null); [ -z \"$RC\" ] && RC=0; if [ \"$RC\" -gt 5 ]; then F=\"$F$c=$RC \"; fi; done; if [ -n \"$F\" ]; then echo \"FLAPPING: $F\"; else echo 'no flapping containers'; fi",
+      "timeoutMs": 30000
+    },
+    {
+      "id": "exited_recently",
+      "type": "bash",
+      "description": "Non-running containers — exited / dead / created. Helps spot crashed services.",
+      "command": "E=$(docker ps -a --filter status=exited --format '{{.Names}}({{.Status}})' | head -10); D=$(docker ps -a --filter status=dead --format '{{.Names}}' | head -5); [ -z \"$E\" ] && E=none; [ -z \"$D\" ] && D=none; echo \"exited=$E dead=$D\"",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "disk_usage",
+      "type": "bash",
+      "description": "docker system df — total / reclaimable bytes per resource type, machine-readable",
+      "command": "docker system df --format '{{.Type}}={{.Size}}/reclaim={{.Reclaimable}}' | tr '\\n' ' '; echo",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "reclaim_check",
+      "type": "bash",
+      "description": "Parse total reclaimable bytes and fail when above the warn threshold so the run is flagged",
+      "command": "BYTES=$(docker system df --format '{{.Reclaimable}}' | awk '{ s=$1; n=s+0; if (s ~ /GB$/) n*=1024*1024*1024; else if (s ~ /MB$/) n*=1024*1024; else if (s ~ /kB$/) n*=1024; total+=n } END { printf \"%.0f\", total+0 }'); GB=$(awk -v b=\"$BYTES\" 'BEGIN { printf \"%.2f\", b/1024/1024/1024 }'); THRESH='${inputs.reclaimWarnGb}'; echo \"reclaimable_gb=$GB threshold_gb=$THRESH\"; awk -v g=\"$GB\" -v t=\"$THRESH\" 'BEGIN { exit !(g > t) }' && { echo 'RECLAIM_EXCEEDED'; exit 2; } || true",
+      "timeoutMs": 15000,
+      "onError": "continue"
+    },
+    {
+      "id": "dangling_images",
+      "type": "bash",
+      "description": "Count and list a few dangling images that prune would clean up",
+      "command": "N=$(docker images -q --filter dangling=true | wc -l); echo \"dangling_images=$N\"; docker images --filter dangling=true --format '{{.ID}} {{.Repository}} {{.CreatedSince}}' | head -5",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "check_dangling_breach",
+      "type": "bash",
+      "description": "Detect-only step: exits 0 (ok=true) when within threshold, exits 1 (ok=false) when dangling images need pruning. Drives the conditional below.",
+      "command": "N=$(docker images -q --filter dangling=true | wc -l); THRESH='${inputs.danglingThreshold}'; echo \"dangling=$N threshold=$THRESH\"; [ \"$N\" -le \"$THRESH\" ]",
+      "timeoutMs": 15000,
+      "onError": "continue"
+    },
+    {
+      "id": "branch_image_prune",
+      "type": "conditional",
+      "description": "Run image_prune only when check_dangling_breach failed (ok=false → dangling above threshold).",
+      "when": "${steps.check_dangling_breach.ok}",
+      "equals": "false",
+      "then": "image_prune"
+    },
+    {
+      "id": "image_prune",
+      "type": "bash",
+      "description": "REMEDIATION: prune dangling images. Idempotent. Captures before/after dangling count and bytes freed from the prune output.",
+      "command": "BEFORE_N=$(docker images -q --filter dangling=true | wc -l); BEFORE_BYTES=$(docker system df --format '{{.Type}}={{.Reclaimable}}' | grep '^Images=' | head -1); OUT=$(docker image prune -f 2>&1); FREED=$(echo \"$OUT\" | tr -d '\\n' | grep -oE 'Total reclaimed space: [^$]*' || echo 'reclaimed: unknown'); AFTER_N=$(docker images -q --filter dangling=true | wc -l); echo \"REMEDIATION image_prune before_dangling=$BEFORE_N after_dangling=$AFTER_N $FREED before_reclaimable=[$BEFORE_BYTES]\"",
+      "timeoutMs": 60000,
+      "onError": "continue"
+    },
+    {
+      "id": "check_stopped_breach",
+      "type": "bash",
+      "description": "Detect-only step: exits 0 when stopped containers within threshold, exits 1 when prune is warranted.",
+      "command": "N=$(docker ps -a --filter status=exited --filter status=created -q | wc -l); THRESH='${inputs.stoppedContainerThreshold}'; echo \"stopped=$N threshold=$THRESH\"; [ \"$N\" -le \"$THRESH\" ]",
+      "timeoutMs": 15000,
+      "onError": "continue"
+    },
+    {
+      "id": "branch_container_prune",
+      "type": "conditional",
+      "description": "Run container_prune only when check_stopped_breach failed.",
+      "when": "${steps.check_stopped_breach.ok}",
+      "equals": "false",
+      "then": "container_prune"
+    },
+    {
+      "id": "container_prune",
+      "type": "bash",
+      "description": "REMEDIATION: prune stopped containers. Idempotent. Captures count removed and bytes freed.",
+      "command": "BEFORE_N=$(docker ps -a --filter status=exited --filter status=created -q | wc -l); OUT=$(docker container prune -f 2>&1); REMOVED=$(echo \"$OUT\" | grep -cE '^[a-f0-9]{12,}$' || echo 0); FREED=$(echo \"$OUT\" | tr -d '\\n' | grep -oE 'Total reclaimed space: [^$]*' || echo 'reclaimed: 0B'); AFTER_N=$(docker ps -a --filter status=exited --filter status=created -q | wc -l); echo \"REMEDIATION container_prune before_stopped=$BEFORE_N after_stopped=$AFTER_N removed=$REMOVED $FREED\"",
+      "timeoutMs": 60000,
+      "onError": "continue"
+    },
+    {
+      "id": "remediation_audit_check",
+      "type": "bash",
+      "description": "Decide whether any remediation actually ran — used to gate the audit incident. ok=true means an incident should be created.",
+      "command": "IMG_OK='${steps.image_prune.ok}'; CT_OK='${steps.container_prune.ok}'; echo \"image_prune.ok=$IMG_OK container_prune.ok=$CT_OK\"; if [ \"$IMG_OK\" = \"true\" ] || [ \"$CT_OK\" = \"true\" ]; then echo 'audit=needed'; exit 0; else echo 'audit=skip'; exit 1; fi",
+      "timeoutMs": 5000,
+      "onError": "continue"
+    },
+    {
+      "id": "branch_audit_incident",
+      "type": "conditional",
+      "description": "Create the audit-trail incident only when at least one remediation step succeeded.",
+      "when": "${steps.remediation_audit_check.ok}",
+      "equals": "true",
+      "then": "create_audit_incident"
+    },
+    {
+      "id": "create_audit_incident",
+      "type": "skill",
+      "description": "AUDIT TRAIL: low-severity incident records that auto-remediation ran and what it touched.",
+      "skill": "incident.create",
+      "params": {
+        "title": "Docker housekeeping auto-remediation performed",
+        "severity": "low",
+        "description": "Docker housekeeping workflow auto-cleaned: image_prune.ok=${steps.image_prune.ok} container_prune.ok=${steps.container_prune.ok}. Detection: dangling=${steps.check_dangling_breach.ok} stopped=${steps.check_stopped_breach.ok} reclaim=${steps.reclaim_check.ok}. See workflow run record for full step output.",
+        "assignedTo": "system"
+      }
+    },
+    {
+      "id": "summary",
+      "type": "bash",
+      "description": "Operator-readable rollup. Each ${steps.*.ok}=false flags an issue; remediation_*.ok=true means cleanup ran.",
+      "command": "echo \"DockerHousekeeping: states=[${steps.container_states.ok}] unhealthy_ok=${steps.unhealthy.ok} flapping_ok=${steps.flapping.ok} reclaim_ok=${steps.reclaim_check.ok} dangling_within_threshold=${steps.check_dangling_breach.ok} stopped_within_threshold=${steps.check_stopped_breach.ok} | remediation: image_prune_ran=${steps.image_prune.ok} container_prune_ran=${steps.container_prune.ok} audit_incident_created=${steps.create_audit_incident.ok}\"",
+      "timeoutMs": 5000,
+      "onError": "fail"
+    }
+  ]
+}

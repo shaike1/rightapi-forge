@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/manifest.json">
+  <title>Audit Trail — RightAPI Forge</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5}
+    .nav{background:#1a1a2e;color:white;padding:14px 24px;display:flex;align-items:center;gap:12px}
+    .nav h1{font-size:18px}
+    .toolbar{display:flex;gap:10px;margin-left:auto;align-items:center;flex-wrap:wrap}
+    button{padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:13px;background:#007bff;color:white}
+    .btn-sec{background:#6c757d}.btn-sm{padding:5px 10px;font-size:12px}
+    select,input{padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px}
+    .main{padding:24px;max-width:1400px;margin:0 auto}
+    .filters{background:white;border-radius:10px;padding:18px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    table{width:100%;border-collapse:collapse;background:white;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+    th{background:#f8f9fa;padding:10px 14px;text-align:left;font-size:13px;font-weight:600;border-bottom:1px solid #eee}
+    td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+    .badge{display:inline-block;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:600}
+    .badge-success{background:#d4edda;color:#155724}.badge-failure{background:#f8d7da;color:#721c24}
+    .badge-create{background:#cce5ff;color:#004085}.badge-read{background:#e2e3e5;color:#383d41}
+    .badge-update{background:#fff3cd;color:#856404}.badge-delete{background:#f8d7da;color:#721c24}
+    .badge-execute{background:#d1ecf1;color:#0c5460}.badge-login{background:#d4edda;color:#155724}
+    .empty{text-align:center;padding:48px;color:#999}
+  </style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>🔍 Audit Trail</h1>
+  <div class="toolbar">
+    <button onclick="loadLogs()">↻ Refresh</button>
+    <button class="btn-sec" onclick="exportCSV()">📥 Export CSV</button>
+    <button class="btn-sec" onclick="exportJSON()">📥 Export JSON</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="filters">
+    <select id="actionFilter" onchange="loadLogs()">
+      <option value="">All Actions</option>
+      <option value="create">Create</option>
+      <option value="read">Read</option>
+      <option value="update">Update</option>
+      <option value="delete">Delete</option>
+      <option value="execute">Execute</option>
+      <option value="login">Login</option>
+      <option value="logout">Logout</option>
+    </select>
+    <select id="resourceFilter" onchange="loadLogs()">
+      <option value="">All Resources</option>
+      <option value="task">Task</option>
+      <option value="agent">Agent</option>
+      <option value="workflow">Workflow</option>
+      <option value="pipeline">Pipeline</option>
+      <option value="alert">Alert</option>
+      <option value="user">User</option>
+      <option value="config">Config</option>
+    </select>
+    <select id="successFilter" onchange="loadLogs()">
+      <option value="">All Status</option>
+      <option value="true">Success</option>
+      <option value="false">Failure</option>
+    </select>
+    <input type="text" id="userFilter" placeholder="Filter by user..." oninput="loadLogs()" style="min-width:180px">
+    <select id="limitFilter" onchange="loadLogs()">
+      <option value="50">50 entries</option>
+      <option value="100" selected>100 entries</option>
+      <option value="200">200 entries</option>
+      <option value="500">500 entries</option>
+    </select>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:150px">Timestamp</th>
+        <th style="width:120px">User</th>
+        <th style="width:100px">Action</th>
+        <th style="width:120px">Resource</th>
+        <th style="width:140px">Resource ID</th>
+        <th style="width:100px">Status</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody id="logsBody">
+      <tr><td colspan="7" class="empty">Loading...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+let allLogs = [];
+
+async function loadLogs() {
+  const action = document.getElementById('actionFilter').value;
+  const resource = document.getElementById('resourceFilter').value;
+  const success = document.getElementById('successFilter').value;
+  const limit = document.getElementById('limitFilter').value;
+
+  let url = '/api/security/audit?limit=' + limit;
+  if (action) url += '&action=' + action;
+  if (resource) url += '&resource=' + resource;
+  if (success) url += '&success=' + success;
+
+  try {
+    const data = await fetch(url).then(r => r.json());
+    allLogs = data.logs || [];
+    renderLogs(allLogs);
+  } catch(e) {
+    document.getElementById('logsBody').innerHTML = '<tr><td colspan="7" class="empty" style="color:#dc3545">Failed to load audit logs</td></tr>';
+  }
+}
+
+function renderLogs(logs) {
+  const userFilter = document.getElementById('userFilter').value.toLowerCase();
+  const filtered = userFilter ? logs.filter(l => l.username.toLowerCase().includes(userFilter) || l.userId.toLowerCase().includes(userFilter)) : logs;
+
+  const tbody = document.getElementById('logsBody');
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><div style="font-size:48px;margin-bottom:12px">📜</div><div>No audit logs found</div></div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map(log => {
+    const ts = new Date(log.timestamp).toLocaleString();
+    const actionClass = log.action.toLowerCase();
+    const statusClass = log.success ? 'success' : 'failure';
+    return '<tr>' +
+      '<td style="white-space:nowrap;font-size:12px;color:#666">' + ts + '</td>' +
+      '<td><div style="font-weight:500">' + esc(log.username) + '</div><div style="font-size:11px;color:#999">' + esc(log.userId) + '</div></td>' +
+      '<td><span class="badge badge-' + actionClass + '">' + esc(log.action) + '</span></td>' +
+      '<td>' + esc(log.resource) + '</td>' +
+      '<td style="font-family:monospace;font-size:11px;color:#666">' + (log.resourceId ? esc(log.resourceId.slice(0, 16)) + '...' : '—') + '</td>' +
+      '<td><span class="badge badge-' + statusClass + '">' + (log.success ? 'success' : 'failure') + '</span></td>' +
+      '<td style="font-size:12px;color:#666">' + (log.errorMessage ? '<span style="color:#dc3545">Error: ' + esc(log.errorMessage) + '</span>' : '—') + '</td></tr>';
+  }).join('');
+}
+
+function exportCSV() {
+  const rows = [['Timestamp', 'User ID', 'Username', 'Action', 'Resource', 'Resource ID', 'Success', 'Error']];
+  allLogs.forEach(log => {
+    rows.push([
+      new Date(log.timestamp).toISOString(),
+      log.userId,
+      log.username,
+      log.action,
+      log.resource,
+      log.resourceId || '',
+      log.success ? 'true' : 'false',
+      log.errorMessage || ''
+    ]);
+  });
+  const csv = rows.map(r => r.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+  download('audit-trail-' + new Date().toISOString().slice(0,10) + '.csv', csv, 'text/csv');
+}
+
+function exportJSON() {
+  const json = JSON.stringify(allLogs, null, 2);
+  download('audit-trail-' + new Date().toISOString().slice(0,10) + '.json', json, 'application/json');
+}
+
+function download(filename, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = String(s||''); return d.innerHTML; }
+
+loadLogs();
+setInterval(loadLogs, 30000);
+</script>
+<script src="/sidebar.js"></script>
+</body>
+</html>

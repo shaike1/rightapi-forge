@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "library.server-health-check",
+  "name": "Server Health Check",
+  "description": "End-to-end vitals sweep on a single host: reachability, disk pressure, memory pressure, CPU load, and a sample service. Emits a single bash echo summary so the run output is operator-readable in one paragraph.",
+  "version": "1.0.0",
+  "tags": ["library", "health", "monitoring", "diagnostics"],
+  "inputs": [
+    { "name": "host", "type": "string", "description": "Hostname or IP to probe", "required": true },
+    { "name": "service", "type": "string", "description": "systemd service name to check", "default": "ssh" }
+  ],
+  "onError": "continue",
+  "steps": [
+    {
+      "id": "ping",
+      "type": "bash",
+      "description": "Reachability check — 4 ICMP packets",
+      "command": "ping -c 4 -W 2 ${inputs.host}",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "disk",
+      "type": "bash",
+      "description": "Disk usage on the target host",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'df -h --output=source,size,used,avail,pcent,target | head -20'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "memory",
+      "type": "bash",
+      "description": "Memory usage (free -h)",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'free -h'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "cpu",
+      "type": "bash",
+      "description": "1 / 5 / 15 minute load average",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'uptime && cat /proc/loadavg'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "service",
+      "type": "bash",
+      "description": "Selected service status",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'systemctl is-active ${inputs.service} && systemctl status ${inputs.service} --no-pager -l | head -20'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "summary",
+      "type": "bash",
+      "description": "Compose a one-paragraph summary referencing each prior step",
+      "command": "echo 'Health check on ${inputs.host}: ping=${steps.ping.ok}, disk=${steps.disk.ok}, memory=${steps.memory.ok}, cpu=${steps.cpu.ok}, service[${inputs.service}]=${steps.service.ok}'",
+      "timeoutMs": 5000,
+      "onError": "fail"
+    }
+  ]
+}

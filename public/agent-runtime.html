@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Ops — Agent Runtime</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --t-bg:#0a0a0a;
+    --t-fg:#33ff99;
+    --t-dim:#1a6644;
+    --t-cyan:#44aaaa;
+    --t-yellow:#ccaa33;
+    --t-red:#cc3333;
+    --t-blue:#4488cc;
+    --t-white:#e8e8d8;
+    --t-border:#1a3322;
+    --t-highlight:#112818;
+    --bar-bg:#001a0d;
+  }
+  html,body{height:100%;background:#000;overflow:hidden;}
+  body{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--t-fg);
+    display:flex;flex-direction:column;
+  }
+  body::after{
+    content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);
+    pointer-events:none;z-index:9999;
+  }
+  body::before{
+    content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+    background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.4) 100%);
+    pointer-events:none;z-index:9998;
+  }
+
+  /* -- Title bar -- */
+  .titlebar{
+    background:#224488;
+    padding:6px 16px;display:flex;justify-content:space-between;align-items:center;
+    flex-shrink:0;font-size:13px;
+  }
+  .titlebar-left{color:#e8e8d8;font-weight:bold;letter-spacing:0.1em;}
+  .titlebar-right{color:#44aaaa;font-size:11px;}
+
+  /* -- Main layout -- */
+  .main{flex:1;display:flex;overflow:hidden;}
+
+  /* -- Sidebar nav (GUI style) -- */
+  .sidebar{
+    width:200px;background:var(--bar-bg);border-right:1px solid var(--t-border);
+    display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;
+  }
+  .sidebar-logo{
+    padding:10px 12px;font-size:13px;font-weight:bold;color:var(--t-white);
+    border-bottom:1px solid var(--t-border);letter-spacing:0.1em;
+  }
+  .sidebar-section{
+    display:block;padding:8px 12px 4px;font-size:10px;color:var(--t-dim);
+    text-transform:uppercase;letter-spacing:0.1em;
+  }
+  .nav-item{
+    display:flex;align-items:center;gap:8px;
+    padding:8px 12px;color:var(--t-dim);text-decoration:none;font-size:12px;
+    border-bottom:1px solid #0d1f14;
+  }
+  .nav-item:hover{background:var(--t-highlight);color:var(--t-white);}
+  .nav-item.active{color:var(--t-cyan);background:var(--t-highlight);}
+  .nav-icon{font-size:12px;min-width:14px;}
+
+  /* -- Content area -- */
+  .content-wrap{
+    flex:1;overflow-y:auto;padding:12px 16px;
+    scrollbar-width:thin;scrollbar-color:var(--t-dim) var(--t-bg);
+  }
+  .content-wrap::-webkit-scrollbar{width:4px;}
+  .content-wrap::-webkit-scrollbar-track{background:var(--t-bg);}
+  .content-wrap::-webkit-scrollbar-thumb{background:var(--t-dim);}
+
+  /* -- Task selector bar -- */
+  .selector-bar{
+    display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;
+    padding:8px 0;border-bottom:1px solid var(--t-border);
+  }
+  .selector-bar label{font-size:12px;color:var(--t-dim);}
+  .selector-bar select,.selector-bar input{
+    background:var(--bar-bg);color:var(--t-fg);border:1px solid var(--t-border);
+    font-family:'JetBrains Mono',monospace;font-size:12px;padding:3px 8px;
+  }
+  .selector-bar select{max-width:280px;}
+  .selector-bar input{width:200px;}
+  .selector-bar button{
+    background:var(--t-dim);color:var(--t-fg);border:1px solid var(--t-border);
+    font-family:'JetBrains Mono',monospace;font-size:12px;cursor:pointer;padding:3px 12px;
+  }
+  .selector-bar button:hover{background:var(--t-cyan);color:#000;}
+
+  /* -- TUI table -- */
+  .tui-table{font-size:12px;margin:4px 0 8px;}
+  .tui-table .tui-row{display:flex;border-bottom:1px solid #0d1f14;}
+  .tui-table .tui-row:hover{background:var(--t-highlight);}
+  .tui-table .tui-row.tui-header{color:var(--t-yellow);font-weight:bold;border-bottom:1px solid var(--t-border);}
+  .tui-table .tui-cell{padding:2px 8px 2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .s-ok{color:#33aa55;}
+  .s-warn{color:var(--t-yellow);}
+  .s-err{color:var(--t-red);}
+  .s-info{color:var(--t-cyan);}
+
+  /* -- Section header -- */
+  .section-header{
+    color:var(--t-cyan);font-weight:bold;font-size:13px;
+    border-bottom:1px solid var(--t-border);padding-bottom:2px;margin:12px 0 4px;
+  }
+  .section-header:first-child{margin-top:0;}
+
+  /* -- Delegation tree -- */
+  .tree-root{list-style:none;font-size:12px;margin:4px 0;}
+  .tree-root ul{list-style:none;margin-left:20px;}
+  .tree-node{
+    padding:2px 0;color:var(--t-white);
+  }
+  .tree-node .node-id{color:var(--t-dim);}
+  .tree-node .node-label{color:var(--t-fg);}
+  .tree-node .node-state{color:var(--t-cyan);}
+  .tree-node .edge-label{color:var(--t-yellow);font-size:11px;}
+  .tree-node::before{content:'  ';white-space:pre;}
+  .tree-node:first-child::before{content:'|- ';}
+  .tree-node ~ .tree-node::before{content:'|- ';}
+
+  .sandbox-highlight{background:rgba(204,170,51,0.1);}
+
+  .dim{color:var(--t-dim);}
+
+  /* -- Status bar -- */
+  .statusbar{
+    background:var(--bar-bg);border-top:1px solid var(--t-border);
+    padding:3px 16px;font-size:11px;color:var(--t-dim);
+    display:flex;justify-content:space-between;flex-shrink:0;
+  }
+</style>
+<script src="/auth-guard.js"></script>
+</head>
+<body>
+<div class="titlebar">
+  <span class="titlebar-left">[=] IT OPS -- AGENT RUNTIME</span>
+  <span class="titlebar-right" id="clock">--:--:--</span>
+</div>
+
+<div class="main">
+  <!-- Sidebar nav -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">[=] IT OPS</div>
+    <span class="sidebar-section">Operations</span>
+    <a href="/incidents" class="nav-item"><span class="nav-icon">!</span>Incidents</a>
+    <a href="/workflows" class="nav-item"><span class="nav-icon">&gt;</span>Workflows</a>
+    <a href="/runbooks" class="nav-item"><span class="nav-icon">#</span>Runbooks</a>
+    <a href="/servers" class="nav-item"><span class="nav-icon">@</span>Servers</a>
+    <a href="/monitoring.html" class="nav-item"><span class="nav-icon">%</span>Monitoring</a>
+    <span class="sidebar-section">Integrations</span>
+    <a href="/jira.html" class="nav-item"><span class="nav-icon">*</span>Jira</a>
+    <a href="/a2a.html" class="nav-item"><span class="nav-icon">&amp;</span>A2A Mesh</a>
+    <span class="sidebar-section">System</span>
+    <a href="/agent-details.html" class="nav-item"><span class="nav-icon">$</span>Agents</a>
+    <a href="/scheduler" class="nav-item"><span class="nav-icon">~</span>Scheduler</a>
+    <a href="/security.html" class="nav-item"><span class="nav-icon">^</span>Security</a>
+    <span class="sidebar-section">Communication</span>
+    <a href="/agent-chat.html" class="nav-item"><span class="nav-icon">&lt;</span>Agent Chat</a>
+    <a href="/agent-bridge" class="nav-item"><span class="nav-icon">&lt;&gt;</span>Agent Bridge</a>
+    <span class="sidebar-section">Tools</span>
+    <a href="/dashboard" class="nav-item"><span class="nav-icon">=</span>Dashboard</a>
+    <a href="/cicd" class="nav-item"><span class="nav-icon">|</span>CI/CD</a>
+    <a href="/audit" class="nav-item"><span class="nav-icon">.</span>Audit</a>
+    <a href="/rbac" class="nav-item"><span class="nav-icon">:</span>RBAC</a>
+    <a href="/plugin-manager" class="nav-item"><span class="nav-icon">,</span>Plugins</a>
+    <a href="/agent-runtime" class="nav-item active"><span class="nav-icon">&gt;&gt;</span>Agent Runtime</a>
+  </aside>
+
+  <!-- Main content -->
+  <div class="content-wrap">
+    <!-- Task selector -->
+    <div class="selector-bar">
+      <label>TASK:</label>
+      <select id="taskSelect" onchange="onSelectChange()">
+        <option value="">-- select task --</option>
+      </select>
+      <label>OR ID:</label>
+      <input type="text" id="taskIdInput" placeholder="task-id..." />
+      <button onclick="loadTask()">LOAD</button>
+    </div>
+
+    <!-- Panel 1: Delegation Tree -->
+    <div class="section-header">DELEGATION TREE</div>
+    <div id="treePanel"><span class="dim">Select a task to view its graph.</span></div>
+
+    <!-- Panel 2: Sandbox Executions -->
+    <div class="section-header">SANDBOX EXECUTIONS</div>
+    <div id="execPanel"><span class="dim">No executions recorded.</span></div>
+
+    <!-- Panel 3: Delegation Timeline -->
+    <div class="section-header">
+      DELEGATION TIMELINE
+      <span style="font-weight:normal;font-size:12px;margin-left:16px;">
+        Filter: <input type="text" id="timelineFilter" style="background:var(--bar-bg);color:var(--t-fg);border:1px solid var(--t-border);font-family:'JetBrains Mono',monospace;font-size:11px;padding:1px 6px;width:150px;" placeholder="task id..." />
+        <button onclick="filterTimeline()" style="background:var(--t-dim);color:var(--t-fg);border:1px solid var(--t-border);font-family:'JetBrains Mono',monospace;font-size:11px;cursor:pointer;padding:1px 8px;">GO</button>
+      </span>
+    </div>
+    <div id="timelinePanel"><span class="dim">No delegation events.</span></div>
+  </div>
+</div>
+
+<div class="statusbar">
+  <span id="sb-left">READY</span>
+  <span id="sb-right">Agent Runtime Visibility</span>
+</div>
+
+<script>
+'use strict';
+
+var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token') || '';
+var hdrs = function() { return { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }; };
+var currentTaskId = null;
+
+setInterval(function() { document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8); }, 1000);
+document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8);
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function timeAgo(ts) {
+  if (!ts) return '-';
+  var m = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+  if (m < 1) return 'now';
+  if (m < 60) return m + 'm';
+  var h = Math.floor(m / 60);
+  if (h < 24) return h + 'h';
+  return Math.floor(h / 24) + 'd';
+}
+
+function fmtTs(ts) {
+  if (!ts) return '-';
+  try { return new Date(ts).toLocaleString(); } catch(e) { return ts; }
+}
+
+function buildTable(cols, rows, widths) {
+  if (rows.length === 0) return '<div class="dim" style="padding:4px 0;">  (empty)</div>';
+  var table = '<div class="tui-table">';
+  table += '<div class="tui-row tui-header">';
+  cols.forEach(function(h, i) {
+    table += '<span class="tui-cell" style="width:' + widths[i] + 'px;min-width:' + widths[i] + 'px;">' + escHtml(h) + '</span>';
+  });
+  table += '</div>';
+  rows.forEach(function(row) {
+    var cls = row._rowClass ? ' ' + row._rowClass : '';
+    table += '<div class="tui-row' + cls + '">';
+    row.forEach(function(val, i) {
+      if (i === cols.length) return; // skip _rowClass meta
+      table += '<span class="tui-cell" style="width:' + widths[i] + 'px;min-width:' + widths[i] + 'px;">' + val + '</span>';
+    });
+    table += '</div>';
+  });
+  table += '</div>';
+  return table;
+}
+
+// Load task list for selector
+async function loadTaskList() {
+  try {
+    var r = await fetch('/api/tasks', { headers: hdrs() });
+    if (!r.ok) return;
+    var data = await r.json();
+    var tasks = Array.isArray(data) ? data : (data.tasks || data.data || []);
+    var sel = document.getElementById('taskSelect');
+    tasks.slice(0, 200).forEach(function(t) {
+      var opt = document.createElement('option');
+      opt.value = t.id || t._id || '';
+      opt.textContent = (t.id || t._id || '').slice(0,8) + ' - ' + (t.title || t.name || '-').slice(0,40);
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    // silently ignore
+  }
+}
+
+function onSelectChange() {
+  var id = document.getElementById('taskSelect').value;
+  if (id) {
+    document.getElementById('taskIdInput').value = id;
+  }
+}
+
+function loadTask() {
+  var id = document.getElementById('taskIdInput').value.trim() ||
+           document.getElementById('taskSelect').value;
+  if (!id) { document.getElementById('sb-left').textContent = 'No task selected.'; return; }
+  currentTaskId = id;
+  document.getElementById('timelineFilter').value = id;
+  loadGraph(id);
+  loadActivity(id);
+  loadTimeline(id);
+}
+
+// Panel 1: Delegation tree
+async function loadGraph(taskId) {
+  var panel = document.getElementById('treePanel');
+  panel.innerHTML = '<span class="dim">Loading graph...</span>';
+  try {
+    var r = await fetch('/api/tasks/' + encodeURIComponent(taskId) + '/graph', { headers: hdrs() });
+    if (r.status === 401) { window.location.href = '/login.html'; return; }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var graph = await r.json();
+    var nodes = graph.nodes || [];
+    var edges = graph.edges || [];
+
+    if (nodes.length === 0) {
+      panel.innerHTML = '<div class="dim">No graph data for this task.</div>';
+      return;
+    }
+
+    // Build adjacency map using child/delegation_child edges
+    var children = {};
+    var hasParent = {};
+    edges.forEach(function(e) {
+      if (e.type === 'child' || e.type === 'delegation_child') {
+        if (!children[e.from]) children[e.from] = [];
+        children[e.from].push({ id: e.to, edgeType: e.type });
+        hasParent[e.to] = true;
+      }
+    });
+
+    // Build node map
+    var nodeMap = {};
+    nodes.forEach(function(n) { nodeMap[n.id] = n; });
+
+    // Root nodes = no parent in child/delegation_child edges
+    var roots = nodes.filter(function(n) { return !hasParent[n.id]; });
+
+    function renderNode(nodeId, depth) {
+      var n = nodeMap[nodeId];
+      if (!n) return '';
+      var indent = '';
+      for (var i = 0; i < depth; i++) indent += '  ';
+      var state = n.state || n.status || '';
+      var stateClass = state === 'completed' ? 's-ok' : state === 'failed' || state === 'rejected' ? 's-err' : state === 'accepted' || state === 'dispatched' ? 's-info' : 's-warn';
+      var html = '<li class="tree-node"><span class="node-id">' + escHtml(nodeId.slice(0,8)) + '</span> ';
+      html += '<span class="node-label">' + escHtml(n.label || n.name || '') + '</span> ';
+      html += '[<span class="node-state ' + stateClass + '">' + escHtml(state) + '</span>]';
+      if (children[nodeId] && children[nodeId].length > 0) {
+        html += '<ul>';
+        children[nodeId].forEach(function(ch) {
+          if (ch.edgeType !== 'child' && ch.edgeType !== 'delegation_child') {
+            html += '<li class="tree-node"><span class="edge-label">--[' + escHtml(ch.edgeType) + ']--&gt;</span> ';
+            html += renderNode(ch.id, 0);
+            html += '</li>';
+          } else {
+            html += renderNode(ch.id, depth + 1);
+          }
+        });
+        html += '</ul>';
+      }
+      html += '</li>';
+      return html;
+    }
+
+    var treeHtml = '<ul class="tree-root">';
+    roots.forEach(function(n) { treeHtml += renderNode(n.id, 0); });
+    treeHtml += '</ul>';
+    panel.innerHTML = treeHtml;
+  } catch(e) {
+    panel.innerHTML = '<div class="s-err">Error: ' + escHtml(e.message) + '</div>';
+  }
+}
+
+// Panel 2: Sandbox executions
+async function loadActivity(taskId) {
+  var panel = document.getElementById('execPanel');
+  panel.innerHTML = '<span class="dim">Loading executions...</span>';
+  try {
+    var r = await fetch('/api/tasks/' + encodeURIComponent(taskId) + '/activity', { headers: hdrs() });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var data = await r.json();
+    var records = Array.isArray(data) ? data : (data.records || data.executions || data.data || []);
+
+    if (records.length === 0) {
+      panel.innerHTML = '<div class="dim">No executions recorded.</div>';
+      return;
+    }
+
+    var rows = records.map(function(rec) {
+      var isSandbox = rec.sandbox === true || rec.sandbox === 'true';
+      var row = [
+        escHtml((rec.command || rec.cmd || '-').slice(0,40)),
+        escHtml((rec.agentId || rec.agent || '-').slice(0,15)),
+        escHtml((rec.agentRole || rec.role || '-').slice(0,15)),
+        escHtml(rec.status || '-'),
+        escHtml(String(rec.risk || '-')),
+        isSandbox ? '<span class="s-warn sandbox-highlight">[YES]</span>' : '<span class="s-ok">no</span>',
+        escHtml((rec.runner || '-').slice(0,12)),
+        escHtml(rec.durationMs != null ? rec.durationMs + 'ms' : '-')
+      ];
+      if (isSandbox) row._rowClass = 'sandbox-highlight';
+      return row;
+    });
+
+    panel.innerHTML = buildTable(
+      ['COMMAND','AGENT','ROLE','STATUS','RISK','SANDBOX','RUNNER','DURATION'],
+      rows,
+      [200,100,100,80,60,70,80,80]
+    );
+  } catch(e) {
+    panel.innerHTML = '<div class="s-err">Error: ' + escHtml(e.message) + '</div>';
+  }
+}
+
+// Panel 3: Delegation timeline
+async function loadTimeline(taskId) {
+  var panel = document.getElementById('timelinePanel');
+  panel.innerHTML = '<span class="dim">Loading timeline...</span>';
+  try {
+    var url = '/api/delegations?taskId=' + encodeURIComponent(taskId);
+    var r = await fetch(url, { headers: hdrs() });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var data = await r.json();
+    var delegations = Array.isArray(data) ? data : (data.delegations || data.data || []);
+
+    // Expand each delegation's history[] into flat event list
+    var events = [];
+    delegations.forEach(function(del) {
+      var hist = Array.isArray(del.history) ? del.history : [];
+      hist.forEach(function(h) {
+        events.push({
+          ts: h.timestamp || h.at || del.createdAt,
+          delId: (del.id || '-').slice(0,8),
+          state: h.state || h.to || '-',
+          from: h.from || del.requesterAgentId || '-',
+          to: h.to || del.assigneeAgentId || '-',
+          actor: h.actorId || h.actor || '-'
+        });
+      });
+      // If no history, add a single row for the delegation itself
+      if (hist.length === 0) {
+        events.push({
+          ts: del.createdAt,
+          delId: (del.id || '-').slice(0,8),
+          state: del.state || '-',
+          from: del.requesterAgentId || '-',
+          to: del.assigneeAgentId || '-',
+          actor: '-'
+        });
+      }
+    });
+
+    // Sort descending by timestamp
+    events.sort(function(a, b) {
+      return new Date(b.ts || 0).getTime() - new Date(a.ts || 0).getTime();
+    });
+
+    if (events.length === 0) {
+      panel.innerHTML = '<div class="dim">No delegation events.</div>';
+      return;
+    }
+
+    var rows = events.map(function(e) {
+      return [
+        escHtml(fmtTs(e.ts)),
+        escHtml(e.delId),
+        escHtml(String(e.from).slice(0,20)),
+        escHtml(String(e.to).slice(0,20)),
+        escHtml(String(e.actor).slice(0,20))
+      ];
+    });
+
+    panel.innerHTML = buildTable(
+      ['TIME','DELEGATION','FROM','TO','ACTOR'],
+      rows,
+      [160,80,120,120,120]
+    );
+  } catch(e) {
+    panel.innerHTML = '<div class="s-err">Error: ' + escHtml(e.message) + '</div>';
+  }
+}
+
+function filterTimeline() {
+  var id = document.getElementById('timelineFilter').value.trim();
+  if (!id) return;
+  currentTaskId = id;
+  loadTimeline(id);
+}
+
+// Init
+loadTaskList();
+</script>
+</body>
+</html>

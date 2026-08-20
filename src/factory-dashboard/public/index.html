@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RightAPI Forge - Managed Agents</title>
+
+  <!--
+    Tailwind via CDN. Production-grade for this kind of admin tool — no
+    build step, JIT-compiled in the browser. Custom theme tokens match
+    the dark agent-control look in the reference screenshots.
+  -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            base:    { 950: '#06080d', 900: '#0a0e16', 850: '#0e1320', 800: '#121829', 700: '#1a2236', 600: '#243049' },
+            line:    '#1f293f',
+            text:    { primary: '#e6edf7', muted: '#8a98b5', dim: '#5a6580' },
+            accent:  { 400: '#7cc4ff', 500: '#3aa3ff', 600: '#1f88e6' },
+            ok:      '#42d392',
+            warn:    '#f5a62a',
+            danger:  '#ff5d6c',
+          },
+          fontFamily: {
+            sans: ['"Inter"', '"IBM Plex Sans"', '"Segoe UI"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', '"Fira Code"', 'ui-monospace', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    body { background: #06080d; color: #e6edf7; font-family: Inter, system-ui, sans-serif; }
+    /* Dragging visual cue */
+    .card-dragging { opacity: 0.45; transform: scale(0.98); }
+    .col-dropping { background-color: rgba(58, 163, 255, 0.06); outline: 1px dashed rgba(58, 163, 255, 0.4); }
+    /* Activity dot pulse */
+    @keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.8); } }
+    .activity-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+    /* Subtle scrollbar in dark theme */
+    .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+    .scroll-thin::-webkit-scrollbar-thumb { background: #243049; border-radius: 4px; }
+    .scroll-thin::-webkit-scrollbar-track { background: transparent; }
+    /* Modal backdrop */
+    .modal-backdrop { backdrop-filter: blur(3px); background: rgba(6, 8, 13, 0.7); }
+  </style>
+</head>
+<body class="min-h-screen flex">
+
+  <!-- ─── Sidebar ─────────────────────────────────────────────────────── -->
+  <aside class="w-60 shrink-0 border-r border-line bg-base-900 flex flex-col">
+    <div class="px-5 py-5 border-b border-line">
+      <div class="flex items-center gap-2.5">
+        <div class="w-7 h-7 rounded-md bg-gradient-to-br from-accent-500 to-accent-600 flex items-center justify-center text-base-950 font-bold text-sm">B</div>
+        <div>
+          <div class="font-semibold text-text-primary text-sm leading-tight">RightAPI Forge</div>
+          <div class="text-[11px] text-text-dim">Managed Agents</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="flex-1 px-3 py-4 space-y-1">
+      <button data-route="board"     class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-base-800 transition">
+        <svg class="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span>Board</span>
+      </button>
+      <button data-route="sessions"  class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-base-800 transition">
+        <svg class="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+        <span>Sessions</span>
+      </button>
+      <button data-route="memory"    class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-base-800 transition">
+        <svg class="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3a4 4 0 0 0-4 4v.5a3 3 0 0 0-2 2.83v3.34A3 3 0 0 0 8 16.5V17a4 4 0 0 0 8 0v-.5a3 3 0 0 0 2-2.83v-3.34a3 3 0 0 0-2-2.83V7a4 4 0 0 0-4-4Z"/></svg>
+        <span>Memory Store</span>
+      </button>
+      <button data-route="workflows" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-base-800 transition">
+        <svg class="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6h7M8.5 18h7M6 8.5v7M18 8.5v7"/></svg>
+        <span>Workflows</span>
+      </button>
+      <button data-route="crystallized" class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-base-800 transition">
+        <svg class="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 3 22 9 22 15 12 21 2 15 2 9 12 3"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="2" y1="9" x2="22" y2="15"/><line x1="22" y1="9" x2="2" y2="15"/></svg>
+        <span>Learned Skills</span>
+      </button>
+      <button data-route="autonomy"  class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-base-800 transition">
+        <svg class="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+        <span>Autonomy</span>
+      </button>
+      <button data-route="settings"  class="nav-item w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm hover:bg-base-800 transition">
+        <svg class="w-4 h-4 text-text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3 1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8 1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <div class="px-4 py-3 border-t border-line">
+      <div class="flex items-center gap-2 text-[11px] text-text-dim">
+        <span class="w-1.5 h-1.5 rounded-full bg-ok" id="ws-indicator" title="WebSocket disconnected"></span>
+        <span id="ws-label">offline</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ─── Main column ─────────────────────────────────────────────────── -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- Top bar -->
+    <header class="h-14 shrink-0 border-b border-line bg-base-900 flex items-center px-5 gap-4">
+      <h1 id="page-title" class="text-base font-semibold tracking-tight">Board</h1>
+      <span class="text-text-dim">·</span>
+      <span id="page-subtitle" class="text-sm text-text-muted">Drag tasks between columns to assign and progress them.</span>
+
+      <div class="ml-auto flex items-center gap-3">
+        <div class="relative">
+          <input id="topbar-search" type="text" placeholder="Search tasks, sessions, IDs…"
+                 class="w-72 bg-base-800 border border-line rounded-md pl-9 pr-3 py-1.5 text-sm placeholder:text-text-dim focus:outline-none focus:border-accent-500" />
+          <svg class="w-4 h-4 absolute left-2.5 top-2 text-text-dim" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+        </div>
+        <div class="flex items-center gap-2 px-3 py-1.5 bg-base-800 border border-line rounded-md text-xs">
+          <span class="w-2 h-2 rounded-full bg-ok"></span>
+          <span class="text-text-muted"><span id="agents-online">–</span> Agents Online</span>
+        </div>
+        <button id="login-btn" class="px-3 py-1.5 bg-accent-600 hover:bg-accent-500 rounded-md text-xs font-medium transition">Login</button>
+      </div>
+    </header>
+
+    <!-- Page outlet -->
+    <main id="page-outlet" class="flex-1 overflow-auto scroll-thin"></main>
+  </div>
+
+  <!-- ─── Modals slot ─────────────────────────────────────────────────── -->
+  <div id="modal-root"></div>
+
+  <script type="module" src="/dashboard-assets/js/api.js"></script>
+  <script type="module" src="/dashboard-assets/js/state.js"></script>
+  <script type="module" src="/dashboard-assets/js/board.js"></script>
+  <script type="module" src="/dashboard-assets/js/memory.js"></script>
+  <script type="module" src="/dashboard-assets/js/settings.js"></script>
+  <script type="module" src="/dashboard-assets/js/workflows.js"></script>
+  <script type="module" src="/dashboard-assets/js/crystallized.js"></script>
+  <script type="module" src="/dashboard-assets/js/autonomy.js"></script>
+  <script type="module" src="/dashboard-assets/js/ui.js"></script>
+</body>
+</html>

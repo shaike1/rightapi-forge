@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — Runbooks</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    /* WS indicator */
+    .ws-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--bg5);
+      transition: background .3s;
+      flex-shrink: 0;
+    }
+    .ws-dot.connected    { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .ws-dot.disconnected { background: var(--danger); }
+
+    /* Two-column page layout */
+    .page-body {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .page-body { grid-template-columns: 1fr; }
+    }
+
+    /* Template list */
+    .tpl-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .tpl-item {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      transition: border-color .15s;
+    }
+    .tpl-item:hover { border-color: var(--border2); }
+
+    .tpl-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .tpl-name {
+      font-weight: 600;
+      font-size: .8rem;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--text);
+    }
+
+    .tpl-desc {
+      font-size: .78rem;
+      color: var(--text2);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .tpl-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .tpl-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    /* Category & steps badges */
+    .badge-cat {
+      padding: 2px 7px;
+      border-radius: 20px;
+      font-size: .65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      background: var(--accent-bg);
+      color: var(--accent-light);
+      border: 1px solid var(--accent-border);
+    }
+    .badge-steps {
+      padding: 2px 7px;
+      border-radius: 20px;
+      font-size: .65rem;
+      font-weight: 600;
+      background: var(--bg4);
+      color: var(--text2);
+      border: 1px solid var(--border);
+    }
+
+    /* Run cards */
+    .run-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .run-card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      transition: border-color .15s;
+    }
+    .run-card:hover { border-color: var(--border2); }
+
+    .run-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .run-title { font-weight: 600; font-size: .8rem; flex: 1; color: var(--text); }
+    .run-meta  { font-size: .72rem; color: var(--text2); }
+
+    .run-progress {
+      padding: 0 12px 10px;
+    }
+    .progress-label { font-size: .72rem; color: var(--text2); margin-top: 4px; }
+
+    /* Step breakdown */
+    .run-steps {
+      border-top: 1px solid var(--border);
+      padding: 10px 12px;
+      display: none;
+    }
+    .run-steps.open { display: block; }
+
+    .step-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .78rem;
+    }
+    .step-row:last-child { border-bottom: none; }
+
+    .step-icon { font-size: .875rem; line-height: 1.4; flex-shrink: 0; width: 18px; text-align: center; }
+    .step-info { flex: 1; min-width: 0; }
+    .step-name { font-weight: 600; color: var(--text); }
+    .step-output {
+      color: var(--text2);
+      margin-top: 2px;
+      font-family: 'Courier New', monospace;
+      font-size: .7rem;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 80px;
+      overflow-y: auto;
+      background: rgba(0,0,0,.25);
+      border-radius: 4px;
+      padding: 4px 6px;
+      display: none;
+    }
+    .step-output.has-content { display: block; }
+    .step-time { font-size: .65rem; color: var(--text2); flex-shrink: 0; }
+
+    /* Approval banner */
+    .approve-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--accent-bg);
+      border-top: 2px solid var(--accent-border);
+      font-size: .8rem;
+      font-weight: 600;
+      color: var(--accent-light);
+    }
+
+    /* Status bar */
+    .status-bar {
+      font-size: .75rem;
+      color: var(--text2);
+      padding: 6px 0 0;
+      min-height: 20px;
+    }
+    .status-bar.error { color: var(--danger); }
+
+    /* Form column in modal */
+    .form-col { display: flex; flex-direction: column; }
+    .form-col textarea {
+      font-family: 'Courier New', monospace;
+      font-size: .78rem;
+      resize: vertical;
+      min-height: 140px;
+    }
+
+    /* Empty state inside cards */
+    .empty {
+      text-align: center;
+      padding: 28px 16px;
+      color: var(--text2);
+      font-size: .82rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo"><span>[=] IT OPS</span></div>
+  <nav class="sidebar-nav">
+    <span class="sidebar-section">Operations</span>
+    <a href="/incidents" class="nav-item"><span class="nav-icon">!</span>Incidents</a>
+    <a href="/workflows" class="nav-item"><span class="nav-icon">></span>Workflows</a>
+    <a href="/runbooks" class="nav-item active"><span class="nav-icon">#</span>Runbooks</a>
+    <a href="/servers" class="nav-item"><span class="nav-icon">@</span>Servers</a>
+    <a href="/monitoring.html" class="nav-item"><span class="nav-icon">%</span>Monitoring</a>
+    <span class="sidebar-section">Integrations</span>
+    <a href="/jira.html" class="nav-item"><span class="nav-icon">*</span>Jira</a>
+    <a href="/a2a.html" class="nav-item"><span class="nav-icon">&amp;</span>A2A Mesh</a>
+    <span class="sidebar-section">System</span>
+    <a href="/agent-details.html" class="nav-item"><span class="nav-icon">$</span>Agents</a>
+    <a href="/scheduler" class="nav-item"><span class="nav-icon">~</span>Scheduler</a>
+    <a href="/security.html" class="nav-item"><span class="nav-icon">^</span>Security</a>
+    <a href="/users.html" class="nav-item" id="nav-users" style="display:none"><span class="nav-icon">+</span>Users</a>
+    <span class="sidebar-section">Communication</span>
+    <a href="/agent-chat.html" class="nav-item"><span class="nav-icon">&lt;</span>Agent Chat</a>
+    <a href="/agent-bridge" class="nav-item"><span class="nav-icon">&lt;&gt;</span>Agent Bridge</a>
+    <span class="sidebar-section">Tools</span>
+    <a href="/dashboard" class="nav-item"><span class="nav-icon">=</span>Dashboard</a>
+    <a href="/cicd" class="nav-item"><span class="nav-icon">|</span>CI/CD</a>
+    <a href="/audit" class="nav-item"><span class="nav-icon">.</span>Audit</a>
+    <a href="/rbac" class="nav-item"><span class="nav-icon">:</span>RBAC</a>
+    <a href="/plugin-manager" class="nav-item"><span class="nav-icon">,</span>Plugins</a>
+    <a href="/agent-runtime" class="nav-item"><span class="nav-icon">&gt;&gt;</span>Agent Runtime</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="user-avatar">?</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-username" id="user-name">---</div>
+        <div class="sidebar-role" id="user-role"></div>
+      </div>
+    </div>
+    <div class="sidebar-actions">
+      <button class="btn-icon" onclick="doLogout()" title="Logout">[X]</button>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Runbooks</h1>
+      <p class="page-subtitle">Step-by-step procedures for incident response</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span class="ws-dot" id="ws-dot" title="WebSocket"></span>
+      <span id="ws-label" style="font-size:.78rem;color:var(--text2)">connecting…</span>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="page-body">
+
+      <!-- LEFT: Templates panel -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">[#] Runbook Templates</span>
+            <button class="btn btn-primary btn-sm" id="new-runbook-btn">+ New Runbook</button>
+          </div>
+          <div class="card-body">
+            <div id="tpl-list" class="tpl-list">
+              <div class="empty">Loading templates…</div>
+            </div>
+            <div id="tpl-status" class="status-bar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Runs panel -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">▶ Active &amp; Recent Runs</span>
+            <button class="btn btn-secondary btn-sm" id="refresh-btn">↺ Refresh</button>
+          </div>
+          <div class="card-body">
+            <div id="run-list" class="run-list">
+              <div class="empty">Loading runs…</div>
+            </div>
+            <div id="run-status" class="status-bar"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="/auth-guard.js"></script>
+<!-- New / Edit Runbook Modal -->
+<div id="modal-backdrop" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">New Runbook</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-col">
+        <div class="form-group">
+          <label>ID</label>
+          <input id="rb-id" type="text" placeholder="my-runbook-id (alphanumeric + hyphens)" />
+        </div>
+        <div class="form-group">
+          <label>Name</label>
+          <input id="rb-name" type="text" placeholder="Human-readable name" />
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input id="rb-desc" type="text" placeholder="Brief description of what this runbook does" />
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="rb-category">
+            <option value="infrastructure">Infrastructure</option>
+            <option value="monitoring">Monitoring</option>
+            <option value="deployment">Deployment</option>
+            <option value="security">Security</option>
+            <option value="service-management">Service Management</option>
+            <option value="general" selected>General</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Steps <span style="font-weight:400;text-transform:none;letter-spacing:0">(JSON array)</span></label>
+          <textarea id="rb-steps" placeholder='[
+  { "name": "Check status", "description": "Verify service status", "type": "command", "command": "systemctl status myservice" },
+  { "name": "Approval gate", "description": "Manual approval required", "type": "approval" },
+  { "name": "Restart service", "description": "Restart the service", "type": "command", "command": "systemctl restart myservice" }
+]'></textarea>
+        </div>
+      </div>
+      <div id="modal-error" class="field-error" style="min-height:16px;margin-top:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button id="modal-cancel" class="btn btn-secondary">Cancel</button>
+      <button id="modal-save" class="btn btn-primary">Save Runbook</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ── Theme ─────────────────────────────────────────────────────────
+// ── Auth ──────────────────────────────────────────────────────────
+const token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token');
+if (!token) { window.location.href = '/'; }
+let authToken = token;
+function doLogout() {
+  sessionStorage.removeItem('itops_token');
+  localStorage.removeItem('itops_token');
+  window.location.href = '/';
+}
+
+// ── Load user info ────────────────────────────────────────────────
+fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+  .then(r => r.json()).then(u => {
+    document.getElementById('user-name').textContent = u.username;
+    document.getElementById('user-role').textContent = u.role;
+    document.getElementById('user-avatar').textContent = u.username[0].toUpperCase();
+    if (u.role === 'admin') document.getElementById('nav-users').style.display = 'flex';
+  }).catch(() => { window.location.href = '/'; });
+
+// ── Toast ─────────────────────────────────────────────────────────
+function toast(msg, type = 'ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  t.style.borderColor = type === 'error' ? 'var(--danger)' : type === 'ok' ? 'var(--success)' : 'var(--border2)';
+  clearTimeout(t._to);
+  t._to = setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+
+// ── Config ────────────────────────────────────────────────────────
+const API = '';  // relative — same origin
+
+const BUILTIN_IDS = new Set(['server-health-check', 'service-restart', 'ssl-cert-check']);
+
+// ── State ─────────────────────────────────────────────────────────
+let templates    = [];
+let runs         = [];
+let expandedRuns = new Set();
+let refreshTimer = null;
+
+// ── DOM refs ──────────────────────────────────────────────────────
+const tplListEl   = document.getElementById('tpl-list');
+const tplStatusEl = document.getElementById('tpl-status');
+const runListEl   = document.getElementById('run-list');
+const runStatusEl = document.getElementById('run-status');
+
+// ── Utility ───────────────────────────────────────────────────────
+function fmtTime(ts) {
+  if (!ts) return '—';
+  try {
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  } catch { return ts; }
+}
+
+function fmtRelative(ts) {
+  if (!ts) return '';
+  try {
+    const diff = Date.now() - new Date(ts).getTime();
+    if (diff < 60000) return 'just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    return `${Math.floor(diff / 3600000)}h ago`;
+  } catch { return ''; }
+}
+
+function stepIcon(status) {
+  const map = { completed: 'OK', failed: 'FAIL', running: '...', waiting_approval: '[!]', skipped: '>>' };
+  return map[status] || '?';
+}
+
+function statusBadge(status) {
+  const label = (status || 'unknown').replace(/_/g, ' ');
+  const map = {
+    running:          'badge-accent',
+    completed:        'badge-success',
+    failed:           'badge-danger',
+    waiting_approval: 'badge-warning',
+    cancelled:        'badge-neutral',
+    unknown:          'badge-neutral'
+  };
+  const cls = map[status] || 'badge-neutral';
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+// ── API helper ────────────────────────────────────────────────────
+async function apiFetch(path, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {}),
+    ...(options.headers || {})
+  };
+  const res = await fetch(API + path, { ...options, headers });
+  if (res.status === 401) {
+    await doLogin();
+    const retry = await fetch(API + path, {
+      ...options,
+      headers: { ...headers, 'Authorization': `Bearer ${authToken}` }
+    });
+    if (!retry.ok) throw new Error(`HTTP ${retry.status}`);
+    const ct2 = retry.headers.get('content-type') || '';
+    return ct2.includes('application/json') ? retry.json() : retry.text();
+  }
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    let msg = body;
+    try { msg = JSON.parse(body).error || body; } catch {}
+    throw new Error(msg || `HTTP ${res.status}`);
+  }
+  const ct = res.headers.get('content-type') || '';
+  return ct.includes('application/json') ? res.json() : res.text();
+}
+
+async function doLogin() {
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'admin', password: '1234' })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    authToken = data.token || data.accessToken || data.access_token;
+    if (authToken) sessionStorage.setItem('itops_token', authToken);
+  } catch { /* silent */ }
+}
+
+// ── Load templates ────────────────────────────────────────────────
+async function loadTemplates() {
+  try {
+    const data = await apiFetch('/api/runbooks/templates');
+    templates = data.templates || [];
+    renderTemplates();
+  } catch (err) {
+    tplStatusEl.textContent = `Error loading templates: ${err.message}`;
+    tplStatusEl.className = 'status-bar error';
+  }
+}
+
+function renderTemplates() {
+  if (!templates.length) {
+    tplListEl.innerHTML = `
+      <div class="empty" style="padding:48px 16px">
+        <div style="font-size:36px;margin-bottom:12px">[#]</div>
+        <div style="font-weight:600;margin-bottom:6px;color:var(--text)">No runbooks yet</div>
+        <div>Create your first runbook template to automate incident response and operational tasks.</div>
+      </div>`;
+    return;
+  }
+  tplListEl.innerHTML = '';
+  for (const tpl of templates) {
+    const isBuiltin  = BUILTIN_IDS.has(tpl.id);
+    const stepCount  = Array.isArray(tpl.steps) ? tpl.steps.length : (tpl.stepCount || 0);
+    const el         = document.createElement('div');
+    el.className = 'tpl-item';
+    el.innerHTML = `
+      <div class="tpl-top">
+        <div class="tpl-name">
+          ${isBuiltin ? '<span title="Built-in template">[^]</span>' : ''}
+          ${escHtml(tpl.name || tpl.id)}
+        </div>
+      </div>
+      <div class="tpl-desc">${escHtml(tpl.description || '')}</div>
+      <div class="tpl-meta">
+        <span class="badge-steps">${stepCount} step${stepCount !== 1 ? 's' : ''}</span>
+        ${tpl.category ? `<span class="badge-cat">${escHtml(tpl.category)}</span>` : ''}
+      </div>
+      <div class="tpl-actions">
+        <button class="btn btn-success btn-xs run-btn" data-id="${escAttr(tpl.id)}">▶ Run</button>
+        <button class="btn btn-secondary btn-xs edit-btn" data-id="${escAttr(tpl.id)}">✎ Edit</button>
+        ${!isBuiltin ? `<button class="btn btn-danger btn-xs del-btn" data-id="${escAttr(tpl.id)}" data-name="${escAttr(tpl.name || tpl.id)}">X Delete</button>` : ''}
+      </div>
+    `;
+    el.querySelector('.run-btn').addEventListener('click', () => triggerRun(tpl.id));
+    el.querySelector('.edit-btn').addEventListener('click', () => openModal(tpl));
+    if (!isBuiltin) {
+      el.querySelector('.del-btn').addEventListener('click', () => deleteTemplate(tpl.id, tpl.name || tpl.id));
+    }
+    tplListEl.appendChild(el);
+  }
+  tplStatusEl.textContent = `${templates.length} template${templates.length !== 1 ? 's' : ''} loaded.`;
+  tplStatusEl.className = 'status-bar';
+}
+
+// ── Load runs ─────────────────────────────────────────────────────
+async function loadRuns() {
+  try {
+    const data = await apiFetch('/api/runbooks/runs');
+    runs = data.runs || [];
+    renderRuns();
+  } catch (err) {
+    runStatusEl.textContent = `Error loading runs: ${err.message}`;
+    runStatusEl.className = 'status-bar error';
+  }
+}
+
+function renderRuns() {
+  if (!runs.length) {
+    runListEl.innerHTML = `
+      <div class="empty" style="padding:48px 16px">
+        <div style="font-size:32px;margin-bottom:10px">▶</div>
+        <div style="font-weight:600;margin-bottom:6px;color:var(--text)">No runs yet</div>
+        <div>Trigger a runbook template to get started. Runs will appear here with live progress tracking.</div>
+      </div>`;
+    runStatusEl.textContent = '';
+    return;
+  }
+  runListEl.innerHTML = '';
+  for (const run of runs) {
+    const el = buildRunCard(run);
+    runListEl.appendChild(el);
+  }
+  runStatusEl.textContent = `${runs.length} run${runs.length !== 1 ? 's' : ''} shown. Auto-refreshes every 10s.`;
+  runStatusEl.className = 'status-bar';
+}
+
+function buildRunCard(run) {
+  const steps          = Array.isArray(run.steps) ? run.steps : [];
+  const done           = steps.filter(s => s.status === 'completed' || s.status === 'failed').length;
+  const total          = steps.length;
+  const pct            = total > 0 ? Math.round((done / total) * 100) : 0;
+  const isOpen         = expandedRuns.has(run.id);
+  const needsApproval  = run.status === 'waiting_approval';
+
+  const card = document.createElement('div');
+  card.className  = 'run-card';
+  card.dataset.id = run.id;
+
+  card.innerHTML = `
+    <div class="run-header" data-toggle="${escAttr(run.id)}">
+      <div class="run-title">${escHtml(run.templateName || run.templateId || 'Runbook')}</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        ${statusBadge(run.status)}
+        <span style="color:var(--text2);font-size:.8rem">${isOpen ? '▲' : '▼'}</span>
+      </div>
+    </div>
+    <div class="run-progress">
+      ${total > 0 ? `
+        <div class="progress-bar">
+          <div class="progress-fill" style="width:${pct}%;background:${progressColor(run.status)}"></div>
+        </div>
+        <div class="progress-label">${done}/${total} steps (${pct}%) · triggered by ${escHtml(run.triggeredBy || 'unknown')} · ${fmtRelative(run.startedAt || run.createdAt)}</div>
+      ` : `<div class="run-meta">triggered by ${escHtml(run.triggeredBy || 'unknown')} · ${fmtRelative(run.startedAt || run.createdAt)}</div>`}
+    </div>
+    ${needsApproval ? `
+      <div class="approve-banner">
+        [!] Waiting for manual approval
+        <button class="btn btn-primary btn-sm approve-btn" data-id="${escAttr(run.id)}">OK Approve Now</button>
+      </div>
+    ` : ''}
+    <div class="run-steps ${isOpen ? 'open' : ''}" id="steps-${escAttr(run.id)}">
+      ${buildStepsHtml(steps)}
+    </div>
+  `;
+
+  card.querySelector('.run-header').addEventListener('click', () => toggleRun(run.id));
+  if (needsApproval) {
+    card.querySelector('.approve-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      approveStep(run.id);
+    });
+  }
+
+  return card;
+}
+
+function buildStepsHtml(steps) {
+  if (!steps.length) return '<div class="empty" style="padding:12px 0">No step details available.</div>';
+  return steps.map(step => {
+    const out = step.output || step.error || '';
+    return `
+      <div class="step-row">
+        <div class="step-icon">${stepIcon(step.status)}</div>
+        <div class="step-info">
+          <div class="step-name">${escHtml(step.name || step.id || 'Step')}</div>
+          ${step.description ? `<div style="color:var(--text2);font-size:.72rem">${escHtml(step.description)}</div>` : ''}
+          <div class="step-output ${out ? 'has-content' : ''}">${escHtml(out.length > 400 ? out.slice(0, 400) + '…' : out)}</div>
+        </div>
+        <div class="step-time">${fmtTime(step.startedAt || step.timestamp)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function progressColor(status) {
+  const map = {
+    running:          '#3b82f6',
+    completed:        '#22c55e',
+    failed:           '#ef4444',
+    waiting_approval: '#f59e0b',
+    cancelled:        '#64748b'
+  };
+  return map[status] || '#6366f1';
+}
+
+function toggleRun(id) {
+  if (expandedRuns.has(id)) {
+    expandedRuns.delete(id);
+  } else {
+    expandedRuns.add(id);
+  }
+  const stepsEl = document.getElementById(`steps-${id}`);
+  const card    = document.querySelector(`.run-card[data-id="${id}"]`);
+  if (stepsEl) stepsEl.classList.toggle('open', expandedRuns.has(id));
+  if (card) {
+    const arrow = card.querySelector('.run-header span[style]');
+    if (arrow) arrow.textContent = expandedRuns.has(id) ? '▲' : '▼';
+  }
+}
+
+// ── Actions ───────────────────────────────────────────────────────
+async function triggerRun(templateId) {
+  try {
+    const data = await apiFetch('/api/runbooks/runs', {
+      method: 'POST',
+      body: JSON.stringify({ templateId, triggeredBy: 'dashboard' })
+    });
+    if (data.run || data.id) {
+      toast(`Run started for "${templateId}"`);
+      if (data.run) expandedRuns.add(data.run.id || data.run);
+      await loadRuns();
+    }
+  } catch (err) {
+    toast(`Failed to trigger run: ${err.message}`, 'error');
+  }
+}
+
+async function approveStep(runId) {
+  try {
+    await apiFetch(`/api/runbooks/runs/${encodeURIComponent(runId)}/approve`, {
+      method: 'POST',
+      body: JSON.stringify({ approverId: 'dashboard-operator' })
+    });
+    toast('Approval granted');
+    await loadRuns();
+  } catch (err) {
+    toast(`Approval failed: ${err.message}`, 'error');
+  }
+}
+
+async function deleteTemplate(id, name) {
+  if (!confirm(`Delete runbook "${name}"? This cannot be undone.`)) return;
+  try {
+    await apiFetch(`/api/runbooks/templates/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    toast(`Template "${name}" deleted.`);
+    await loadTemplates();
+  } catch (err) {
+    toast(`Delete failed: ${err.message}`, 'error');
+  }
+}
+
+// ── New / Edit Modal ──────────────────────────────────────────────
+let editingId = null;
+
+const modalBackdrop = document.getElementById('modal-backdrop');
+const modalTitle    = document.getElementById('modal-title');
+const modalError    = document.getElementById('modal-error');
+const rbId          = document.getElementById('rb-id');
+const rbName        = document.getElementById('rb-name');
+const rbDesc        = document.getElementById('rb-desc');
+const rbCategory    = document.getElementById('rb-category');
+const rbSteps       = document.getElementById('rb-steps');
+
+function openModal(tpl = null) {
+  editingId             = tpl ? tpl.id : null;
+  modalTitle.textContent = tpl ? 'Edit Runbook' : 'New Runbook';
+  modalError.textContent = '';
+  rbId.value            = tpl ? tpl.id : '';
+  rbId.disabled         = !!tpl;
+  rbName.value          = tpl ? (tpl.name || '') : '';
+  rbDesc.value          = tpl ? (tpl.description || '') : '';
+  rbCategory.value      = tpl ? (tpl.category || 'general') : 'general';
+  rbSteps.value         = tpl && Array.isArray(tpl.steps) ? JSON.stringify(tpl.steps, null, 2) : '';
+  modalBackdrop.classList.add('open');
+  (tpl ? rbName : rbId).focus();
+}
+
+function closeModal() {
+  modalBackdrop.classList.remove('open');
+  editingId = null;
+}
+
+document.getElementById('new-runbook-btn').addEventListener('click', () => openModal(null));
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+modalBackdrop.addEventListener('click', (e) => { if (e.target === modalBackdrop) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+document.getElementById('modal-save').addEventListener('click', async () => {
+  modalError.textContent = '';
+  const id       = rbId.value.trim();
+  const name     = rbName.value.trim();
+  const desc     = rbDesc.value.trim();
+  const category = rbCategory.value;
+  const stepsRaw = rbSteps.value.trim();
+
+  if (!editingId && !id)   { modalError.textContent = 'ID is required.'; return; }
+  if (!/^[a-z0-9-]+$/i.test(id) && !editingId) {
+    modalError.textContent = 'ID must be alphanumeric and hyphens only.'; return;
+  }
+  if (!name) { modalError.textContent = 'Name is required.'; return; }
+
+  let steps = [];
+  if (stepsRaw) {
+    try { steps = JSON.parse(stepsRaw); }
+    catch { modalError.textContent = 'Steps must be valid JSON.'; return; }
+  }
+
+  const saveBtn = document.getElementById('modal-save');
+  saveBtn.disabled = true;
+  try {
+    if (editingId) {
+      await apiFetch(`/api/runbooks/templates/${encodeURIComponent(editingId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name, description: desc, category, steps })
+      });
+      toast(`Runbook "${name}" updated.`);
+    } else {
+      await apiFetch('/api/runbooks/templates', {
+        method: 'POST',
+        body: JSON.stringify({ id, name, description: desc, category, steps })
+      });
+      toast(`Runbook "${name}" created.`);
+    }
+    closeModal();
+    await loadTemplates();
+  } catch (err) {
+    modalError.textContent = err.message || 'Save failed';
+  } finally {
+    saveBtn.disabled = false;
+  }
+});
+
+// ── Refresh button ────────────────────────────────────────────────
+document.getElementById('refresh-btn').addEventListener('click', async () => {
+  await loadRuns();
+});
+
+// ── WebSocket ─────────────────────────────────────────────────────
+let wsConn = null;
+
+function connectWS() {
+  try {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    wsConn = new WebSocket(`${proto}//${location.host}`);
+
+    wsConn.addEventListener('open', () => {
+      document.getElementById('ws-dot').className = 'ws-dot connected';
+      document.getElementById('ws-label').textContent = 'live';
+    });
+
+    wsConn.addEventListener('close', () => {
+      document.getElementById('ws-dot').className = 'ws-dot disconnected';
+      document.getElementById('ws-label').textContent = 'disconnected';
+      setTimeout(connectWS, 5000);
+    });
+
+    wsConn.addEventListener('error', () => {
+      document.getElementById('ws-dot').className = 'ws-dot disconnected';
+    });
+
+    wsConn.addEventListener('message', (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (typeof msg.type === 'string' && msg.type.startsWith('runbook_')) {
+          loadRuns();
+        }
+      } catch {}
+    });
+  } catch {
+    document.getElementById('ws-dot').className = 'ws-dot disconnected';
+    document.getElementById('ws-label').textContent = 'no ws';
+  }
+}
+
+// ── HTML escaping ─────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+function escAttr(str) { return escHtml(str).replace(/'/g, '&#39;'); }
+
+// ── Bootstrap ─────────────────────────────────────────────────────
+(async function init() {
+  if (!authToken) await doLogin();
+  await Promise.all([loadTemplates(), loadRuns()]);
+  connectWS();
+  refreshTimer = setInterval(() => loadRuns().catch(() => {}), 10000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,223 @@
+/* SchedulerPage.module.css */
+
+/* Table */
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 13px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover td {
+  background: var(--bg3);
+}
+
+.taskName {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.taskAction {
+  font-size: 0.75rem;
+  color: var(--text3);
+  margin-top: 3px;
+  font-family: monospace;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cronCode {
+  font-family: monospace;
+  font-size: 0.82rem;
+  background: var(--bg4);
+  color: var(--accent-light);
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border2);
+  white-space: nowrap;
+}
+
+.dateCell {
+  font-size: 0.8rem;
+  color: var(--text2);
+  white-space: nowrap;
+}
+
+.na {
+  color: var(--text3);
+}
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggleSlider {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  background: var(--bg5);
+  border-radius: 999px;
+  transition: background 0.2s;
+  border: 1px solid var(--border2);
+}
+
+.toggleSlider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  background: var(--text3);
+  border-radius: 50%;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.toggle input:checked + .toggleSlider {
+  background: var(--accent);
+  border-color: var(--accent-border);
+}
+
+.toggle input:checked + .toggleSlider::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+
+.toggle input:disabled + .toggleSlider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Row actions */
+.actionBtns {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+/* Modal form */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.82rem;
+  color: var(--text2);
+  font-weight: 500;
+}
+
+.required {
+  color: var(--danger);
+}
+
+.input {
+  padding: 8px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  font-family: inherit;
+}
+
+.input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.input::placeholder {
+  color: var(--text3);
+}
+
+.inputError {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 3px var(--danger-bg) !important;
+}
+
+.errorText {
+  font-size: 0.75rem;
+  color: var(--danger);
+  margin-top: 2px;
+}
+
+.hint {
+  font-size: 0.72rem;
+  color: var(--text3);
+  margin-top: 2px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .table th:nth-child(3),
+  .table td:nth-child(3),
+  .table th:nth-child(4),
+  .table td:nth-child(4) {
+    display: none;
+  }
+}
+
+/* Run History */
+.historyEmpty {
+  color: var(--text3);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.historyOutput {
+  font-size: 0.78rem;
+  font-family: monospace;
+  color: var(--text2);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

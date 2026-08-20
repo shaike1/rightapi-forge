@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/manifest.json">
+  <title>API Gateway — RightAPI Forge</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5}
+    .nav{background:#1a1a2e;color:white;padding:14px 24px;display:flex;align-items:center;gap:16px}
+    .nav h1{font-size:18px}
+    .nav-tabs{display:flex;gap:6px;margin-left:auto}
+    .nav-tab{padding:6px 14px;border-radius:4px;cursor:pointer;font-size:13px;color:#ccc;border:none;background:transparent}
+    .nav-tab.active{background:#007bff;color:white}
+    .main{padding:24px;max-width:1400px;margin:0 auto}
+    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px}
+    .kpi{background:white;padding:18px;border-radius:10px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+    .kpi-val{font-size:28px;font-weight:700;color:#007bff}
+    .kpi-lbl{font-size:12px;color:#888;margin-top:4px}
+    .section{display:none}.section.active{display:block}
+    .toolbar{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
+    button{padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:13px}
+    .btn{background:#007bff;color:white}.btn-success{background:#28a745;color:white}
+    .btn-danger{background:#dc3545;color:white}.btn-secondary{background:#6c757d;color:white}
+    .btn-sm{padding:4px 10px;font-size:12px}
+    select,input{padding:7px 10px;border:1px solid #ddd;border-radius:4px;font-size:13px}
+    table{width:100%;border-collapse:collapse;background:white;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+    th{background:#f8f9fa;padding:10px 14px;text-align:left;font-size:13px;font-weight:600;border-bottom:1px solid #eee}
+    td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+    .badge{display:inline-block;padding:3px 9px;border-radius:10px;font-size:11px;font-weight:600}
+    .badge-active{background:#d4edda;color:#155724}.badge-revoked{background:#f8d7da;color:#721c24}
+    .badge-2xx{background:#d4edda;color:#155724}.badge-4xx{background:#fff3cd;color:#856404}
+    .badge-5xx{background:#f8d7da;color:#721c24}
+    .empty{text-align:center;padding:48px;color:#999}
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+    .modal.open{display:flex}
+    .modal-box{background:white;border-radius:8px;padding:24px;width:90%;max-width:580px;max-height:90vh;overflow-y:auto}
+    .modal-title{font-size:18px;font-weight:600;margin-bottom:16px}
+    .form-row{margin-bottom:12px}
+    .form-row label{display:block;font-size:13px;font-weight:500;margin-bottom:4px;color:#555}
+    .form-row input,.form-row select{width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px}
+    .form-actions{display:flex;gap:8px;margin-top:16px}
+    .key-reveal{background:#f8f9fa;border:1px solid #ddd;border-radius:6px;padding:16px;margin:12px 0;word-break:break-all;font-family:monospace;font-size:13px}
+    .scopes-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    .scope-cb{display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer}
+    .link-btn{background:none;border:none;color:#007bff;cursor:pointer;font-size:13px;text-decoration:underline;padding:0}
+  </style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>🔌 API Gateway</h1>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showTab('keys')">API Keys</button>
+    <button class="nav-tab" onclick="showTab('requests')">Request Log</button>
+    <button class="nav-tab" onclick="showTab('docs')">Docs</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- KPIs -->
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-val" id="kTotal">0</div><div class="kpi-lbl">Total Keys</div></div>
+    <div class="kpi"><div class="kpi-val" id="kActive">0</div><div class="kpi-lbl">Active Keys</div></div>
+    <div class="kpi"><div class="kpi-val" id="kReqHour">0</div><div class="kpi-lbl">Requests/hour</div></div>
+    <div class="kpi"><div class="kpi-val" id="kReqDay">0</div><div class="kpi-lbl">Requests/day</div></div>
+    <div class="kpi"><div class="kpi-val" id="kAvgDur">0ms</div><div class="kpi-lbl">Avg Latency</div></div>
+    <div class="kpi"><div class="kpi-val" id="kTotal2xx">0</div><div class="kpi-lbl">2xx Responses</div></div>
+  </div>
+
+  <!-- API Keys Tab -->
+  <div id="tab-keys" class="section active">
+    <div class="toolbar">
+      <button class="btn" onclick="openCreateModal()">➕ Create API Key</button>
+      <button class="btn-secondary" onclick="loadKeys()">🔄 Refresh</button>
+      <a href="/api/docs" target="_blank"><button class="btn" style="background:#6610f2">📖 Swagger UI</button></a>
+    </div>
+    <table>
+      <thead><tr><th>Name</th><th>Owner</th><th>Prefix</th><th>Scopes</th><th>Usage</th><th>Last Used</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody id="keysBody"><tr><td colspan="8" class="empty">Loading...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Requests Tab -->
+  <div id="tab-requests" class="section">
+    <div class="toolbar">
+      <button class="btn-secondary" onclick="loadRequests()">🔄 Refresh</button>
+    </div>
+    <table>
+      <thead><tr><th>Time</th><th>Method</th><th>Path</th><th>Status</th><th>Duration</th><th>IP</th></tr></thead>
+      <tbody id="requestsBody"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Docs Tab -->
+  <div id="tab-docs" class="section">
+    <div style="background:white;border-radius:10px;padding:28px;box-shadow:0 1px 4px rgba(0,0,0,.08)">
+      <h2 style="margin-bottom:16px">📖 API Documentation</h2>
+      <p style="color:#666;margin-bottom:20px">Authenticate all requests with an API key:</p>
+      <div class="key-reveal" style="margin-bottom:24px">Authorization: Bearer &lt;your-api-key&gt;</div>
+
+      <div id="endpointList"></div>
+
+      <div style="margin-top:24px">
+        <a href="/api/docs" target="_blank">
+          <button class="btn" style="background:#6610f2">🚀 Open Swagger UI</button>
+        </a>
+        <a href="/api/gateway/openapi.json" target="_blank">
+          <button class="btn-secondary" style="margin-left:8px">📄 Download OpenAPI JSON</button>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Key Modal -->
+<div id="createModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-title">🔑 Create API Key</div>
+    <div class="form-row"><label>Key Name *</label><input id="kName" placeholder="e.g. CI/CD Pipeline"></div>
+    <div class="form-row"><label>Owner *</label><input id="kOwner" placeholder="e.g. devops-team"></div>
+    <div class="form-row">
+      <label>Rate Limit (req/min)</label>
+      <input id="kRpm" type="number" value="60">
+    </div>
+    <div class="form-row">
+      <label>Scopes</label>
+      <div class="scopes-grid">
+        <label class="scope-cb"><input type="checkbox" value="tasks:read"> tasks:read</label>
+        <label class="scope-cb"><input type="checkbox" value="tasks:write"> tasks:write</label>
+        <label class="scope-cb"><input type="checkbox" value="agents:read"> agents:read</label>
+        <label class="scope-cb"><input type="checkbox" value="agents:write"> agents:write</label>
+        <label class="scope-cb"><input type="checkbox" value="workflows:read"> workflows:read</label>
+        <label class="scope-cb"><input type="checkbox" value="workflows:write"> workflows:write</label>
+        <label class="scope-cb"><input type="checkbox" value="alerts:read"> alerts:read</label>
+        <label class="scope-cb"><input type="checkbox" value="pipelines:read"> pipelines:read</label>
+        <label class="scope-cb"><input type="checkbox" value="analytics:read"> analytics:read</label>
+        <label class="scope-cb"><input type="checkbox" value="security:read"> security:read</label>
+        <label class="scope-cb"><input type="checkbox" value="security:write"> security:write</label>
+        <label class="scope-cb"><input type="checkbox" value="admin" id="adminScope"> admin (all)</label>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-success" onclick="createKey()">Create</button>
+      <button class="btn-secondary" onclick="closeModal('createModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Key Reveal Modal -->
+<div id="revealModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-title">✅ API Key Created!</div>
+    <p style="color:#666;font-size:13px;margin-bottom:8px">⚠️ Copy this key now — it won't be shown again!</p>
+    <div class="key-reveal" id="revealKey"></div>
+    <div class="form-actions">
+      <button class="btn-success" onclick="copyKey()">📋 Copy</button>
+      <button class="btn-secondary" onclick="closeModal('revealModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+  if (tab === 'keys') loadKeys();
+  if (tab === 'requests') loadRequests();
+  if (tab === 'docs') loadDocs();
+}
+
+async function loadStats() {
+  try {
+    const s = await fetch('/api/gateway/stats').then(r => r.json());
+    document.getElementById('kTotal').textContent = s.totalKeys;
+    document.getElementById('kActive').textContent = s.activeKeys;
+    document.getElementById('kReqHour').textContent = s.requestsLastHour;
+    document.getElementById('kReqDay').textContent = s.requestsLastDay;
+    document.getElementById('kAvgDur').textContent = s.avgDurationMs + 'ms';
+    document.getElementById('kTotal2xx').textContent = s.statusCodes?.['200'] || 0;
+  } catch(e) {}
+}
+
+async function loadKeys() {
+  try {
+    const data = await fetch('/api/gateway/keys').then(r => r.json());
+    const tbody = document.getElementById('keysBody');
+    if (!data.keys.length) {
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty"><div style="font-size:48px;margin-bottom:12px">🔑</div><div>No API keys yet</div></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.keys.map(k => {
+      const scopes = k.scopes.length > 3 ? k.scopes.slice(0,3).join(', ') + '...' : k.scopes.join(', ');
+      return '<tr>' +
+        '<td><strong>' + esc(k.name) + '</strong></td>' +
+        '<td>' + esc(k.owner) + '</td>' +
+        '<td><code style="background:#f8f9fa;padding:2px 6px;border-radius:3px">' + esc(k.keyPrefix) + '...</code></td>' +
+        '<td style="font-size:12px;color:#666">' + esc(scopes) + '</td>' +
+        '<td>' + k.usageCount + '</td>' +
+        '<td>' + (k.lastUsedAt ? timeAgo(k.lastUsedAt) : '—') + '</td>' +
+        '<td><span class="badge badge-' + (k.enabled ? 'active' : 'revoked') + '">' + (k.enabled ? 'active' : 'revoked') + '</span></td>' +
+        '<td style="white-space:nowrap">' +
+          (k.enabled ? '<button class="btn-sm btn-secondary" onclick="revokeKey(\'' + k.id + '\')">🚫 Revoke</button> ' : '') +
+          '<button class="btn-sm btn-danger" onclick="deleteKey(\'' + k.id + '\')">🗑</button>' +
+        '</td></tr>';
+    }).join('');
+  } catch(e) {}
+}
+
+async function loadRequests() {
+  try {
+    const data = await fetch('/api/gateway/requests?limit=200').then(r => r.json());
+    const tbody = document.getElementById('requestsBody');
+    if (!data.requests.length) {
+      tbody.innerHTML = '<tr><td colspan="6"><div class="empty"><div style="font-size:48px;margin-bottom:12px">📡</div><div>No requests yet</div></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.requests.map(r => {
+      const bucket = String(Math.floor(r.statusCode / 100) * 100);
+      return '<tr>' +
+        '<td style="white-space:nowrap">' + new Date(r.timestamp).toLocaleTimeString() + '</td>' +
+        '<td><code>' + r.method + '</code></td>' +
+        '<td style="font-size:12px">' + esc(r.path) + '</td>' +
+        '<td><span class="badge badge-' + bucket + 'xx">' + r.statusCode + '</span></td>' +
+        '<td>' + r.durationMs + 'ms</td>' +
+        '<td>' + esc(r.ip) + '</td></tr>';
+    }).join('');
+  } catch(e) {}
+}
+
+async function loadDocs() {
+  try {
+    const spec = await fetch('/api/gateway/openapi.json').then(r => r.json());
+    const container = document.getElementById('endpointList');
+    container.innerHTML = '<h3 style="margin-bottom:12px">Endpoints</h3>' +
+      Object.entries(spec.paths).map(([path, methods]) =>
+        Object.entries(methods).map(([method, op]) =>
+          '<div style="display:flex;align-items:center;gap:12px;padding:10px;background:#f8f9fa;border-radius:6px;margin-bottom:8px">' +
+            '<span style="background:' + methodColor(method) + ';color:white;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:700;min-width:48px;text-align:center">' + method.toUpperCase() + '</span>' +
+            '<code style="font-size:13px">' + esc(path) + '</code>' +
+            '<span style="color:#666;font-size:13px;margin-left:auto">' + esc((op as any).summary || '') + '</span>' +
+          '</div>'
+        ).join('')
+      ).join('');
+  } catch(e) {}
+}
+
+function methodColor(m) {
+  return { get:'#28a745', post:'#007bff', put:'#fd7e14', patch:'#17a2b8', delete:'#dc3545' }[m] || '#6c757d';
+}
+
+function openCreateModal() { document.getElementById('createModal').classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function copyKey() { navigator.clipboard.writeText(document.getElementById('revealKey').textContent); alert('Copied!'); }
+
+async function createKey() {
+  const name = document.getElementById('kName').value.trim();
+  const owner = document.getElementById('kOwner').value.trim();
+  const rpm = parseInt(document.getElementById('kRpm').value) || 60;
+  if (!name || !owner) { alert('Name and owner required'); return; }
+
+  const scopes = [];
+  document.querySelectorAll('.scopes-grid input[type=checkbox]:checked').forEach(cb => scopes.push(cb.value));
+  if (!scopes.length) { alert('Select at least one scope'); return; }
+
+  const data = await fetch('/api/gateway/keys', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, owner, scopes, rateLimit: { requestsPerMinute: rpm, requestsPerHour: rpm * 60 } })
+  }).then(r => r.json());
+
+  closeModal('createModal');
+  document.getElementById('revealKey').textContent = data.plainKey;
+  document.getElementById('revealModal').classList.add('open');
+  loadKeys(); loadStats();
+}
+
+async function revokeKey(id) {
+  if (!confirm('Revoke this key?')) return;
+  await fetch('/api/gateway/keys/' + id + '/revoke', { method: 'POST' });
+  loadKeys(); loadStats();
+}
+
+async function deleteKey(id) {
+  if (!confirm('Delete this key permanently?')) return;
+  await fetch('/api/gateway/keys/' + id, { method: 'DELETE' });
+  loadKeys(); loadStats();
+}
+
+function timeAgo(d) {
+  const diff = (Date.now() - new Date(d).getTime()) / 1000;
+  if (diff < 60) return Math.floor(diff) + 's ago';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = String(s||''); return d.innerHTML; }
+
+loadStats(); loadKeys();
+setInterval(() => { loadStats(); }, 15000);
+</script>
+<script>if("serviceWorker"in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{})}</script>
+<script src="/sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+project:
+  name: itops-agents
+  version: 1.0.0
+  description: IT Operations multi-agent system
+  default_model: zai/glm-4.7
+
+agents:
+  - id: director
+    name: IT Director
+    role: director
+    capabilities: [coordination, escalation, decision]
+    max_concurrency: 3
+
+  - id: alice
+    name: Alice
+    role: sysadmin
+    capabilities: [linux, docker, deployment, monitoring]
+    max_concurrency: 5
+
+  - id: bob
+    name: Bob
+    role: sysadmin
+    capabilities: [network, backup, storage, incident-response]
+    max_concurrency: 5
+
+  - id: eve
+    name: Eve
+    role: sysadmin
+    capabilities: [security, patching, compliance, hardening]
+    max_concurrency: 4
+
+  - id: charlie
+    name: Charlie
+    role: specialist
+    capabilities: [ci-cd, automation, pipelines]
+    max_concurrency: 4
+
+  - id: diana
+    name: Diana
+    role: specialist
+    capabilities: [observability, analytics, reporting]
+    max_concurrency: 4
+
+workflows:
+  - id: incident-response
+    name: Incident Response
+    trigger: alert|outage|incident
+    stages:
+      - triage
+      - assign
+      - mitigate
+      - validate
+      - postmortem
+
+  - id: change-deploy
+    name: Change and Deploy
+    trigger: deploy|release|change
+    stages:
+      - plan
+      - review
+      - execute
+      - verify
+      - rollback_or_close

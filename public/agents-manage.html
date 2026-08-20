@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — Agent Manager</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .am-container { max-width: 1100px; margin: 0 auto; }
+    .am-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 24px; }
+
+    .agent-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .2s; }
+    .agent-card:hover { border-color: var(--accent); }
+    .agent-card-header { padding: 12px 14px; background: var(--bg3); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+    .agent-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; color: #fff; }
+    .agent-avatar.director { background: #9b59b6; }
+    .agent-avatar.sysadmin { background: #3498db; }
+    .agent-avatar.specialist { background: #2ecc71; }
+    .agent-info { flex: 1; }
+    .agent-info-name { font-size: .85rem; font-weight: 600; color: var(--text); }
+    .agent-info-role { font-size: .65rem; color: var(--text2); text-transform: uppercase; }
+    .agent-status { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+
+    .agent-card-body { padding: 12px 14px; font-size: .75rem; color: var(--text2); }
+    .agent-desc { margin-bottom: 8px; line-height: 1.4; }
+    .agent-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+    .agent-tag { padding: 2px 6px; background: var(--bg3); border-radius: 8px; font-size: .6rem; color: var(--text2); }
+    .agent-meta { font-size: .65rem; color: var(--text3); }
+
+    .agent-card-actions { padding: 8px 14px; border-top: 1px solid var(--bg3); display: flex; gap: 6px; }
+    .agent-card-actions button { padding: 4px 10px; font-size: .7rem; border: 1px solid var(--border); border-radius: 3px; background: var(--bg); color: var(--text2); cursor: pointer; }
+    .agent-card-actions button:hover { border-color: var(--accent); color: var(--accent); }
+    .agent-card-actions button.chat { border-color: var(--success); color: var(--success); }
+    .agent-card-actions button.del { border-color: var(--danger); color: var(--danger); }
+
+    .am-create { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 24px; display: none; }
+    .am-create.visible { display: block; }
+    .am-create h3 { margin: 0 0 12px; font-size: .9rem; color: var(--text); }
+    .am-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .am-form .full { grid-column: 1 / -1; }
+    .am-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-family: inherit; font-size: .8rem; width: 100%; box-sizing: border-box; }
+    .am-input:focus { border-color: var(--accent); outline: none; }
+    .am-textarea { min-height: 100px; resize: vertical; font-family: monospace; }
+    .am-btn { padding: 8px 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-size: .8rem; cursor: pointer; }
+    .am-btn:hover { opacity: .9; }
+    .am-btn.secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+
+    .toolbar { display: flex; gap: 10px; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+<script src="/sidebar.js"></script>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Agent Manager</h1>
+      <p class="page-subtitle">Create, configure, and manage AI agent personas</p>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="am-container">
+
+      <div class="toolbar">
+        <button class="am-btn" onclick="toggleCreate()">+ New Agent</button>
+      </div>
+
+      <div class="am-create" id="am-create">
+        <h3 id="form-title">Create New Agent</h3>
+        <div class="am-form">
+          <input type="text" class="am-input" id="ag-name" placeholder="Agent name">
+          <select class="am-input" id="ag-role">
+            <option value="specialist">Specialist</option>
+            <option value="sysadmin">SysAdmin</option>
+          </select>
+          <input type="text" class="am-input" id="ag-specialty" placeholder="Specialty (e.g. security, networking, backup)">
+          <input type="text" class="am-input" id="ag-description" placeholder="Short description">
+          <input type="text" class="am-input full" id="ag-keywords" placeholder="Domain keywords (comma-separated, for auto-routing)">
+          <textarea class="am-input am-textarea full" id="ag-prompt" placeholder="Custom system prompt (instructions for how the agent should behave)"></textarea>
+          <div class="full" style="display:flex;gap:8px;">
+            <button class="am-btn" onclick="saveAgent()">Save Agent</button>
+            <button class="am-btn secondary" onclick="toggleCreate()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="am-grid" id="am-grid">
+        <div style="color:var(--text3);padding:20px;text-align:center;">Loading agents...</div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="/auth-guard.js"></script>
+<script>
+(function() {
+  var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token');
+  if (!token) window.location.href = '/';
+  function hdr() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
+
+  var editingId = null;
+
+  function loadAgents() {
+    fetch('/api/agents', { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var el = document.getElementById('am-grid');
+        // The API returns { director: {...}, sysadmins: [...], specialists: [...] }
+        var agents = [];
+        if (data.director) agents.push(data.director);
+        if (data.sysadmins) agents = agents.concat(data.sysadmins);
+        if (data.specialists) agents = agents.concat(data.specialists);
+        // Or it might be a flat array
+        if (Array.isArray(data)) agents = data;
+
+        if (agents.length === 0) {
+          el.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center;">No agents configured</div>';
+          return;
+        }
+
+        el.innerHTML = agents.map(function(a) {
+          var role = a.role || a.type || 'specialist';
+          var initials = (a.name || '??').split(' ').map(function(w){return w[0];}).join('').slice(0,2).toUpperCase();
+          var skills = a.skills || [];
+          var desc = a.description || a.specialty || role;
+          var keywords = a.domainKeywords || [];
+
+          return '<div class="agent-card">' +
+            '<div class="agent-card-header">' +
+              '<div class="agent-avatar ' + role + '">' + initials + '</div>' +
+              '<div class="agent-info"><div class="agent-info-name">' + a.name + '</div><div class="agent-info-role">' + role + '</div></div>' +
+              '<div class="agent-status"></div>' +
+            '</div>' +
+            '<div class="agent-card-body">' +
+              '<div class="agent-desc">' + desc + '</div>' +
+              '<div class="agent-tags">' + skills.slice(0,5).map(function(s) { return '<span class="agent-tag">' + s + '</span>'; }).join('') + '</div>' +
+              (keywords.length > 0 ? '<div class="agent-meta">Routes: ' + keywords.slice(0,6).join(', ') + '</div>' : '') +
+            '</div>' +
+            '<div class="agent-card-actions">' +
+              '<button class="chat" onclick="chatWith(\'' + a.id + '\')">Chat</button>' +
+              '<button onclick="editAgent(\'' + a.id + '\')">Edit</button>' +
+              (role !== 'director' ? '<button class="del" onclick="deleteAgent(\'' + a.id + '\')">Delete</button>' : '') +
+            '</div>' +
+          '</div>';
+        }).join('');
+      });
+  }
+
+  window.toggleCreate = function() {
+    var el = document.getElementById('am-create');
+    el.classList.toggle('visible');
+    if (!el.classList.contains('visible')) { editingId = null; clearForm(); }
+  };
+
+  function clearForm() {
+    document.getElementById('ag-name').value = '';
+    document.getElementById('ag-role').value = 'specialist';
+    document.getElementById('ag-specialty').value = '';
+    document.getElementById('ag-description').value = '';
+    document.getElementById('ag-keywords').value = '';
+    document.getElementById('ag-prompt').value = '';
+    document.getElementById('form-title').textContent = 'Create New Agent';
+    editingId = null;
+  }
+
+  window.saveAgent = function() {
+    var name = document.getElementById('ag-name').value.trim();
+    var role = document.getElementById('ag-role').value;
+    var specialty = document.getElementById('ag-specialty').value.trim();
+    var description = document.getElementById('ag-description').value.trim();
+    var keywords = document.getElementById('ag-keywords').value.split(',').map(function(k){return k.trim();}).filter(Boolean);
+    var prompt = document.getElementById('ag-prompt').value;
+
+    if (!name) { alert('Name required'); return; }
+
+    if (editingId) {
+      // Update existing
+      fetch('/api/agents/' + editingId, {
+        method: 'PATCH', headers: hdr(),
+        body: JSON.stringify({ name: name, specialty: specialty, description: description, domainKeywords: keywords, systemPrompt: prompt })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.error) { alert(d.error); return; }
+        toggleCreate();
+        loadAgents();
+      });
+    } else {
+      // Create new
+      fetch('/api/agents', {
+        method: 'POST', headers: hdr(),
+        body: JSON.stringify({ name: name, role: role, platform: 'claude', specialty: specialty || 'general', description: description, domainKeywords: keywords, systemPrompt: prompt })
+      }).then(function(r) { return r.json(); }).then(function(d) {
+        if (d.error) { alert(d.error); return; }
+        toggleCreate();
+        loadAgents();
+      });
+    }
+  };
+
+  window.editAgent = function(id) {
+    fetch('/api/agents/detail/' + id, { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(a) {
+        editingId = id;
+        document.getElementById('ag-name').value = a.name || '';
+        document.getElementById('ag-role').value = a.role || 'specialist';
+        document.getElementById('ag-specialty').value = (a.skills || [])[0] || '';
+        document.getElementById('ag-description').value = a.description || '';
+        document.getElementById('ag-keywords').value = (a.domainKeywords || []).join(', ');
+        document.getElementById('ag-prompt').value = a.systemPrompt || '';
+        document.getElementById('form-title').textContent = 'Edit: ' + a.name;
+        document.getElementById('am-create').classList.add('visible');
+      });
+  };
+
+  window.deleteAgent = function(id) {
+    if (!confirm('Delete this agent?')) return;
+    fetch('/api/agents/' + id, { method: 'DELETE', headers: hdr() })
+      .then(function() { loadAgents(); });
+  };
+
+  window.chatWith = function(id) {
+    window.location.href = '/agent-chat.html?agent=' + id;
+  };
+
+  loadAgents();
+})();
+</script>
+</body>
+</html>

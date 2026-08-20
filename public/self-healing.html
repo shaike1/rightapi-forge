@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Self-Healing - RightAPI Forge</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .container { max-width: 1400px; margin: 0 auto; }
+    h1 { margin-bottom: 20px; color: #333; }
+    
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid #ddd;
+    }
+    
+    .tab {
+      padding: 12px 24px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.2s;
+    }
+    
+    .tab.active {
+      color: #007bff;
+      border-bottom-color: #007bff;
+    }
+    
+    .tab:hover { color: #007bff; }
+    
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
+    .toolbar {
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    button.primary { background: #007bff; color: white; }
+    button.primary:hover { background: #0056b3; }
+    button.danger { background: #dc3545; color: white; }
+    button.danger:hover { background: #c82333; }
+    button.secondary { background: #6c757d; color: white; }
+    button.secondary:hover { background: #5a6268; }
+    button.success { background: #28a745; color: white; }
+    button.success:hover { background: #218838; }
+    
+    .grid {
+      display: grid;
+      gap: 15px;
+    }
+    
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .badge-info { background: #d1ecf1; color: #0c5460; }
+    .badge-warning { background: #fff3cd; color: #856404; }
+    .badge-critical { background: #f8d7da; color: #721c24; }
+    .badge-success { background: #d4edda; color: #155724; }
+    .badge-enabled { background: #d4edda; color: #155724; }
+    .badge-disabled { background: #f8d7da; color: #721c24; }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+    }
+    
+    .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+    
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: #007bff;
+    }
+    
+    .stat-label {
+      font-size: 14px;
+      color: #666;
+      margin-top: 8px;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal.active { display: flex; }
+    
+    .modal-content {
+      background: white;
+      padding: 24px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 700px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .modal-title { font-size: 20px; font-weight: 600; }
+    
+    .close-btn {
+      font-size: 24px;
+      cursor: pointer;
+      color: #999;
+      background: none;
+      border: none;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+    }
+    
+    .close-btn:hover { color: #333; }
+    
+    .form-group { margin-bottom: 16px; }
+    
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      font-size: 14px;
+      color: #333;
+    }
+    
+    input, textarea, select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    .actions { display: flex; gap: 8px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🩺 Self-Healing System</h1>
+    
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('anomalies')">Anomalies</button>
+      <button class="tab" onclick="switchTab('rules')">Remediation Rules</button>
+      <button class="tab" onclick="switchTab('executions')">Executions</button>
+      <button class="tab" onclick="switchTab('baselines')">Baselines</button>
+    </div>
+    
+    <!-- Anomalies Tab -->
+    <div id="anomaliesTab" class="tab-content active">
+      <div class="toolbar">
+        <button class="secondary" onclick="loadAnomalies()">🔄 Refresh</button>
+        <button class="primary" onclick="testAnomaly()">🧪 Test Anomaly</button>
+      </div>
+      
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-value" id="anomalyCount">0</div>
+          <div class="stat-label">Total Anomalies</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="unacknowledgedCount">0</div>
+          <div class="stat-label">Unacknowledged</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="remediatedCount">0</div>
+          <div class="stat-label">Remediated</div>
+        </div>
+      </div>
+      
+      <div id="anomaliesGrid" class="grid"></div>
+    </div>
+    
+    <!-- Rules Tab -->
+    <div id="rulesTab" class="tab-content">
+      <div class="toolbar">
+        <button class="primary" onclick="openCreateRuleModal()">➕ New Rule</button>
+        <button class="secondary" onclick="loadRules()">🔄 Refresh</button>
+      </div>
+      <div id="rulesGrid" class="grid"></div>
+    </div>
+    
+    <!-- Executions Tab -->
+    <div id="executionsTab" class="tab-content">
+      <div class="toolbar">
+        <button class="secondary" onclick="loadExecutions()">🔄 Refresh</button>
+      </div>
+      <div id="executionsGrid" class="grid"></div>
+    </div>
+    
+    <!-- Baselines Tab -->
+    <div id="baselinesTab" class="tab-content">
+      <div class="toolbar">
+        <button class="secondary" onclick="loadBaselines()">🔄 Refresh</button>
+      </div>
+      <div id="baselinesGrid" class="grid"></div>
+    </div>
+  </div>
+  
+  <!-- Create Rule Modal -->
+  <div id="ruleModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">New Remediation Rule</h2>
+        <button class="close-btn" onclick="closeRuleModal()">&times;</button>
+      </div>
+      <form id="ruleForm" onsubmit="saveRule(event)">
+        <div class="form-group">
+          <label for="ruleName">Rule Name *</label>
+          <input type="text" id="ruleName" required placeholder="e.g., Restart on High CPU">
+        </div>
+        <div class="form-group">
+          <label for="ruleDescription">Description</label>
+          <textarea id="ruleDescription" placeholder="What does this rule do?"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="triggerType">Trigger Type *</label>
+          <select id="triggerType" required>
+            <option value="anomaly">Anomaly Detected</option>
+            <option value="task-failure">Task Failure</option>
+            <option value="alert">Alert</option>
+            <option value="manual">Manual</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="triggerMetric">Metric Pattern (for anomaly trigger)</label>
+          <input type="text" id="triggerMetric" placeholder="e.g., cpu.usage">
+        </div>
+        <div class="form-group">
+          <label for="actionType">Action Type *</label>
+          <select id="actionType" required>
+            <option value="restart-service">Restart Service</option>
+            <option value="scale-up">Scale Up</option>
+            <option value="clear-cache">Clear Cache</option>
+            <option value="run-script">Run Script</option>
+            <option value="create-task">Create Task</option>
+            <option value="send-alert">Send Alert</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="requireApproval">
+            <input type="checkbox" id="requireApproval" checked style="width: auto; margin-right: 8px;">
+            Require Approval
+          </label>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button type="submit" class="primary">💾 Save Rule</button>
+          <button type="button" class="secondary" onclick="closeRuleModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let currentTab = 'anomalies';
+    let anomalies = [];
+    let rules = [];
+    let executions = [];
+    let baselines = [];
+    
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      const tabBtn = Array.from(document.querySelectorAll('.tab')).find(t => 
+        t.textContent.toLowerCase().includes(tab)
+      );
+      if (tabBtn) tabBtn.classList.add('active');
+      
+      document.getElementById(`${tab}Tab`).classList.add('active');
+      
+      // Load data for tab
+      switch(tab) {
+        case 'anomalies': loadAnomalies(); break;
+        case 'rules': loadRules(); break;
+        case 'executions': loadExecutions(); break;
+        case 'baselines': loadBaselines(); break;
+      }
+    }
+    
+    async function loadAnomalies() {
+      try {
+        const res = await fetch('/api/self-healing/anomalies');
+        const data = await res.json();
+        anomalies = data.anomalies || [];
+        renderAnomalies();
+      } catch (error) {
+        console.error('Failed to load anomalies:', error);
+      }
+    }
+    
+    function renderAnomalies() {
+      const unack = anomalies.filter(a => !a.acknowledged).length;
+      const rem = anomalies.filter(a => a.remediated).length;
+      
+      document.getElementById('anomalyCount').textContent = anomalies.length;
+      document.getElementById('unacknowledgedCount').textContent = unack;
+      document.getElementById('remediatedCount').textContent = rem;
+      
+      const container = document.getElementById('anomaliesGrid');
+      
+      if (anomalies.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✨</div><h3>No anomalies detected</h3><p>System is operating normally</p></div>';
+        return;
+      }
+      
+      container.innerHTML = anomalies.map(a => `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">${escapeHtml(a.metric)}</div>
+            <span class="badge badge-${a.severity}">${a.severity.toUpperCase()}</span>
+          </div>
+          <div style="color: #666; font-size: 14px; line-height: 1.6;">
+            <strong>Value:</strong> ${a.value.toFixed(2)}<br>
+            <strong>Baseline:</strong> ${a.baseline.mean.toFixed(2)} ± ${a.baseline.stdDev.toFixed(2)}<br>
+            <strong>Deviation:</strong> ${a.deviation.toFixed(2)}σ<br>
+            <strong>Time:</strong> ${new Date(a.timestamp).toLocaleString()}<br>
+            <strong>Acknowledged:</strong> ${a.acknowledged ? 'Yes' : 'No'}<br>
+            <strong>Remediated:</strong> ${a.remediated ? 'Yes' : 'No'}
+          </div>
+          <div class="actions">
+            ${!a.acknowledged ? `<button class="secondary" onclick="acknowledgeAnomaly('${a.id}')">✓ Acknowledge</button>` : ''}
+            ${!a.remediated ? `<button class="success" onclick="markRemediated('${a.id}')">🩹 Mark Remediated</button>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    async function acknowledgeAnomaly(id) {
+      try {
+        await fetch(`/api/self-healing/anomalies/${id}/acknowledge`, { method: 'POST' });
+        await loadAnomalies();
+      } catch (error) {
+        console.error('Failed to acknowledge:', error);
+      }
+    }
+    
+    async function markRemediated(id) {
+      try {
+        await fetch(`/api/self-healing/anomalies/${id}/remediate`, { method: 'POST' });
+        await loadAnomalies();
+      } catch (error) {
+        console.error('Failed to mark remediated:', error);
+      }
+    }
+    
+    async function loadRules() {
+      try {
+        const res = await fetch('/api/self-healing/remediation/rules');
+        const data = await res.json();
+        rules = data.rules || [];
+        renderRules();
+      } catch (error) {
+        console.error('Failed to load rules:', error);
+      }
+    }
+    
+    function renderRules() {
+      const container = document.getElementById('rulesGrid');
+      
+      if (rules.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><h3>No remediation rules</h3><p>Create your first rule to enable auto-remediation</p></div>';
+        return;
+      }
+      
+      container.innerHTML = rules.map(r => `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">${escapeHtml(r.name)}</div>
+            <span class="badge badge-${r.enabled ? 'enabled' : 'disabled'}">${r.enabled ? 'Enabled' : 'Disabled'}</span>
+          </div>
+          <div style="color: #666; font-size: 14px; line-height: 1.6;">
+            ${r.description ? `<p>${escapeHtml(r.description)}</p>` : ''}
+            <strong>Trigger:</strong> ${r.trigger.type}<br>
+            <strong>Actions:</strong> ${r.actions.length}<br>
+            <strong>Success:</strong> ${r.successCount} | <strong>Failure:</strong> ${r.failureCount}
+          </div>
+          <div class="actions">
+            <button class="secondary" onclick="toggleRule('${r.id}', ${!r.enabled})">${r.enabled ? '⏸ Disable' : '▶ Enable'}</button>
+            <button class="danger" onclick="deleteRule('${r.id}')">🗑️ Delete</button>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    async function toggleRule(id, enabled) {
+      try {
+        await fetch(`/api/self-healing/remediation/rules/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled })
+        });
+        await loadRules();
+      } catch (error) {
+        console.error('Failed to toggle rule:', error);
+      }
+    }
+    
+    async function deleteRule(id) {
+      if (!confirm('Delete this rule?')) return;
+      try {
+        await fetch(`/api/self-healing/remediation/rules/${id}`, { method: 'DELETE' });
+        await loadRules();
+      } catch (error) {
+        console.error('Failed to delete rule:', error);
+      }
+    }
+    
+    async function loadExecutions() {
+      try {
+        const res = await fetch('/api/self-healing/remediation/executions');
+        const data = await res.json();
+        executions = data.executions || [];
+        renderExecutions();
+      } catch (error) {
+        console.error('Failed to load executions:', error);
+      }
+    }
+    
+    function renderExecutions() {
+      const container = document.getElementById('executionsGrid');
+      
+      if (executions.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📜</div><h3>No executions yet</h3></div>';
+        return;
+      }
+      
+      container.innerHTML = executions.map(e => `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">${escapeHtml(e.ruleName)}</div>
+            <span class="badge badge-${e.status === 'success' ? 'success' : e.status === 'failed' ? 'critical' : 'warning'}">${e.status}</span>
+          </div>
+          <div style="color: #666; font-size: 14px;">
+            <strong>Started:</strong> ${new Date(e.startedAt).toLocaleString()}<br>
+            ${e.completedAt ? `<strong>Completed:</strong> ${new Date(e.completedAt).toLocaleString()}<br>` : ''}
+            <strong>Actions:</strong> ${e.actions.length} (${e.actions.filter(a => a.status === 'success').length} success)
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    async function loadBaselines() {
+      try {
+        const res = await fetch('/api/self-healing/baselines');
+        const data = await res.json();
+        baselines = data.baselines || [];
+        renderBaselines();
+      } catch (error) {
+        console.error('Failed to load baselines:', error);
+      }
+    }
+    
+    function renderBaselines() {
+      const container = document.getElementById('baselinesGrid');
+      
+      if (baselines.length === 0) {
+        container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><h3>No baselines yet</h3><p>Baselines will appear after collecting metrics</p></div>';
+        return;
+      }
+      
+      container.innerHTML = baselines.map(b => `
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">${escapeHtml(b.metric)}</div>
+          </div>
+          <div style="color: #666; font-size: 14px;">
+            <strong>Mean:</strong> ${b.mean.toFixed(2)}<br>
+            <strong>Std Dev:</strong> ${b.stdDev.toFixed(2)}<br>
+            <strong>Range:</strong> ${b.min.toFixed(2)} - ${b.max.toFixed(2)}<br>
+            <strong>Samples:</strong> ${b.sampleCount}<br>
+            <strong>Updated:</strong> ${new Date(b.lastUpdated).toLocaleString()}
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    function openCreateRuleModal() {
+      document.getElementById('ruleModal').classList.add('active');
+    }
+    
+    function closeRuleModal() {
+      document.getElementById('ruleModal').classList.remove('active');
+    }
+    
+    async function saveRule(event) {
+      event.preventDefault();
+      
+      const payload = {
+        name: document.getElementById('ruleName').value,
+        description: document.getElementById('ruleDescription').value || undefined,
+        trigger: {
+          type: document.getElementById('triggerType').value,
+          metric: document.getElementById('triggerMetric').value || undefined
+        },
+        actions: [{
+          type: document.getElementById('actionType').value,
+          params: {}
+        }],
+        requireApproval: document.getElementById('requireApproval').checked
+      };
+      
+      try {
+        const res = await fetch('/api/self-healing/remediation/rules', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          alert(`Error: ${error.error}`);
+          return;
+        }
+        
+        closeRuleModal();
+        await loadRules();
+      } catch (error) {
+        console.error('Save error:', error);
+        alert('Failed to save rule');
+      }
+    }
+    
+    async function testAnomaly() {
+      const metrics = ['cpu.usage', 'memory.usage', 'disk.io', 'network.latency'];
+      const metric = metrics[Math.floor(Math.random() * metrics.length)];
+      const value = 50 + Math.random() * 100;
+      
+      try {
+        await fetch('/api/self-healing/metrics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: metric, value })
+        });
+        
+        setTimeout(loadAnomalies, 500);
+      } catch (error) {
+        console.error('Test failed:', error);
+      }
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Auto-load on page load
+    loadAnomalies();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+      switch(currentTab) {
+        case 'anomalies': loadAnomalies(); break;
+        case 'rules': loadRules(); break;
+        case 'executions': loadExecutions(); break;
+        case 'baselines': loadBaselines(); break;
+      }
+    }, 30000);
+  </script>
+<script src="/sidebar.js"></script>
+</body>
+</html>

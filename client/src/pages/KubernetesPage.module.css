@@ -1,0 +1,300 @@
+/* ── Header bar ─────────────────────────────────────────────────────────────── */
+.headerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.headerTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.version {
+  font-size: .75rem;
+  color: var(--text3);
+  font-family: var(--font-mono, monospace);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nsSelect {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: .875rem;
+  padding: 6px 10px;
+  cursor: pointer;
+  outline: none;
+  min-width: 160px;
+}
+
+.nsSelect:focus { border-color: var(--accent); }
+
+.refreshBtn {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text2);
+  font-size: .875rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background .12s, border-color .12s;
+}
+
+.refreshBtn:hover { background: var(--bg3); border-color: var(--accent); color: var(--text); }
+
+.statusBadge {
+  font-size: .78rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.statusConnected {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 40%, transparent);
+}
+
+.statusNotConfigured {
+  background: color-mix(in srgb, var(--text3) 15%, transparent);
+  color: var(--text3);
+  border: 1px solid var(--border);
+}
+
+/* ── Stats row ─────────────────────────────────────────────────────────────── */
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* ── Tabs ───────────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 9px 18px;
+  font-size: .875rem;
+  font-weight: 500;
+  color: var(--text2);
+  cursor: pointer;
+  transition: color .12s, border-color .12s;
+}
+
+.tab:hover { color: var(--text); }
+
+.tabActive {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+/* ── Tab content ─────────────────────────────────────────────────────────────── */
+.tabContent {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* ── Table ──────────────────────────────────────────────────────────────────── */
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .875rem;
+  min-width: 600px;
+}
+
+.th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: .72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  background: var(--bg3);
+}
+
+.td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  vertical-align: middle;
+}
+
+.tr:last-child .td { border-bottom: none; }
+.tr:hover { background: var(--bg3); }
+
+.trWarning { background: color-mix(in srgb, var(--warning) 6%, transparent); }
+.trWarning:hover { background: color-mix(in srgb, var(--warning) 12%, transparent); }
+
+.tdName {
+  color: var(--text);
+  font-weight: 500;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tdMono {
+  font-family: var(--font-mono, monospace);
+  font-size: .8rem;
+  color: var(--text3);
+}
+
+.tdWarn { color: var(--danger) !important; }
+
+.tdMessage {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: .82rem;
+}
+
+/* ── Loading / Empty ─────────────────────────────────────────────────────────── */
+.loading, .empty {
+  padding: 3rem 2rem;
+  text-align: center;
+  color: var(--text3);
+  font-size: .9rem;
+}
+
+/* ── Not configured ──────────────────────────────────────────────────────────── */
+.notConfigured {
+  max-width: 520px;
+  margin: 4rem auto;
+  text-align: center;
+  padding: 2rem;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.notConfiguredIcon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.notConfiguredTitle {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 .75rem;
+}
+
+.notConfiguredText {
+  font-size: .9rem;
+  color: var(--text2);
+  margin-bottom: .75rem;
+  line-height: 1.6;
+}
+
+.pathList {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.code {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: var(--font-mono, monospace);
+  font-size: .82rem;
+  color: var(--accent);
+}
+
+/* ── Mobile responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .statsRow {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .headerBar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .headerRight {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .nsSelect {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .refreshBtn {
+    min-height: 44px;
+    padding: 6px 12px;
+  }
+
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    gap: 0;
+    padding-bottom: 0;
+  }
+
+  .tab {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding: 9px 14px;
+  }
+
+  .tableWrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

@@ -1,0 +1,16 @@
+* text=auto
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.mjs text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+client/**/*.css text eol=lf
+client/**/*.html text eol=lf
+client/**/*.json text eol=lf
+client/**/*.ts text eol=lf
+client/**/*.tsx text eol=lf
+public/**/*.css text eol=lf
+public/**/*.html text eol=lf
+public/**/*.js text eol=lf
+public/**/*.json text eol=lf
+public/**/*.svg text eol=lf

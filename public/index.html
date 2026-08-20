@@ -1,0 +1,1053 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops | Unified Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{--control-height:40px}
+    body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+    
+    /* Login Screen */
+    .login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000}
+    .login-screen.hidden{display:none}
+    .login-box{background:var(--bg2);border:1px solid var(--border);border-radius:0;padding:32px;width:min(360px,calc(100vw - 32px))}
+    .login-title{font-size:24px;font-weight:700;margin-bottom:8px;text-align:center}
+    .login-subtitle{color:var(--text2);text-align:center;margin-bottom:24px;font-size:13px}
+    .login-input{width:100%;min-height:var(--control-height);padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:14px;margin-bottom:12px}
+    .login-input:focus{outline:none;border-color:var(--accent)}
+    .login-btn{width:100%;min-height:var(--control-height);padding:10px 12px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer}
+    
+    /* Header */
+    .header{background:linear-gradient(90deg,var(--bg2),var(--bg1));border-bottom:1px solid var(--border);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-shrink:0}
+    .logo{display:flex;align-items:center;gap:10px}
+    .logo-icon{width:32px;height:32px;background:var(--accent);border-radius:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px}
+    .logo-text{font-weight:700;font-size:16px}
+    .logo-text span{color:var(--accent)}
+    .header-right{display:flex;align-items:center;gap:12px}
+    .live-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--success-bg);border-radius:0;font-size:11px;color:var(--success)}
+    .live-dot{width:6px;height:6px;background:var(--success);border-radius:50%;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+    .user-info{font-size:13px;color:var(--text2)}
+    
+    /* Main Layout */
+    .main{flex:1;display:flex;overflow:hidden}
+    
+    /* Sidebar */
+    .sidebar{width:248px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+    .sidebar-nav{flex:1;padding:10px;overflow-y:auto}
+    .nav-item{display:flex;align-items:center;gap:10px;min-height:40px;padding:10px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all 0.2s;margin-bottom:6px;color:var(--text2);font-size:13px}
+    .nav-item:hover{background:var(--bg3);color:var(--text)}
+    .nav-item.active{background:var(--bg3);color:var(--accent);font-weight:500}
+    .nav-icon{font-size:16px}
+    .nav-label{flex:1}
+    .nav-badge{padding:2px 8px;background:var(--accent);border-radius:0;font-size:10px;color:white}
+    
+    .sidebar-footer{padding:12px;border-top:1px solid var(--border)}
+    .sidebar-footer a{color:var(--text2);text-decoration:none;font-size:12px;display:flex;align-items:center;min-height:36px;padding:8px;border-radius:0;transition:all 0.2s}
+    .sidebar-footer a:hover{background:var(--bg3);color:var(--text)}
+    
+    /* Content Area */
+    .content{flex:1;overflow:hidden;display:flex;flex-direction:column}
+    .content-header{padding:16px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+    .content-title{font-size:18px;font-weight:600;margin-bottom:4px}
+    .content-subtitle{font-size:13px;color:var(--text2)}
+    .content-body{flex:1;overflow-y:auto;padding:20px}
+    
+    /* Sections */
+    .section{display:none}
+    .section.active{display:block}
+    
+    /* Stats Grid */
+    .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+    .stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:0;padding:20px}
+    .stat-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .stat-icon{width:40px;height:40px;border-radius:0;display:flex;align-items:center;justify-content:center;font-size:18px}
+    .stat-label{font-size:13px;color:var(--text2)}
+    .stat-value{font-size:32px;font-weight:700;font-family:'JetBrains Mono',monospace}
+    .stat-change{font-size:12px;margin-top:4px;color:var(--success)}
+    
+    /* Grid */
+    .grid-2{display:grid;grid-template-columns:2fr 1fr;gap:20px;margin-bottom:24px}
+    .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+    
+    /* Panels */
+    .panel{background:var(--bg3);border:1px solid var(--border);border-radius:0;overflow:hidden}
+    .panel-head{background:var(--bg2);padding:14px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .panel-title{font-weight:600;font-size:14px}
+    .panel-btn{min-height:34px;padding:6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:0;color:var(--text2);font-size:12px;cursor:pointer}
+    .panel-btn:hover{background:var(--accent);color:white;border-color:var(--accent)}
+    .panel-body{padding:16px}
+    
+    /* Agent Cards */
+    .agent-list{display:flex;flex-direction:column;gap:12px}
+    .agent-card{background:var(--bg2);border-radius:0;padding:16px;display:flex;align-items:center;gap:16px}
+    .agent-avatar{width:48px;height:48px;border-radius:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px}
+    .agent-avatar.director{background:var(--accent)}
+    .agent-avatar.sysadmin{background:var(--accent)}
+    .agent-avatar.specialist{background:var(--success)}
+    .agent-info{flex:1}
+    .agent-name{font-weight:600;font-size:15px;margin-bottom:4px}
+    .agent-role{font-size:12px;color:var(--text2)}
+    .status-pill{padding:4px 10px;border-radius:0;font-size:11px;font-weight:500}
+    .status-pill.online{background:var(--success-bg);color:var(--success)}
+    
+    /* Skills */
+    .skills-grid{display:flex;flex-wrap:wrap;gap:8px}
+    .skill-tag{background:var(--bg2);padding:8px 14px;border-radius:0;font-size:12px;color:var(--text2);border:1px solid transparent}
+    .skill-tag:hover{border-color:var(--accent);color:var(--accent)}
+    
+    /* Activity List */
+    .activity-list{display:flex;flex-direction:column}
+    .activity-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+    .activity-item:last-child{border:none}
+    .activity-icon{width:28px;height:28px;border-radius:0;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+    .activity-content{flex:1}
+    .activity-text{font-size:12px;line-height:1.4}
+    .activity-time{font-size:10px;color:var(--text3);margin-top:4px}
+    
+    /* Chat */
+    .chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--bg3);border-radius:0}
+    .message{display:flex;gap:10px;max-width:80%}
+    .message.user{align-self:flex-end;flex-direction:row-reverse}
+    .message.agent{align-self:flex-start}
+    .message-bubble{padding:10px 14px;border-radius:0;font-size:14px;line-height:1.4}
+    .message.user .message-bubble{background:var(--accent);color:white}
+    .message.agent .message-bubble{background:var(--bg2);border:1px solid var(--border)}
+    
+    .chat-input-area{padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:0;display:flex;gap:12px;margin-top:16px}
+    .chat-input{flex:1;min-height:var(--control-height);padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:0;color:var(--text);font-size:14px}
+    .chat-input:focus{outline:none;border-color:var(--accent)}
+    .send-btn{width:40px;height:40px;background:var(--accent);border:none;border-radius:50%;color:white;cursor:pointer}
+    
+    /* Empty State */
+    .empty-state{text-align:center;padding:60px 20px;color:var(--text2)}
+    .empty-state-icon{font-size:64px;margin-bottom:16px}
+    .empty-state-title{font-size:20px;font-weight:600;margin-bottom:8px}
+    .empty-state-desc{font-size:14px}
+
+    .chat-controls{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+    .chat-select{min-height:36px;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:0;color:var(--text);font-size:12px}
+    .chat-mini{font-size:12px;color:var(--text2)}
+    .btn-secondary{min-height:36px;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:0;cursor:pointer}
+    .btn-swarm{min-height:36px;padding:8px 12px;background:var(--accent);border:1px solid transparent;color:var(--bg);border-radius:0;cursor:pointer;font-weight:600}
+    .msg-meta{font-size:11px;color:var(--text3);margin-top:4px;white-space:pre-wrap}
+    @media (max-width:1200px){
+      .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .grid-2{grid-template-columns:1fr}
+      .grid-3{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media (max-width:900px){
+      body{overflow:auto}
+      .header{padding:12px 14px;flex-wrap:wrap}
+      .main{flex-direction:column;overflow:visible}
+      .sidebar{width:100%;border-right:none;border-bottom:1px solid var(--border)}
+      .sidebar-nav{display:flex;gap:8px;overflow-x:auto;padding:10px}
+      .nav-item{margin-bottom:0;white-space:nowrap;min-width:max-content}
+      .sidebar-footer{display:flex;gap:8px;flex-wrap:wrap}
+      .sidebar-footer a{padding:6px 10px}
+      .content{min-height:0}
+      .content-header{padding:14px}
+      .content-body{padding:14px}
+    }
+    @media (max-width:640px){
+      .login-box{padding:24px 20px}
+      .stats-grid{grid-template-columns:1fr}
+      .grid-3{grid-template-columns:1fr}
+      .chat-input-area{padding:10px}
+      .message{max-width:100%}
+    }
+
+  </style>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+</head>
+<body>
+  <!-- Login Screen -->
+  <div id="loginScreen" class="login-screen">
+    <div class="login-box">
+      <div class="login-title">🔐 IT Ops</div>
+      <div class="login-subtitle">Unified Dashboard</div>
+      <input type="text" class="login-input" id="username" value="admin" placeholder="Username">
+      <input type="password" class="login-input" id="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
+      <div id="login-error" style="display:none;color:var(--danger);font-size:13px;margin-bottom:8px;text-align:center"></div>
+      <button class="login-btn" onclick="login()">Sign In</button>
+      <div id="azure-login-wrap" style="display:none;margin-top:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-size:12px;color:var(--text2)">or</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+        <a href="/auth/azure" style="display:block;text-align:center;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);text-decoration:none;font-size:14px;font-weight:500">
+          ☁️ Sign in with Azure AD
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text"><span>IT Ops</span> Dashboard</div>
+    </div>
+    <div class="header-right">
+      <div class="live-badge"><div class="live-dot"></div><span>Live</span></div>
+      <button id="idx-theme-btn" onclick="toggleTheme()" title="Toggle light/dark" style="font-size:15px;padding:4px 8px;background:transparent;border:1px solid var(--border);border-radius:0;cursor:pointer;color:var(--text2)">🌙</button>
+      <div class="user-info" id="userInfo">Not logged in</div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+  <div class="sidebar-logo"><span>[=] IT OPS</span></div>
+  <nav class="sidebar-nav">
+    <span class="sidebar-section">Operations</span>
+    <a href="/incidents" class="nav-item"><span class="nav-icon">!</span>Incidents</a>
+    <a href="/workflows" class="nav-item"><span class="nav-icon">></span>Workflows</a>
+    <a href="/runbooks" class="nav-item"><span class="nav-icon">#</span>Runbooks</a>
+    <a href="/servers" class="nav-item"><span class="nav-icon">@</span>Servers</a>
+    <a href="/monitoring.html" class="nav-item"><span class="nav-icon">%</span>Monitoring</a>
+    <span class="sidebar-section">Integrations</span>
+    <a href="/jira.html" class="nav-item"><span class="nav-icon">*</span>Jira</a>
+    <a href="/a2a.html" class="nav-item"><span class="nav-icon">&amp;</span>A2A Mesh</a>
+    <span class="sidebar-section">System</span>
+    <a href="/agent-details.html" class="nav-item"><span class="nav-icon">$</span>Agents</a>
+    <a href="/scheduler" class="nav-item"><span class="nav-icon">~</span>Scheduler</a>
+    <a href="/security.html" class="nav-item"><span class="nav-icon">^</span>Security</a>
+    <a href="/users.html" class="nav-item" id="nav-users" style="display:none"><span class="nav-icon">+</span>Users</a>
+    <span class="sidebar-section">Communication</span>
+    <a href="/agent-chat.html" class="nav-item"><span class="nav-icon">&lt;</span>Agent Chat</a>
+    <a href="/agent-bridge" class="nav-item"><span class="nav-icon">&lt;&gt;</span>Agent Bridge</a>
+    <span class="sidebar-section">Tools</span>
+    <a href="/dashboard" class="nav-item active"><span class="nav-icon">=</span>Dashboard</a>
+    <a href="/cicd" class="nav-item"><span class="nav-icon">|</span>CI/CD</a>
+    <a href="/audit" class="nav-item"><span class="nav-icon">.</span>Audit</a>
+    <a href="/rbac" class="nav-item"><span class="nav-icon">:</span>RBAC</a>
+    <a href="/plugin-manager" class="nav-item"><span class="nav-icon">,</span>Plugins</a>
+    <a href="/agent-runtime" class="nav-item"><span class="nav-icon">&gt;&gt;</span>Agent Runtime</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="user-avatar">?</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-username" id="user-name">---</div>
+        <div class="sidebar-role" id="user-role"></div>
+      </div>
+    </div>
+    <div class="sidebar-actions">
+      <button class="btn-icon" onclick="doLogout()" title="Logout">[X]</button>
+    </div>
+  </div>
+</aside>
+
+    <!-- Content -->
+    <div class="content">
+      <!-- Overview Section -->
+      <div class="section active" id="overview-section">
+        <div class="content-header">
+          <div class="content-title">Overview</div>
+          <div class="content-subtitle">System status and metrics</div>
+        </div>
+        <div class="content-body">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-header"><div class="stat-icon" style="background:rgba(88,166,255,0.15)">👥</div></div>
+              <div class="stat-label">Agents</div>
+              <div class="stat-value" id="statAgents">-</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-header"><div class="stat-icon" style="background:rgba(63,185,80,0.15)">✓</div></div>
+              <div class="stat-label">System Health</div>
+              <div class="stat-value" id="statHealth" style="color:var(--success)">…</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-header"><div class="stat-icon" style="background:rgba(210,153,34,0.15)">📋</div></div>
+              <div class="stat-label">Active Tasks</div>
+              <div class="stat-value" id="statTasks">-</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-header"><div class="stat-icon" style="background:rgba(163,113,247,0.15)">🛠️</div></div>
+              <div class="stat-label">Skills</div>
+              <div class="stat-value" id="statSkills">…</div>
+            </div>
+          </div>
+          
+          <div class="grid-2">
+            <div class="panel">
+              <div class="panel-head">
+                <div class="panel-title">👥 Agents</div>
+                <button class="panel-btn" onclick="loadAgents()">↻</button>
+              </div>
+              <div class="panel-body">
+                <div class="agent-list" id="agentList"><div class="empty-state"><div class="empty-state-icon">⏳</div></div></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div class="panel-title">📈 Recent Activity</div>
+              </div>
+              <div class="panel-body">
+                <div class="activity-list" id="activityList"><div class="empty-state" style="padding:20px"><div class="empty-state-title">No activity yet</div></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-bottom:24px">
+            <div class="panel-head">
+              <div class="panel-title">🔄 Workflow Health</div>
+              <button class="panel-btn" onclick="loadWorkflowHealth()">↻</button>
+            </div>
+            <div class="panel-body">
+              <div class="stats-grid" style="margin-bottom:12px">
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(88,166,255,0.15)">▶</div></div>
+                  <div class="stat-label">Active Runs</div>
+                  <div class="stat-value" id="wfActiveRuns">-</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(210,153,34,0.15)">⚠</div></div>
+                  <div class="stat-label">Drifted</div>
+                  <div class="stat-value" id="wfDrifted" style="color:var(--yellow)">-</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(248,81,73,0.15)">✖</div></div>
+                  <div class="stat-label">Stuck</div>
+                  <div class="stat-value" id="wfStuck" style="color:var(--red)">-</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(163,113,247,0.15)">⏱</div></div>
+                  <div class="stat-label">Oldest Run</div>
+                  <div class="stat-value" id="wfOldest" style="font-size:18px">-</div>
+                </div>
+              </div>
+              <div id="wfDriftedList"></div>
+            </div>
+          </div>
+
+          <div class="panel" id="backupHealthPanel" style="margin-bottom:24px">
+            <div class="panel-head">
+              <div class="panel-title">💾 Backup Health</div>
+              <button class="panel-btn" onclick="loadBackupHealth()">↻</button>
+            </div>
+            <div class="panel-body">
+              <div class="stats-grid" style="margin-bottom:12px">
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(88,166,255,0.15)">🕐</div></div>
+                  <div class="stat-label">Last Backup</div>
+                  <div class="stat-value" id="bkLastBackup" style="font-size:20px">…</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(63,185,80,0.15)">📊</div></div>
+                  <div class="stat-label">Status</div>
+                  <div class="stat-value" id="bkStatus" style="font-size:20px">…</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(163,113,247,0.15)">✔</div></div>
+                  <div class="stat-label">Verification</div>
+                  <div class="stat-value" id="bkVerification" style="font-size:20px">…</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(210,153,34,0.15)">⏱</div></div>
+                  <div class="stat-label">Scheduler</div>
+                  <div class="stat-value" id="bkScheduler" style="font-size:20px">…</div>
+                </div>
+              </div>
+              <div id="bkSchedulerDetail" style="font-size:12px;color:var(--text2);line-height:1.8"></div>
+              <div id="bkWarning"></div>
+            </div>
+          </div>
+
+          <div class="panel" id="delegationPanel" style="margin-bottom:24px">
+            <div class="panel-head">
+              <div class="panel-title">🔀 Delegation Activity</div>
+              <button class="panel-btn" onclick="loadDelegations()">↻</button>
+            </div>
+            <div class="panel-body">
+              <div class="stats-grid" style="margin-bottom:12px">
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(88,166,255,0.15)">▶</div></div>
+                  <div class="stat-label">Active</div>
+                  <div class="stat-value" id="dlgActive" style="font-size:20px">…</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(63,185,80,0.15)">✓</div></div>
+                  <div class="stat-label">Completed</div>
+                  <div class="stat-value" id="dlgCompleted" style="font-size:20px;color:var(--success)">…</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(210,153,34,0.15)">⏳</div></div>
+                  <div class="stat-label">Pending</div>
+                  <div class="stat-value" id="dlgPending" style="font-size:20px;color:var(--yellow)">…</div>
+                </div>
+              </div>
+              <div id="dlgList"></div>
+            </div>
+          </div>
+
+          <div class="panel" id="credDecisionsPanel" style="margin-bottom:24px">
+            <div class="panel-head">
+              <div class="panel-title">🔑 Credential Decisions</div>
+              <button class="panel-btn" onclick="loadCredDecisions()">↻</button>
+            </div>
+            <div class="panel-body">
+              <div class="stats-grid" style="margin-bottom:12px">
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(88,166,255,0.15)">∑</div></div>
+                  <div class="stat-label">Total</div>
+                  <div class="stat-value" id="credTotal" style="font-size:20px">…</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(63,185,80,0.15)">✓</div></div>
+                  <div class="stat-label">Allowed</div>
+                  <div class="stat-value" id="credAllow" style="font-size:20px;color:var(--success)">…</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(210,0,0,0.15)">✗</div></div>
+                  <div class="stat-label">Denied</div>
+                  <div class="stat-value" id="credDeny" style="font-size:20px;color:var(--red)">…</div>
+                </div>
+              </div>
+              <div id="credDenyReasons" style="font-size:12px;color:var(--text2);line-height:1.8"></div>
+            </div>
+          </div>
+
+          <div class="panel" id="agentHealthPanel" style="margin-bottom:24px">
+            <div class="panel-head">
+              <div class="panel-title">Agent Health</div>
+              <button class="panel-btn" onclick="loadAgentHealth()">↻</button>
+            </div>
+            <div class="panel-body">
+              <div class="stats-grid" style="margin-bottom:12px">
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(88,166,255,0.15)">∑</div></div>
+                  <div class="stat-label">Total Agents</div>
+                  <div class="stat-value" id="ahTotal" style="font-size:20px">…</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(63,185,80,0.15)">✓</div></div>
+                  <div class="stat-label">Healthy</div>
+                  <div class="stat-value" id="ahHealthy" style="font-size:20px;color:var(--success)">…</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(210,153,34,0.15)">~</div></div>
+                  <div class="stat-label">Idle</div>
+                  <div class="stat-value" id="ahIdle" style="font-size:20px;color:var(--yellow)">…</div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-header"><div class="stat-icon" style="background:rgba(210,0,0,0.15)">!</div></div>
+                  <div class="stat-label">Stuck</div>
+                  <div class="stat-value" id="ahStuck" style="font-size:20px;color:var(--red)">…</div>
+                </div>
+              </div>
+              <div id="ahStuckList" style="font-size:12px;color:var(--text2);line-height:1.8"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chat Section -->
+      <div class="section" id="chat-section">
+        <div class="content-header">
+          <div class="content-title">💬 Multi-Agent Chat</div>
+          <div class="content-subtitle">Chat with your IT Ops team</div>
+        </div>
+        <div class="content-body">
+          <div class="panel" style="height:600px;display:flex;flex-direction:column">
+            <div class="chat-messages" id="chatMessages">
+              <div class="empty-state"><div class="empty-state-icon">💬</div><div class="empty-state-title">Start a conversation</div><div class="empty-state-desc">Select agents and send a message</div></div>
+            </div>
+            <div class="chat-input-area" style="display:block">
+              <div style="display:flex;gap:10px;align-items:center">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Type your message... (tip: /swarm <task>)" onkeypress="if(event.key==='Enter')sendChatMessage()">
+                <button class="send-btn" onclick="sendChatMessage()">➤</button>
+              </div>
+              <div class="chat-controls">
+                <button class="btn-secondary" onclick="sendChatMessage(false)">Send Direct</button>
+                <button class="btn-swarm" onclick="runSwarmFromInput()">Run Swarm</button>
+                <label class="chat-mini">Workers
+                  <select id="swarmWorkers" class="chat-select">
+                    <option value="2">2</option>
+                    <option value="3" selected>3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                  </select>
+                </label>
+                <label class="chat-mini">
+                  <input type="checkbox" id="swarmSynthesis" checked> Synthesis
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Factory Section -->
+      <div class="section" id="factory-section">
+        <div class="content-header">
+          <div class="content-title">🏭 Software Factory</div>
+          <div class="content-subtitle">Gate-aware task board &mdash; <a href="http://localhost:19124" target="_blank" style="color:var(--accent)">Full Factory Dashboard ↗</a></div>
+        </div>
+        <div class="content-body">
+          <div class="stats-grid" style="margin-bottom:24px" id="factoryStats">
+            <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(88,166,255,0.15)">📝</div></div><div class="stat-label">Proposed</div><div class="stat-value" id="fsStat-proposed">-</div></div>
+            <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(88,166,255,0.15)">📋</div></div><div class="stat-label">Specified</div><div class="stat-value" id="fsStat-specified">-</div></div>
+            <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(63,185,80,0.15)">✅</div></div><div class="stat-label">Ready</div><div class="stat-value" id="fsStat-ready">-</div></div>
+            <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(210,153,34,0.15)">⚙</div></div><div class="stat-label">In Progress</div><div class="stat-value" id="fsStat-in_progress">-</div></div>
+          </div>
+          <div class="stats-grid" style="margin-bottom:24px">
+            <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(163,113,247,0.15)">👁</div></div><div class="stat-label">In Review</div><div class="stat-value" id="fsStat-in_review">-</div></div>
+            <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(248,81,73,0.15)">🧪</div></div><div class="stat-label">In QA</div><div class="stat-value" id="fsStat-in_qa">-</div></div>
+            <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(63,185,80,0.15)">🚀</div></div><div class="stat-label">Releasable</div><div class="stat-value" id="fsStat-releasable">-</div></div>
+            <div class="stat-card"><div class="stat-header"><div class="stat-icon" style="background:rgba(63,185,80,0.2)">🎉</div></div><div class="stat-label">Released</div><div class="stat-value" id="fsStat-released">-</div></div>
+          </div>
+          <div style="display:flex;gap:16px;overflow-x:auto;padding-bottom:8px" id="factoryBoard">
+            <div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-title">Loading factory board...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Other sections would go here -->
+    </div>
+  </div>
+
+  <script src="/auth-guard.js"></script>
+  <script>
+    // ── Theme toggle ─────────────────────────────────────────────────────────
+    function toggleTheme() {
+      const isLight = document.documentElement.classList.toggle('light');
+      localStorage.setItem('itops_theme', isLight ? 'light' : 'dark');
+      const btn = document.getElementById('idx-theme-btn');
+      if (btn) btn.textContent = isLight ? '☀️' : '🌙';
+    }
+    (function initTheme() {
+      if (localStorage.getItem('itops_theme') === 'light') {
+        document.documentElement.classList.add('light');
+        const btn = document.getElementById('idx-theme-btn');
+        if (btn) btn.textContent = '☀️';
+      }
+    })();
+
+    // Check if Azure AD is configured and show SSO button
+    fetch('/api/auth/providers').then(r => r.json()).then(p => {
+      if (p.azure) document.getElementById('azure-login-wrap').style.display = 'block';
+    }).catch(() => {});
+
+    let token = localStorage.getItem('itops_token') || '';
+    const API = '/api';
+    let agents = [];
+    let ws = null;
+
+    if (token) {
+      document.getElementById('loginScreen').classList.add('hidden');
+      loadAll();
+    }
+
+    function login() {
+      const u = document.getElementById('username').value;
+      const p = document.getElementById('password').value;
+      const errEl = document.getElementById('login-error');
+      errEl.style.display = 'none';
+      const btn = document.querySelector('.login-btn');
+      btn.disabled = true; btn.textContent = 'Signing in…';
+      fetch(API + '/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p })
+      }).then(r => r.json()).then(d => {
+        btn.disabled = false; btn.textContent = 'Sign In';
+        if (d.success && d.session && d.session.token) {
+          token = d.session.token;
+          localStorage.setItem('itops_token', token);
+          window.location.href = '/app/';
+        } else {
+          errEl.textContent = d.error || 'Invalid username or password';
+          errEl.style.display = 'block';
+          document.getElementById('password').value = '';
+          document.getElementById('password').focus();
+        }
+      }).catch(() => {
+        btn.disabled = false; btn.textContent = 'Sign In';
+        errEl.textContent = 'Could not reach server. Check your connection.';
+        errEl.style.display = 'block';
+      });
+    }
+
+    function logout() {
+      localStorage.removeItem('itops_token');
+      location.reload();
+    }
+
+    function getH() { return { 'Authorization': 'Bearer ' + token }; }
+
+    async function loadAll() {
+      document.getElementById('userInfo').innerText = 'Logged in';
+      await loadAgents();
+      await loadWorkflowHealth();
+      await loadBackupHealth();
+      await loadDelegations();
+      await loadCredDecisions();
+      await loadAgentHealth();
+      loadIncidentBadge();
+      loadLiveStats();
+    }
+
+    async function loadLiveStats() {
+      try {
+        const d = await fetch(API + '/status', { headers: getH() }).then(r => r.json());
+        const onlineServers = 0; // will be replaced once /api/servers/metrics is available
+        const healthEl = document.getElementById('statHealth');
+        const skillEl = document.getElementById('statSkills');
+        if (skillEl) skillEl.innerText = d.skills?.total ?? '…';
+        if (healthEl) {
+          const breaches = d.incidents?.slaBreaches || 0;
+          const open = (d.incidents?.open || 0) + (d.incidents?.investigating || 0);
+          const pct = breaches > 0 ? 'SLA!' : open > 5 ? '⚠' : '✓ OK';
+          const color = breaches > 0 ? 'var(--red,#e53e3e)' : open > 5 ? 'var(--orange,#ed8936)' : 'var(--success)';
+          healthEl.innerText = pct;
+          healthEl.style.color = color;
+        }
+      } catch (_) {}
+    }
+
+    async function loadIncidentBadge() {
+      try {
+        const r = await fetch(API + '/incidents/stats', { headers: getH() });
+        if (!r.ok) return;
+        const d = await r.json();
+        const open = (d.open || 0) + (d.investigating || 0);
+        const el = document.getElementById('nav-incident-count');
+        if (el && open > 0) { el.textContent = open; el.style.display = ''; }
+      } catch (_) {}
+    }
+
+    async function loadWorkflowHealth() {
+      document.getElementById('wfActiveRuns').innerText = '…';
+      document.getElementById('wfDrifted').innerText = '…';
+      document.getElementById('wfStuck').innerText = '…';
+      document.getElementById('wfOldest').innerText = '…';
+      document.getElementById('wfDriftedList').innerHTML = '';
+      try {
+        const d = await fetch(API + '/workflows/health', { headers: getH() }).then(r => r.json());
+        document.getElementById('wfActiveRuns').innerText = d.totalActive != null ? d.totalActive : '-';
+        const driftedEl = document.getElementById('wfDrifted');
+        driftedEl.innerText = d.driftedCount != null ? d.driftedCount : '-';
+        driftedEl.style.color = d.driftedCount > 0 ? 'var(--yellow)' : '';
+        document.getElementById('wfStuck').innerText = d.stuckCount != null ? d.stuckCount : '-';
+        const oldest = d.oldestRunAgeMs != null
+          ? (d.oldestRunAgeMs < 60000 ? Math.round(d.oldestRunAgeMs / 1000) + 's'
+            : d.oldestRunAgeMs < 3600000 ? Math.round(d.oldestRunAgeMs / 60000) + 'm'
+            : Math.round(d.oldestRunAgeMs / 3600000) + 'h')
+          : '-';
+        document.getElementById('wfOldest').innerText = oldest;
+        const listEl = document.getElementById('wfDriftedList');
+        if (d.driftedCount > 0 && Array.isArray(d.driftedRuns) && d.driftedRuns.length > 0) {
+          listEl.innerHTML = '<div style="font-size:12px;color:var(--yellow);margin-bottom:8px;font-weight:600">Drifted Runs</div>'
+            + d.driftedRuns.map(r => `<div class="activity-item"><div class="activity-icon" style="background:rgba(210,153,34,0.2)">⚠</div><div class="activity-content"><div class="activity-text">${r.id || '(unknown)'} &mdash; ${r.name || ''}</div><div class="activity-time">${r.status || ''} &bull; age: ${r.lastUpdateAgeMs != null ? Math.round(r.lastUpdateAgeMs/60000)+'m' : '?'}</div></div></div>`).join('');
+        } else {
+          listEl.innerHTML = '';
+        }
+      } catch (e) {
+        console.error('Failed to load workflow health:', e);
+        document.getElementById('wfActiveRuns').innerText = '-';
+        document.getElementById('wfDrifted').innerText = '-';
+        document.getElementById('wfStuck').innerText = '-';
+        document.getElementById('wfOldest').innerText = '-';
+        document.getElementById('wfDriftedList').innerHTML = '<div style="font-size:12px;color:var(--red);padding:8px 0">Failed to load Workflow Health</div>';
+      }
+    }
+
+    async function loadAgents() {
+      try {
+        const d = await fetch(API + '/mission-control/agents', { headers: getH() }).then(r => r.json());
+        agents = d.agents;
+        document.getElementById('statAgents').innerText = agents.length;
+        
+        const html = agents.map(a => `
+          <div class="agent-card">
+            <div class="agent-avatar ${a.role}">${a.name.charAt(0)}</div>
+            <div class="agent-info">
+              <div class="agent-name">${a.name}</div>
+              <div class="agent-role">${a.role}</div>
+            </div>
+            <span class="status-pill online">${a.status}</span>
+          </div>
+        `).join('');
+        
+        document.getElementById('agentList').innerHTML = html;
+      } catch (e) {
+        console.error('Failed to load agents:', e);
+      }
+    }
+
+    function appendChatMessage(kind, text, meta) {
+      const chatDiv = document.getElementById('chatMessages');
+      if (chatDiv.querySelector('.empty-state')) chatDiv.innerHTML = '';
+      const el = document.createElement('div');
+      el.className = 'message ' + kind;
+      const safeText = String(text || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const safeMeta = meta ? String(meta).replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+      el.innerHTML = '<div class="message-bubble">' + safeText + (safeMeta ? '<div class="msg-meta">' + safeMeta + '</div>' : '') + '</div>';
+      chatDiv.appendChild(el);
+      chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
+
+    async function runSwarmTask(taskText) {
+      const maxWorkers = Number(document.getElementById('swarmWorkers')?.value || 3);
+      const includeSynthesis = !!document.getElementById('swarmSynthesis')?.checked;
+      const res = await fetch(API + '/agent-bus/swarm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getH() },
+        body: JSON.stringify({ task: taskText, maxWorkers, includeSynthesis })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Swarm request failed');
+      }
+      const result = data.result || {};
+      const workers = Array.isArray(result.workers) ? result.workers : [];
+      const meta = workers.map(w => `${w.agentName || w.agentId}: ${w.success ? 'ok' : 'failed'} (${w.durationMs || 0}ms)`).join('\n');
+      const text = result.synthesis || workers.map(w => (w.reply && w.reply.content) ? w.reply.content : `${w.agentName || w.agentId} failed`).join('\n\n');
+      appendChatMessage('agent', text || '(empty synthesis)', `runId: ${result.runId || '-'}\n${meta}`);
+    }
+
+    async function sendDirectTask(msg) {
+      const director = agents.find(a => String(a.role).toLowerCase() === 'director');
+      const target = agents.find(a => String(a.role).toLowerCase() !== 'director');
+      if (!director || !target) throw new Error('No available agent pair');
+      const res = await fetch(API + '/agent-bus/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getH() },
+        body: JSON.stringify({
+          fromAgentId: director.id,
+          toAgentId: target.id,
+          content: msg,
+          expectReply: true
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Send failed');
+      const reply = data.reply && data.reply.content ? data.reply.content : 'Message queued.';
+      appendChatMessage('agent', reply, `from: ${target.name}`);
+    }
+
+    async function sendChatMessage(forceDirect) {
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+      appendChatMessage('user', msg);
+      input.value = '';
+      try {
+        if (!forceDirect && msg.startsWith('/swarm ')) {
+          const task = msg.slice(7).trim();
+          if (!task) throw new Error('Usage: /swarm <task>');
+          await runSwarmTask(task);
+          return;
+        }
+        await sendDirectTask(msg);
+      } catch (e) {
+        appendChatMessage('agent', 'Error: ' + (e.message || e));
+      }
+    }
+
+    async function runSwarmFromInput() {
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+      appendChatMessage('user', '/swarm ' + msg);
+      input.value = '';
+      try {
+        await runSwarmTask(msg);
+      } catch (e) {
+        appendChatMessage('agent', 'Error: ' + (e.message || e));
+      }
+    }
+
+    function fmtAge(seconds) {
+      if (seconds == null) return '-';
+      if (seconds < 60) return seconds + 's ago';
+      if (seconds < 3600) return Math.round(seconds / 60) + 'm ago';
+      if (seconds < 86400) return Math.round(seconds / 3600) + 'h ago';
+      return Math.round(seconds / 86400) + 'd ago';
+    }
+
+    function fmtTs(ts) {
+      if (!ts) return '-';
+      return new Date(ts).toLocaleString();
+    }
+
+    async function loadBackupHealth() {
+      ['bkLastBackup','bkStatus','bkVerification','bkScheduler'].forEach(id => {
+        document.getElementById(id).innerText = '…';
+      });
+      document.getElementById('bkSchedulerDetail').innerHTML = '';
+      document.getElementById('bkWarning').innerHTML = '';
+      document.getElementById('backupHealthPanel').style.borderColor = '';
+      try {
+        const [health, sched] = await Promise.all([
+          fetch(API + '/system/backups/health', { headers: getH() }).then(r => r.json()),
+          fetch(API + '/system/backups/scheduler', { headers: getH() }).then(r => r.json())
+        ]);
+
+        // Last backup age
+        const ageEl = document.getElementById('bkLastBackup');
+        ageEl.innerText = fmtAge(health.backupAgeSeconds);
+
+        // Status: Fresh / Stale
+        const statusEl = document.getElementById('bkStatus');
+        statusEl.innerText = health.stale ? 'Stale' : 'Fresh';
+        statusEl.style.color = health.stale ? 'var(--red)' : 'var(--success)';
+
+        // Verification
+        const vOk = health.verification && health.verification.ok;
+        const verEl = document.getElementById('bkVerification');
+        verEl.innerText = vOk ? 'OK' : 'Failed';
+        verEl.style.color = vOk ? 'var(--success)' : 'var(--red)';
+
+        // Scheduler enabled indicator
+        const schedEl = document.getElementById('bkScheduler');
+        schedEl.innerText = sched.enabled ? 'On' : 'Off';
+        schedEl.style.color = sched.enabled ? 'var(--success)' : 'var(--text2)';
+
+        // Scheduler detail row
+        document.getElementById('bkSchedulerDetail').innerHTML =
+          '<span style="margin-right:16px">Interval: ' + (sched.intervalMinutes != null ? sched.intervalMinutes + ' min' : '-') + '</span>' +
+          '<span style="margin-right:16px">Last success: ' + fmtTs(sched.lastSuccessAt) + '</span>' +
+          '<span>Last run: ' + fmtTs(sched.lastRunAt) + '</span>';
+
+        // Warning highlight when stale or verification failed
+        if (health.stale || !vOk) {
+          document.getElementById('backupHealthPanel').style.borderColor = 'var(--red)';
+          document.getElementById('bkWarning').innerHTML =
+            '<div style="margin-top:10px;padding:8px 12px;background:rgba(248,81,73,0.12);border:1px solid var(--red);border-radius:0;font-size:12px;color:var(--red)">' +
+            (health.stale ? '⚠ Backup is stale (exceeds threshold of ' + (health.thresholdHours || '?') + 'h). ' : '') +
+            (!vOk ? '⚠ Last verification failed.' : '') +
+            '</div>';
+        }
+      } catch (e) {
+        console.error('Failed to load backup health:', e);
+        ['bkLastBackup','bkStatus','bkVerification','bkScheduler'].forEach(id => {
+          document.getElementById(id).innerText = '-';
+        });
+        document.getElementById('bkSchedulerDetail').innerHTML =
+          '<div style="font-size:12px;color:var(--red);padding:4px 0">Failed to load Backup Health</div>';
+      }
+    }
+
+    const FACTORY_STATES = ['proposed','specified','ready','in_progress','in_review','in_qa','releasable','released'];
+    const FACTORY_STATE_LABELS = {proposed:'Proposed',specified:'Specified',ready:'Ready',in_progress:'In Progress',in_review:'In Review',in_qa:'In QA',releasable:'Releasable',released:'Released'};
+
+    async function loadFactoryTab() {
+      FACTORY_STATES.forEach(s => { const el = document.getElementById('fsStat-' + s); if (el) el.innerText = '…'; });
+      document.getElementById('factoryBoard').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><div class="empty-state-title">Loading factory board...</div></div>';
+      try {
+        const d = await fetch(API + '/factory/tasks', { headers: getH() }).then(r => r.json());
+        const tasks = Array.isArray(d.tasks) ? d.tasks : [];
+        const byState = {};
+        FACTORY_STATES.forEach(s => { byState[s] = []; });
+        tasks.forEach(t => { if (byState[t.state]) byState[t.state].push(t); });
+        FACTORY_STATES.forEach(s => {
+          const el = document.getElementById('fsStat-' + s);
+          if (el) el.innerText = byState[s].length;
+        });
+        const board = document.getElementById('factoryBoard');
+        if (tasks.length === 0) {
+          board.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏭</div><div class="empty-state-title">No tasks</div><div class="empty-state-desc">Create factory tasks to see them here</div></div>';
+          return;
+        }
+        board.innerHTML = FACTORY_STATES.map(s => {
+          const col = byState[s];
+          const cards = col.length === 0
+            ? '<div style="font-size:12px;color:var(--text3);padding:8px 0">No tasks</div>'
+            : col.map(t => {
+                const updated = t.updatedAt ? new Date(t.updatedAt).toLocaleString() : '-';
+                const safe = (v) => String(v||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                return `<div class="panel" style="margin-bottom:10px"><div class="panel-body" style="padding:12px"><div style="font-size:13px;font-weight:600;margin-bottom:4px">${safe(t.title)}</div><div style="font-size:11px;color:var(--text3)">${safe(t.id)}</div><div style="font-size:10px;color:var(--text3);margin-top:4px">Updated: ${safe(updated)}</div></div></div>`;
+              }).join('');
+          return `<div style="flex:0 0 200px;min-width:160px"><div class="panel-head" style="border-radius:0 10px 0 0"><div class="panel-title">${FACTORY_STATE_LABELS[s]}</div><span class="nav-badge">${col.length}</span></div><div style="background:var(--bg3);border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:10px;min-height:80px">${cards}</div></div>`;
+        }).join('');
+      } catch (e) {
+        console.error('Failed to load factory tab:', e);
+        FACTORY_STATES.forEach(s => { const el = document.getElementById('fsStat-' + s); if (el) el.innerText = '-'; });
+        document.getElementById('factoryBoard').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠</div><div class="empty-state-title">Failed to load Factory Board</div></div>';
+      }
+    }
+
+    async function loadDelegations() {
+      ['dlgActive','dlgCompleted','dlgPending'].forEach(id => {
+        document.getElementById(id).innerText = '…';
+      });
+      document.getElementById('dlgList').innerHTML = '';
+      try {
+        const d = await fetch(API + '/delegations', { headers: getH() }).then(r => r.json());
+        const list = Array.isArray(d) ? d : (Array.isArray(d.delegations) ? d.delegations : []);
+        let active = 0, completed = 0, pending = 0;
+        list.forEach(item => {
+          const s = (item.state || '').toLowerCase();
+          if (s === 'dispatched' || s === 'accepted') active++;
+          else if (s === 'completed') completed++;
+          else if (s === 'proposed' || s === 'approved') pending++;
+        });
+        document.getElementById('dlgActive').innerText = active;
+        document.getElementById('dlgCompleted').innerText = completed;
+        document.getElementById('dlgPending').innerText = pending;
+
+        const listEl = document.getElementById('dlgList');
+        if (list.length === 0) {
+          listEl.innerHTML = '<div class="empty-state" style="padding:24px 0"><div class="empty-state-title">No delegations recorded</div></div>';
+          return;
+        }
+
+        const BADGE = {
+          dispatched: 'background:rgba(88,166,255,0.2);color:var(--accent)',
+          accepted:   'background:rgba(88,166,255,0.2);color:var(--accent)',
+          completed:  'background:rgba(63,185,80,0.2);color:var(--success)',
+          rejected:   'background:rgba(248,81,73,0.2);color:var(--red)',
+          proposed:   'background:rgba(210,153,34,0.2);color:var(--yellow)',
+          approved:   'background:rgba(210,153,34,0.2);color:var(--yellow)'
+        };
+
+        const top10 = list.slice().sort((a,b) => {
+          return new Date(b.updatedAt||0) - new Date(a.updatedAt||0);
+        }).slice(0,10);
+
+        const safe = v => String(v||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const fmtAgeTs = ts => {
+          if (!ts) return '-';
+          const sec = Math.round((Date.now() - new Date(ts).getTime()) / 1000);
+          if (sec < 60) return sec + 's ago';
+          if (sec < 3600) return Math.round(sec/60) + 'm ago';
+          if (sec < 86400) return Math.round(sec/3600) + 'h ago';
+          return Math.round(sec/86400) + 'd ago';
+        };
+
+        listEl.innerHTML = '<div style="overflow-x:auto">'
+          + '<table style="width:100%;border-collapse:collapse;font-size:12px">'
+          + '<thead><tr style="color:var(--text3);border-bottom:1px solid var(--border)">'
+          + '<th style="text-align:left;padding:6px 8px;font-weight:500">From</th>'
+          + '<th style="text-align:left;padding:6px 8px;font-weight:500">To</th>'
+          + '<th style="text-align:left;padding:6px 8px;font-weight:500">State</th>'
+          + '<th style="text-align:left;padding:6px 8px;font-weight:500">Tasks</th>'
+          + '<th style="text-align:left;padding:6px 8px;font-weight:500">Age</th>'
+          + '</tr></thead><tbody>'
+          + top10.map(item => {
+              const s = (item.state || '').toLowerCase();
+              const badgeStyle = BADGE[s] || 'background:rgba(139,148,158,0.2);color:var(--text2)';
+              return '<tr style="border-bottom:1px solid var(--border)">'
+                + '<td style="padding:6px 8px;color:var(--text)">' + safe(item.requesterAgentId||'-') + '</td>'
+                + '<td style="padding:6px 8px;color:var(--text)">' + safe(item.assigneeAgentId||'-') + '</td>'
+                + '<td style="padding:6px 8px"><span style="padding:2px 8px;border-radius:0;font-size:11px;font-weight:500;' + badgeStyle + '">' + safe(item.state||'-') + '</span></td>'
+                + '<td style="padding:6px 8px;color:var(--text3);font-family:\'JetBrains Mono\',monospace;font-size:11px">'
+                  + (item.parentTaskId ? '<span title="parent">' + safe(String(item.parentTaskId).slice(0,8)) + '</span>' : '-')
+                  + (item.childTaskId ? ' → <span title="child">' + safe(String(item.childTaskId).slice(0,8)) + '</span>' : '')
+                + '</td>'
+                + '<td style="padding:6px 8px;color:var(--text3)">' + fmtAgeTs(item.updatedAt) + '</td>'
+                + '</tr>';
+            }).join('')
+          + '</tbody></table></div>';
+      } catch (e) {
+        console.error('Failed to load delegations:', e);
+        ['dlgActive','dlgCompleted','dlgPending'].forEach(id => {
+          document.getElementById(id).innerText = '-';
+        });
+        document.getElementById('dlgList').innerHTML =
+          '<div style="font-size:12px;color:var(--red);padding:8px 0">Failed to load Delegation Activity</div>';
+      }
+    }
+
+    async function loadCredDecisions() {
+      ['credTotal','credAllow','credDeny'].forEach(id => {
+        document.getElementById(id).innerText = '…';
+      });
+      document.getElementById('credDenyReasons').innerHTML = '';
+      try {
+        const d = await fetch(API + '/credentials/usage', { headers: getH() }).then(r => r.json());
+        document.getElementById('credTotal').innerText = d.total != null ? d.total : '-';
+        document.getElementById('credAllow').innerText = d.allow != null ? d.allow : '-';
+        document.getElementById('credDeny').innerText = d.deny != null ? d.deny : '-';
+        const reasonsEl = document.getElementById('credDenyReasons');
+        if (d.topDenyReasons && d.topDenyReasons.length > 0) {
+          const safe = v => String(v||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          reasonsEl.innerHTML = '<div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">Top deny reasons:</div>'
+            + d.topDenyReasons.map(r => '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--border)">'
+              + '<span>' + safe(r.reason) + '</span>'
+              + '<span style="color:var(--red);font-weight:600;margin-left:8px">' + r.count + '</span>'
+              + '</div>').join('');
+        } else {
+          reasonsEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0">No deny decisions recorded</div>';
+        }
+      } catch (e) {
+        console.error('Failed to load credential decisions:', e);
+        ['credTotal','credAllow','credDeny'].forEach(id => {
+          document.getElementById(id).innerText = '-';
+        });
+        document.getElementById('credDenyReasons').innerHTML =
+          '<div style="font-size:12px;color:var(--red);padding:8px 0">Failed to load Credential Decisions</div>';
+      }
+    }
+
+    async function loadAgentHealth() {
+      ['ahTotal','ahHealthy','ahIdle','ahStuck'].forEach(id => {
+        document.getElementById(id).innerText = '…';
+      });
+      document.getElementById('ahStuckList').innerHTML = '';
+      document.getElementById('agentHealthPanel').style.borderColor = '';
+      try {
+        const d = await fetch(API + '/agents/health', { headers: getH() }).then(r => r.json());
+        const summary = d.summary || {};
+        const agents = Array.isArray(d.agents) ? d.agents : [];
+        const healthy = agents.filter(a => a.health === 'ok').length;
+        document.getElementById('ahTotal').innerText = summary.total != null ? summary.total : agents.length;
+        document.getElementById('ahHealthy').innerText = healthy;
+        document.getElementById('ahIdle').innerText = summary.idle != null ? summary.idle : '-';
+        const stuckCount = summary.stuck != null ? summary.stuck : 0;
+        document.getElementById('ahStuck').innerText = stuckCount;
+        const stuckEl = document.getElementById('ahStuckList');
+        if (stuckCount > 0) {
+          document.getElementById('agentHealthPanel').style.borderColor = 'var(--red)';
+          const stuckAgents = agents.filter(a => a.health === 'stuck' || a.stuckTaskCount > 0);
+          const safe = v => String(v||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+          stuckEl.innerHTML = '<div style="font-size:11px;color:var(--red);margin-bottom:4px;font-weight:600">Stuck agents:</div>'
+            + stuckAgents.map(a => '<div style="padding:2px 0;border-bottom:1px solid var(--border)">'
+              + '<span style="color:var(--text);font-weight:600">' + safe(a.name || a.agentId) + '</span>'
+              + ' &mdash; <span style="color:var(--text2)">' + a.stuckTaskCount + ' stuck task' + (a.stuckTaskCount !== 1 ? 's' : '') + '</span>'
+              + (a.stuckTaskIds && a.stuckTaskIds.length > 0
+                ? ' <span style="font-size:11px;color:var(--text3);font-family:\'JetBrains Mono\',monospace">['
+                  + a.stuckTaskIds.slice(0,3).map(id => safe(String(id).slice(0,8))).join(', ')
+                  + (a.stuckTaskIds.length > 3 ? '...' : '') + ']</span>'
+                : '')
+              + '</div>'
+            ).join('');
+        } else {
+          stuckEl.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:4px 0">All agents healthy</div>';
+        }
+      } catch (e) {
+        console.error('Failed to load agent health:', e);
+        ['ahTotal','ahHealthy','ahIdle','ahStuck'].forEach(id => {
+          document.getElementById(id).innerText = '-';
+        });
+        document.getElementById('ahStuckList').innerHTML =
+          '<div style="font-size:12px;color:var(--red);padding:8px 0">Failed to load Agent Health</div>';
+      }
+    }
+
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+
+        const section = item.dataset.section;
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(section + '-section').classList.add('active');
+        if (section === 'factory') loadFactoryTab();
+      });
+    });
+  </script>
+</body>
+</html>

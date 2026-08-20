@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — System Health</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .health-container { max-width: 1200px; margin: 0 auto; }
+    .health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .health-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .health-card-title { font-size: .75rem; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+    .health-card-value { font-size: 1.8rem; font-weight: 700; color: var(--text); }
+    .health-card-sub { font-size: .7rem; color: var(--text3); margin-top: 4px; }
+
+    .gauge-container { display: flex; align-items: center; gap: 12px; }
+    .gauge { width: 100%; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+    .gauge-fill { height: 100%; border-radius: 4px; transition: width .5s, background .5s; }
+    .gauge-fill.ok { background: var(--success); }
+    .gauge-fill.warn { background: var(--warning); }
+    .gauge-fill.critical { background: var(--danger); }
+    .gauge-pct { font-size: .9rem; font-weight: 600; min-width: 45px; text-align: right; }
+
+    .services-list { display: flex; flex-direction: column; gap: 6px; }
+    .service-item { display: flex; align-items: center; gap: 8px; font-size: .8rem; color: var(--text); }
+    .service-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .service-dot.active { background: var(--success); }
+    .service-dot.inactive { background: var(--danger); }
+
+    .history-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; }
+    .history-title { font-size: .85rem; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+    .sparkline { width: 100%; height: 50px; display: flex; align-items: flex-end; gap: 2px; }
+    .spark-bar { flex: 1; background: var(--accent); border-radius: 2px 2px 0 0; min-width: 3px; transition: height .3s; }
+    .spark-bar.warn { background: var(--warning); }
+    .spark-bar.critical { background: var(--danger); }
+
+    .disk-section { display: flex; flex-direction: column; gap: 10px; }
+    .disk-item { }
+    .disk-label { display: flex; justify-content: space-between; font-size: .75rem; color: var(--text2); margin-bottom: 3px; }
+
+    .uptime-badge { display: inline-block; padding: 4px 10px; background: rgba(46,204,113,.1); color: var(--success); border-radius: 12px; font-size: .75rem; font-weight: 600; }
+    .refresh-info { font-size: .7rem; color: var(--text3); text-align: right; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+<script src="/sidebar.js"></script>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">System Health</h1>
+      <p class="page-subtitle">Real-time monitoring of CPU, memory, disk, and services</p>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="health-container">
+      <div class="refresh-info" id="refresh-info">Last updated: --</div>
+
+      <div class="health-grid">
+        <div class="health-card">
+          <div class="health-card-title">CPU Load</div>
+          <div class="health-card-value" id="h-cpu">—</div>
+          <div class="health-card-sub" id="h-cpu-sub">— cores</div>
+          <div style="margin-top:8px;">
+            <div class="gauge-container">
+              <div class="gauge"><div class="gauge-fill" id="h-cpu-gauge" style="width:0%"></div></div>
+              <span class="gauge-pct" id="h-cpu-pct">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="health-card">
+          <div class="health-card-title">Memory</div>
+          <div class="health-card-value" id="h-mem">—</div>
+          <div class="health-card-sub" id="h-mem-sub">— MB free</div>
+          <div style="margin-top:8px;">
+            <div class="gauge-container">
+              <div class="gauge"><div class="gauge-fill" id="h-mem-gauge" style="width:0%"></div></div>
+              <span class="gauge-pct" id="h-mem-pct">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="health-card">
+          <div class="health-card-title">Uptime</div>
+          <div class="health-card-value" id="h-uptime">—</div>
+          <div class="health-card-sub" id="h-uptime-sub"></div>
+        </div>
+
+        <div class="health-card">
+          <div class="health-card-title">Services</div>
+          <div class="services-list" id="h-services"><span style="color:var(--text3);font-size:.8rem;">Loading...</span></div>
+        </div>
+      </div>
+
+      <!-- Disk Usage -->
+      <div class="health-card" style="margin-bottom:20px;">
+        <div class="health-card-title">Disk Usage</div>
+        <div class="disk-section" id="h-disks"></div>
+      </div>
+
+      <!-- Load History Sparkline -->
+      <div class="history-section">
+        <div class="history-title">CPU Load History (last 30 min)</div>
+        <div class="sparkline" id="h-sparkline"></div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="/auth-guard.js"></script>
+<script>
+(function() {
+  var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token');
+  if (!token) window.location.href = '/';
+  function hdr() { return { 'Authorization': 'Bearer ' + token }; }
+
+  function gaugeClass(pct) {
+    if (pct > 85) return 'critical';
+    if (pct > 60) return 'warn';
+    return 'ok';
+  }
+
+  function formatUptime(seconds) {
+    var d = Math.floor(seconds / 86400);
+    var h = Math.floor((seconds % 86400) / 3600);
+    var m = Math.floor((seconds % 3600) / 60);
+    if (d > 0) return d + 'd ' + h + 'h';
+    if (h > 0) return h + 'h ' + m + 'm';
+    return m + 'm';
+  }
+
+  function updateDashboard(snap) {
+    // CPU
+    var cpuPct = Math.round((snap.cpu.loadAvg1 / snap.cpu.cores) * 100);
+    document.getElementById('h-cpu').textContent = snap.cpu.loadAvg1.toFixed(2);
+    document.getElementById('h-cpu-sub').textContent = snap.cpu.cores + ' cores | 5m: ' + snap.cpu.loadAvg5.toFixed(2) + ' | 15m: ' + snap.cpu.loadAvg15.toFixed(2);
+    document.getElementById('h-cpu-gauge').style.width = Math.min(cpuPct, 100) + '%';
+    document.getElementById('h-cpu-gauge').className = 'gauge-fill ' + gaugeClass(cpuPct);
+    document.getElementById('h-cpu-pct').textContent = cpuPct + '%';
+
+    // Memory
+    document.getElementById('h-mem').textContent = snap.memory.usedPct + '%';
+    document.getElementById('h-mem-sub').textContent = snap.memory.freeMB + ' MB free / ' + snap.memory.totalMB + ' MB total';
+    document.getElementById('h-mem-gauge').style.width = snap.memory.usedPct + '%';
+    document.getElementById('h-mem-gauge').className = 'gauge-fill ' + gaugeClass(snap.memory.usedPct);
+    document.getElementById('h-mem-pct').textContent = snap.memory.usedPct + '%';
+
+    // Uptime
+    document.getElementById('h-uptime').textContent = formatUptime(snap.uptime);
+
+    // Services
+    var svcEl = document.getElementById('h-services');
+    svcEl.innerHTML = (snap.services || []).map(function(s) {
+      return '<div class="service-item"><span class="service-dot ' + (s.active ? 'active' : 'inactive') + '"></span>' + s.name + '</div>';
+    }).join('');
+
+    // Disks
+    var diskEl = document.getElementById('h-disks');
+    diskEl.innerHTML = (snap.disk || []).map(function(d) {
+      return '<div class="disk-item"><div class="disk-label"><span>' + d.mount + '</span><span>' + d.usedPct + '% (' + d.usedMB + 'MB / ' + d.sizeMB + 'MB)</span></div><div class="gauge"><div class="gauge-fill ' + gaugeClass(d.usedPct) + '" style="width:' + d.usedPct + '%"></div></div></div>';
+    }).join('') || '<span style="color:var(--text3);font-size:.8rem;">No disk data</span>';
+
+    document.getElementById('refresh-info').textContent = 'Last updated: ' + new Date().toLocaleTimeString();
+  }
+
+  function loadCurrent() {
+    fetch('/api/health/current', { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(updateDashboard)
+      .catch(function(e) { console.error('Health fetch error:', e); });
+  }
+
+  function loadHistory() {
+    fetch('/api/health/history?limit=60', { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var snaps = data.snapshots || [];
+        var sparkEl = document.getElementById('h-sparkline');
+        if (snaps.length === 0) { sparkEl.innerHTML = '<span style="color:var(--text3);font-size:.75rem;">Collecting data...</span>'; return; }
+        var maxLoad = Math.max(1, ...snaps.map(function(s) { return s.cpu.loadAvg1; }));
+        sparkEl.innerHTML = snaps.map(function(s) {
+          var pct = Math.round((s.cpu.loadAvg1 / maxLoad) * 100);
+          var cls = (s.cpu.loadAvg1 / s.cpu.cores) > 0.85 ? 'critical' : (s.cpu.loadAvg1 / s.cpu.cores) > 0.6 ? 'warn' : '';
+          return '<div class="spark-bar ' + cls + '" style="height:' + Math.max(pct, 3) + '%" title="' + s.cpu.loadAvg1.toFixed(2) + '"></div>';
+        }).join('');
+      });
+  }
+
+  loadCurrent();
+  loadHistory();
+  setInterval(loadCurrent, 10000);
+  setInterval(loadHistory, 30000);
+})();
+</script>
+</body>
+</html>

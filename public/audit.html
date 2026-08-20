@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — Audit Trail</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .audit-container { max-width: 1200px; margin: 0 auto; }
+    .audit-filters { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    .audit-filter { padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-size: .8rem; }
+    .audit-filter:focus { border-color: var(--accent); outline: none; }
+    .audit-btn { padding: 6px 14px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-size: .8rem; cursor: pointer; }
+
+    .audit-summary { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .audit-stat { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 14px; text-align: center; min-width: 80px; }
+    .audit-stat-val { font-size: 1.2rem; font-weight: 700; color: var(--accent); }
+    .audit-stat-lbl { font-size: .65rem; color: var(--text3); text-transform: uppercase; }
+
+    .audit-table { width: 100%; border-collapse: collapse; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .audit-table th { text-align: left; padding: 8px 12px; background: var(--bg3); color: var(--text2); font-size: .75rem; font-weight: 500; border-bottom: 1px solid var(--border); }
+    .audit-table td { padding: 7px 12px; border-bottom: 1px solid var(--bg3); font-size: .78rem; color: var(--text); }
+    .audit-table tr:hover td { background: rgba(124,58,237,.03); }
+
+    .cat-badge { padding: 2px 6px; border-radius: 3px; font-size: .65rem; font-weight: 600; }
+    .cat-auth { background: rgba(52,152,219,.15); color: #3498db; }
+    .cat-chat { background: rgba(46,204,113,.15); color: #2ecc71; }
+    .cat-tool { background: rgba(241,196,15,.15); color: #f1c40f; }
+    .cat-admin { background: rgba(155,89,182,.15); color: #9b59b6; }
+    .cat-delegation { background: rgba(230,126,34,.15); color: #e67e22; }
+    .cat-scheduled { background: rgba(149,165,166,.15); color: #95a5a6; }
+    .cat-kb { background: rgba(26,188,156,.15); color: #1abc9c; }
+
+    .status-ok { color: var(--success); }
+    .status-fail { color: var(--danger); }
+    .empty-state { text-align: center; padding: 30px; color: var(--text3); }
+  </style>
+</head>
+<body>
+<script src="/sidebar.js"></script>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Audit Trail</h1>
+      <p class="page-subtitle">Complete log of agent actions, tool executions, and system events</p>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="audit-container">
+
+      <div class="audit-filters">
+        <input type="date" class="audit-filter" id="audit-date">
+        <select class="audit-filter" id="audit-category">
+          <option value="">All Categories</option>
+          <option value="auth">Auth</option>
+          <option value="chat">Chat</option>
+          <option value="tool">Tool</option>
+          <option value="delegation">Delegation</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="kb">Knowledge Base</option>
+          <option value="admin">Admin</option>
+        </select>
+        <input type="text" class="audit-filter" id="audit-actor" placeholder="Filter by actor...">
+        <button class="audit-btn" onclick="loadAudit()">Filter</button>
+      </div>
+
+      <div class="audit-summary" id="audit-summary"></div>
+
+      <table class="audit-table">
+        <thead><tr><th>Time</th><th>Category</th><th>Action</th><th>Actor</th><th>Target</th><th>Details</th><th>Status</th></tr></thead>
+        <tbody id="audit-body"><tr><td colspan="7" class="empty-state">Loading...</td></tr></tbody>
+      </table>
+
+    </div>
+  </div>
+</main>
+
+<script src="/auth-guard.js"></script>
+<script>
+(function() {
+  var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token');
+  if (!token) window.location.href = '/';
+  function hdr() { return { 'Authorization': 'Bearer ' + token }; }
+
+  // Set default date to today
+  document.getElementById('audit-date').value = new Date().toISOString().slice(0, 10);
+
+  function loadAudit() {
+    var date = document.getElementById('audit-date').value;
+    var category = document.getElementById('audit-category').value;
+    var actor = document.getElementById('audit-actor').value;
+
+    var params = ['limit=200'];
+    if (date) params.push('date=' + date);
+    if (category) params.push('category=' + category);
+    if (actor) params.push('actor=' + encodeURIComponent(actor));
+
+    fetch('/api/agent-audit?' + params.join('&'), { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var logs = data.logs || [];
+        var body = document.getElementById('audit-body');
+
+        // Summary
+        var summary = document.getElementById('audit-summary');
+        var cats = {};
+        logs.forEach(function(l) { cats[l.category] = (cats[l.category] || 0) + 1; });
+        var failures = logs.filter(function(l) { return !l.success; }).length;
+        summary.innerHTML = '<div class="audit-stat"><div class="audit-stat-val">' + logs.length + '</div><div class="audit-stat-lbl">Total</div></div>' +
+          '<div class="audit-stat"><div class="audit-stat-val" style="color:var(--danger)">' + failures + '</div><div class="audit-stat-lbl">Failures</div></div>' +
+          Object.entries(cats).map(function(e) { return '<div class="audit-stat"><div class="audit-stat-val">' + e[1] + '</div><div class="audit-stat-lbl">' + e[0] + '</div></div>'; }).join('');
+
+        if (logs.length === 0) {
+          body.innerHTML = '<tr><td colspan="7" class="empty-state">No audit entries for ' + (date || 'today') + '</td></tr>';
+          return;
+        }
+
+        body.innerHTML = logs.map(function(l) {
+          var time = new Date(l.timestamp).toLocaleTimeString();
+          var catClass = 'cat-' + (l.category || 'admin');
+          return '<tr>' +
+            '<td>' + time + '</td>' +
+            '<td><span class="cat-badge ' + catClass + '">' + l.category + '</span></td>' +
+            '<td>' + l.action + '</td>' +
+            '<td>' + (l.actor || '-') + '</td>' +
+            '<td>' + (l.target || '-') + '</td>' +
+            '<td>' + (l.details || '').slice(0, 60) + '</td>' +
+            '<td class="' + (l.success ? 'status-ok' : 'status-fail') + '">' + (l.success ? 'OK' : 'FAIL') + '</td>' +
+            '</tr>';
+        }).join('');
+      });
+  }
+
+  window.loadAudit = loadAudit;
+  loadAudit();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,366 @@
+/* ── Two-column layout ───────────────────────────────────────────────────────── */
+.columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .columns { grid-template-columns: 1fr; }
+}
+
+.column {
+  min-width: 0;
+}
+
+/* ── Loading ─────────────────────────────────────────────────────────────────── */
+.loading {
+  padding: 32px;
+  text-align: center;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+/* ── Shared list ─────────────────────────────────────────────────────────────── */
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Runbook template item ───────────────────────────────────────────────────── */
+.rbItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.rbItem:last-child {
+  border-bottom: none;
+}
+
+.rbInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.rbName {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rbDesc {
+  font-size: 12px;
+  color: var(--text2);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rbMeta {
+  font-size: 11px;
+  color: var(--text2);
+}
+
+/* ── Execution item ──────────────────────────────────────────────────────────── */
+.execItem {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.execItem:last-child {
+  border-bottom: none;
+}
+
+.execHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.execName {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-decoration: none;
+}
+.execName:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* ── Progress bar ────────────────────────────────────────────────────────────── */
+.progressRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progressBar {
+  flex: 1;
+  height: 6px;
+  background: var(--bg3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  min-width: 4px;
+}
+
+.progressLabel {
+  font-size: 11px;
+  color: var(--text2);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.execActions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.execMeta {
+  font-size: 11px;
+  color: var(--text2);
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 14px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tabActive {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tabBadge {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  line-height: 1.4;
+}
+
+/* ── Expand button ───────────────────────────────────────────────────────────── */
+.execHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.expandBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 10px;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.expandBtn:hover {
+  color: var(--text);
+}
+
+/* ── Step list ───────────────────────────────────────────────────────────────── */
+.stepList {
+  list-style: none;
+  padding: 4px 0 4px 20px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-left: 2px solid var(--border);
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.stepIcon {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.stepName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── History table ───────────────────────────────────────────────────────────── */
+.historyTable {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow-x: auto;
+}
+
+.historyHeader,
+.historyRow {
+  display: grid;
+  grid-template-columns: 2fr 1fr 60px 1.5fr 80px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 4px;
+  font-size: 12px;
+}
+
+.historyHeader {
+  font-weight: 600;
+  color: var(--text2);
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.historyRow {
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.historyRow:last-child {
+  border-bottom: none;
+}
+
+.historyName {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.historyMeta {
+  color: var(--text2);
+  white-space: nowrap;
+}
+
+/* ── Modal form ──────────────────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  margin-top: 4px;
+}
+
+.required {
+  color: var(--danger);
+}
+
+.input,
+.textarea {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 8px 12px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--text2);
+}
+
+.input:focus,
+.textarea:focus {
+  border-color: var(--accent);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.rbActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rbLink, .toolbarLink {
+  font-size: .85rem;
+  color: var(--text2);
+  text-decoration: none;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg2);
+}
+.rbLink:hover, .toolbarLink:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+.toolbarLink {
+  font-weight: 500;
+}

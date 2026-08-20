@@ -1,0 +1,409 @@
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.backLink {
+  font-size: .85rem;
+  color: var(--text2);
+  text-decoration: none;
+  padding: 0 6px;
+}
+
+.backLink:hover { color: var(--accent); text-decoration: underline; }
+
+.loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text3);
+}
+
+.notFound {
+  padding: 2rem;
+  text-align: center;
+}
+
+.notFound p {
+  color: var(--text2);
+  margin: 0 0 16px;
+}
+
+.notFoundActions {
+  display: flex;
+  justify-content: center;
+}
+
+/* ── Meta strip ─────────────────────────────────────────────────────────────── */
+.metaStrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 28px;
+  padding: 14px 18px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+}
+
+.metaLabel {
+  font-size: .7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text3);
+}
+
+.metaVal {
+  font-size: .85rem;
+  color: var(--text);
+}
+
+.jiraLink {
+  font-size: .85rem;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.jiraLink:hover { text-decoration: underline; }
+
+/* ── Two-column grid ───────────────────────────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 16px;
+}
+
+.colMain { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.colSide { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+@media (max-width: 1100px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+/* ── Description ────────────────────────────────────────────────────────────── */
+.description {
+  margin: 0;
+  color: var(--text);
+  font-size: .9rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.descriptionEmpty {
+  margin: 0;
+  color: var(--text3);
+  font-size: .9rem;
+  font-style: italic;
+}
+
+/* ── Remediation status ────────────────────────────────────────────────────── */
+.remediationOk {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.remediationMsg {
+  color: var(--text);
+  font-size: .9rem;
+}
+
+.remediationEmpty {
+  color: var(--text3);
+  font-size: .9rem;
+}
+
+/* ── Timeline ──────────────────────────────────────────────────────────────── */
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.timelineItem {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.timelineItem:last-child { border-bottom: none; }
+
+.timelineDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.timelineBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.timelineHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.timelineType {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text);
+}
+
+.timelineActor {
+  font-size: .78rem;
+  color: var(--text2);
+}
+
+.timelineTime {
+  font-size: .72rem;
+  color: var(--text3);
+  font-family: var(--font-mono, monospace);
+  margin-left: auto;
+}
+
+.timelineMessage {
+  color: var(--text);
+  font-size: .88rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.timelineEmpty {
+  color: var(--text3);
+  font-size: .9rem;
+  padding: 8px 0;
+}
+
+/* ── Note input row ────────────────────────────────────────────────────────── */
+.noteRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.noteInput {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: .875rem;
+  font-family: inherit;
+}
+
+.noteInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+/* ── AI panel ──────────────────────────────────────────────────────────────── */
+.aiEmpty {
+  color: var(--text3);
+  font-size: .88rem;
+  padding: 4px 0;
+}
+
+.aiBody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.aiBadges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.aiSection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.aiSectionTitle {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text2);
+}
+
+.aiText {
+  color: var(--text);
+  font-size: .88rem;
+  line-height: 1.45;
+}
+
+.aiList {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--text);
+  font-size: .85rem;
+  line-height: 1.45;
+}
+
+.aiTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.aiTag {
+  font-size: .75rem;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text2);
+}
+
+/* ── Assign modal form ─────────────────────────────────────────────────────── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-size: .85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.fieldHint {
+  font-size: .75rem;
+  color: var(--text3);
+}
+
+.select,
+.input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font-size: .875rem;
+  font-family: inherit;
+  width: 100%;
+}
+
+.select:focus,
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+/* ── Escalation stepper ────────────────────────────────────────────────── */
+.stepper {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+}
+.step {
+  position: relative;
+  padding: 12px 12px 16px 12px;
+  border-radius: var(--radius-sm);
+  margin: 4px;
+}
+.stepHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.stepDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: .85rem;
+  color: white;
+  background: var(--text3);
+  flex-shrink: 0;
+}
+.stepLabel { font-size: .85rem; font-weight: 600; color: var(--text); }
+.stepWhen  { font-size: .7rem; color: var(--text3); margin-left: auto; white-space: nowrap; }
+.stepDesc  { font-size: .75rem; color: var(--text2); line-height: 1.35; }
+.stepNote  {
+  margin-top: 6px;
+  font-size: .75rem;
+  color: var(--text);
+  background: var(--bg3);
+  padding: 6px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+/* State colours */
+.step_done .stepDot       { background: var(--success); }
+.step_active .stepDot     { background: var(--warning); animation: pulse-warn 1.6s infinite; }
+.step_critical .stepDot   { background: var(--danger);  animation: pulse-danger 1s infinite; }
+.step_pending .stepDot    { background: var(--text3); opacity: .6; }
+.step_pending .stepLabel  { color: var(--text3); }
+.step_pending .stepDesc   { color: var(--text3); opacity: .8; }
+
+/* Connector line between steps (only visible on wider layouts) */
+.stepConnector {
+  position: absolute;
+  top: 26px;
+  right: -4px;
+  width: 8px;
+  height: 2px;
+  background: var(--border2);
+}
+.connector_done    { background: var(--success); }
+.connector_active  { background: var(--warning); }
+.connector_critical{ background: var(--danger); }
+
+@keyframes pulse-warn {
+  0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,.6); }
+  50%     { box-shadow: 0 0 0 6px rgba(245,158,11,0); }
+}
+@keyframes pulse-danger {
+  0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.7); }
+  50%     { box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+}
+
+/* Stack vertically on narrow screens */
+@media (max-width: 800px) {
+  .stepper { grid-template-columns: 1fr; }
+  .stepConnector { display: none; }
+}

@@ -1,0 +1,99 @@
+/* SecurityPage.module.css */
+
+.loading { padding: 2rem; text-align: center; color: var(--text3); }
+
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+.tab { padding: 8px 16px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text2); cursor: pointer; font-size: .875rem; font-weight: 500; margin-bottom: -1px; }
+.tab:hover { color: var(--text); }
+.tabActive { border-bottom-color: var(--accent); color: var(--accent); }
+
+.table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+.th { padding: 10px 14px; text-align: left; font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: middle; }
+.tr:hover { background: var(--bg3); }
+.tdRight { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: middle; text-align: right; }
+
+.credName { font-weight: 500; }
+.tsSmall { font-size: .8rem; }
+
+.fieldGroup { margin-bottom: 1rem; }
+.fieldLabel { display: block; margin-bottom: 4px; font-size: .875rem; font-weight: 500; }
+.input { width: 100%; padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: .875rem; box-sizing: border-box; }
+.input:focus { outline: none; border-color: var(--accent); }
+.select { padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: .875rem; }
+.select:focus { outline: none; border-color: var(--accent); }
+
+/* Audit filter bar */
+.filterBar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.filterInput { padding: 7px 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font-size: .875rem; }
+.filterInput:focus { outline: none; border-color: var(--accent); }
+
+/* Export buttons row */
+.exportRow { display: flex; gap: 8px; margin-bottom: 12px; }
+
+/* Pagination */
+.pagination { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.pageInfo { font-size: .8rem; color: var(--text2); flex: 1; }
+
+/* Print styles */
+@media print {
+  .tabs,
+  .filterBar,
+  .exportRow,
+  .pagination,
+  :global(.audit-no-print) {
+    display: none !important;
+  }
+
+  :global(body) > *:not(:has(#audit-table)),
+  :global(.sidebar),
+  :global(header),
+  :global(nav) {
+    display: none !important;
+  }
+
+  .table {
+    font-size: 11px;
+  }
+
+  .th, .td {
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+  }
+}
+
+/* ── Table wrapper ─────────────────────────────────────────────────────────── */
+.tableWrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Mobile responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+
+  .tab {
+    flex-shrink: 0;
+    min-height: 44px;
+    padding: 8px 14px;
+  }
+
+  .table {
+    min-width: 500px;
+  }
+
+  .th:nth-child(4),
+  .td:nth-child(4),
+  .th:nth-child(5),
+  .td:nth-child(5) {
+    display: none;
+  }
+
+  .fieldGroup {
+    margin-bottom: 12px;
+  }
+}

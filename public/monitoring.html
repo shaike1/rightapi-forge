@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — Monitoring</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    /* Server cards inside monitoring */
+    .srv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+    .srv-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+    .srv-card.offline { border-color: var(--danger); }
+    .srv-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .srv-name { font-weight: 600; font-size: .9rem; color: var(--text); }
+    .srv-ip   { font-size: .75rem; color: var(--text2); margin-top: 2px; }
+    .srv-metric { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
+    .srv-metric-label { display: flex; justify-content: space-between; font-size: .75rem; color: var(--text2); }
+
+    /* Agent cards */
+    .agent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+    .agent-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; transition: border-color .15s; }
+    .agent-card:hover { border-color: var(--border2); }
+    .agent-name { font-size: .9rem; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .agent-role { font-size: .78rem; color: var(--text2); }
+    .agent-status-pill {
+      display: inline-block; margin-top: 10px; padding: 3px 10px;
+      background: var(--success-bg); color: var(--success);
+      border: 1px solid rgba(34,197,94,.25); border-radius: 20px;
+      font-size: .72rem; font-weight: 600;
+    }
+
+    /* Section spacing */
+    .section { margin-bottom: 16px; }
+
+    /* Link inside section-header */
+    .view-link { color: var(--accent-light); font-size: .82rem; }
+    .view-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo"><span>[=] IT OPS</span></div>
+  <nav class="sidebar-nav">
+    <span class="sidebar-section">Operations</span>
+    <a href="/incidents" class="nav-item"><span class="nav-icon">!</span>Incidents</a>
+    <a href="/workflows" class="nav-item"><span class="nav-icon">></span>Workflows</a>
+    <a href="/runbooks" class="nav-item"><span class="nav-icon">#</span>Runbooks</a>
+    <a href="/servers" class="nav-item"><span class="nav-icon">@</span>Servers</a>
+    <a href="/monitoring.html" class="nav-item active"><span class="nav-icon">%</span>Monitoring</a>
+    <span class="sidebar-section">Integrations</span>
+    <a href="/jira.html" class="nav-item"><span class="nav-icon">*</span>Jira</a>
+    <a href="/a2a.html" class="nav-item"><span class="nav-icon">&amp;</span>A2A Mesh</a>
+    <span class="sidebar-section">System</span>
+    <a href="/agent-details.html" class="nav-item"><span class="nav-icon">$</span>Agents</a>
+    <a href="/scheduler" class="nav-item"><span class="nav-icon">~</span>Scheduler</a>
+    <a href="/security.html" class="nav-item"><span class="nav-icon">^</span>Security</a>
+    <a href="/users.html" class="nav-item" id="nav-users" style="display:none"><span class="nav-icon">+</span>Users</a>
+    <span class="sidebar-section">Communication</span>
+    <a href="/agent-chat.html" class="nav-item"><span class="nav-icon">&lt;</span>Agent Chat</a>
+    <a href="/agent-bridge" class="nav-item"><span class="nav-icon">&lt;&gt;</span>Agent Bridge</a>
+    <span class="sidebar-section">Tools</span>
+    <a href="/dashboard" class="nav-item"><span class="nav-icon">=</span>Dashboard</a>
+    <a href="/cicd" class="nav-item"><span class="nav-icon">|</span>CI/CD</a>
+    <a href="/audit" class="nav-item"><span class="nav-icon">.</span>Audit</a>
+    <a href="/rbac" class="nav-item"><span class="nav-icon">:</span>RBAC</a>
+    <a href="/plugin-manager" class="nav-item"><span class="nav-icon">,</span>Plugins</a>
+    <a href="/agent-runtime" class="nav-item"><span class="nav-icon">&gt;&gt;</span>Agent Runtime</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="user-avatar">?</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-username" id="user-name">---</div>
+        <div class="sidebar-role" id="user-role"></div>
+      </div>
+    </div>
+    <div class="sidebar-actions">
+      <button class="btn-icon" onclick="doLogout()" title="Logout">[X]</button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Monitoring</h1>
+      <p class="page-subtitle">Real-time metrics and system health</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <!-- auto-refresh indicator -->
+      <span class="text-muted text-sm" id="refresh-label">Auto-refresh every 10s</span>
+    </div>
+  </div>
+  <div class="page-content">
+
+    <!-- Summary stat cards -->
+    <div class="stat-grid" style="margin-bottom:24px">
+      <div class="stat-card accent">
+        <div class="stat-label">Total Agents</div>
+        <div class="stat-value" id="totalAgents">-</div>
+        <div class="stat-sub">Active agents</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">SysAdmins</div>
+        <div class="stat-value" id="sysadmins">-</div>
+        <div class="stat-sub">System administrators</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Specialists</div>
+        <div class="stat-value" id="specialists">-</div>
+        <div class="stat-sub">Domain experts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Uptime</div>
+        <div class="stat-value" id="uptime">-</div>
+        <div class="stat-sub">Seconds</div>
+      </div>
+    </div>
+
+    <!-- Server Health -->
+    <div class="card section">
+      <div class="card-header">
+        <div class="section-header" style="margin:0;flex:1">
+          <span class="section-title">[@] Server Health</span>
+          <a href="/servers.html" class="view-link">View full dashboard →</a>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="srv-grid" id="serverGrid">
+          <div class="loading-state"><span class="spinner"></span> Loading server metrics…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Incident Stats -->
+    <div class="card section">
+      <div class="card-header">
+        <div class="section-header" style="margin:0;flex:1">
+          <span class="section-title">[!] Incident Stats</span>
+          <a href="/incidents.html" class="view-link">View all incidents →</a>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="stat-grid" id="incidentStats">
+          <div class="loading-state"><span class="spinner"></span> Loading incident stats…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Agents -->
+    <div class="card section">
+      <div class="card-header">
+        <span class="section-title">[$] Active Agents</span>
+      </div>
+      <div class="card-body">
+        <div class="agent-grid" id="agentGrid">
+          <div class="loading-state"><span class="spinner"></span> Loading agents…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System Metrics -->
+    <div class="card section">
+      <div class="card-header">
+        <span class="section-title">[%] System Metrics</span>
+      </div>
+      <div class="card-body">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-label">Memory RSS</div><div class="stat-value" id="memoryRss">-</div></div>
+          <div class="stat-card"><div class="stat-label">Heap Used</div><div class="stat-value" id="heapUsed">-</div></div>
+          <div class="stat-card"><div class="stat-label">Heap Total</div><div class="stat-value" id="heapTotal">-</div></div>
+          <div class="stat-card"><div class="stat-label">External</div><div class="stat-value" id="external">-</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script src="/auth-guard.js"></script>
+<div id="toast"></div>
+
+<script>
+const token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token');
+if (!token) { window.location.href = '/'; }
+function doLogout(){sessionStorage.removeItem('itops_token');localStorage.removeItem('itops_token');window.location.href='/';}
+fetch('/api/auth/me', {headers:{'Authorization':'Bearer '+token}})
+  .then(r=>r.json()).then(u=>{
+    document.getElementById('user-name').textContent = u.username;
+    document.getElementById('user-role').textContent = u.role;
+    document.getElementById('user-avatar').textContent = u.username[0].toUpperCase();
+    if(u.role==='admin') document.getElementById('nav-users').style.display='flex';
+  }).catch(()=>{ window.location.href = '/'; });
+function showToast(msg, type='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.style.display='block';
+  t.style.borderColor=type==='error'?'var(--danger)':type==='success'?'var(--success)':'var(--border2)';
+  clearTimeout(t._to); t._to=setTimeout(()=>{t.style.display='none';},3500);
+}
+
+// Helpers
+const authHeaders = () => ({ Authorization: 'Bearer ' + token });
+
+function barClass(pct) {
+  if (pct >= 90) return 'danger';
+  if (pct >= 75) return 'warning';
+  return 'success';
+}
+
+// Monitoring data
+async function fetchMonitoringData() {
+  try {
+    const response = await fetch('/api/health');
+    const data = await response.json();
+    if (data.monitoring) updateDashboard(data.monitoring);
+  } catch (error) {
+    console.error('Failed to fetch health:', error);
+  }
+}
+
+async function fetchAgents() {
+  try {
+    const response = await fetch('/api/agents');
+    const data = await response.json();
+    if (data) updateAgents(data);
+  } catch (error) {
+    console.error('Failed to fetch agents:', error);
+  }
+}
+
+function updateDashboard(monitoring) {
+  const total = monitoring.agents.director + monitoring.agents.sysadmins + monitoring.agents.specialists;
+  document.getElementById('totalAgents').textContent = total;
+  document.getElementById('sysadmins').textContent = monitoring.agents.sysadmins;
+  document.getElementById('specialists').textContent = monitoring.agents.specialists;
+  document.getElementById('uptime').textContent = Math.floor(monitoring.system.uptime);
+  const fmt = b => (b / 1024 / 1024).toFixed(2) + ' MB';
+  document.getElementById('memoryRss').textContent = fmt(monitoring.system.memory.rss);
+  document.getElementById('heapUsed').textContent = fmt(monitoring.system.memory.heapUsed);
+  document.getElementById('heapTotal').textContent = fmt(monitoring.system.memory.heapTotal);
+  document.getElementById('external').textContent = fmt(monitoring.system.memory.external);
+}
+
+function updateAgents(data) {
+  const grid = document.getElementById('agentGrid');
+  const agents = [...(data.sysadmins || []), ...(data.specialists || [])];
+  if (!agents.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">[$]</div><div class="empty-title">No agents found</div></div>';
+    return;
+  }
+  grid.innerHTML = agents.map(a => `
+    <div class="agent-card">
+      <div class="agent-name">${a.name}</div>
+      <div class="agent-role">${a.role}</div>
+      <div class="agent-status-pill">Active</div>
+    </div>`).join('');
+}
+
+// Server health
+async function fetchServerMetrics() {
+  try {
+    const r = await fetch('/api/servers/metrics', { headers: authHeaders() });
+    if (!r.ok) { renderServerError('API returned ' + r.status); return; }
+    const d = await r.json();
+    renderServers(d.servers || []);
+  } catch (e) {
+    renderServerError(e.message);
+  }
+}
+
+function renderServers(servers) {
+  const grid = document.getElementById('serverGrid');
+  if (!servers.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">[@]</div><div class="empty-title">No servers configured</div><div class="empty-desc">Set MONITORED_SERVERS env var</div></div>';
+    return;
+  }
+  grid.innerHTML = servers.map(s => {
+    if (!s.reachable) return `
+      <div class="srv-card offline">
+        <div class="srv-card-header">
+          <div><div class="srv-name">${s.name}</div><div class="srv-ip">${s.ip}</div></div>
+          <span class="badge badge-danger">OFFLINE</span>
+        </div>
+        <div style="color:var(--danger);font-size:.82rem">${s.error || 'Unreachable'}</div>
+      </div>`;
+    const cpu = s.cpu ?? 0, mem = s.memUsedPct ?? 0, disk = s.diskUsedPct ?? 0;
+    return `
+      <div class="srv-card">
+        <div class="srv-card-header">
+          <div><div class="srv-name">${s.name}</div><div class="srv-ip">${s.ip}</div></div>
+          <span class="badge badge-success">ONLINE</span>
+        </div>
+        <div class="srv-metric">
+          <div class="srv-metric-label"><span>CPU</span><span>${cpu.toFixed(1)}%</span></div>
+          <div class="progress-bar"><div class="progress-fill ${barClass(cpu)}" style="width:${Math.min(cpu,100)}%"></div></div>
+        </div>
+        <div class="srv-metric">
+          <div class="srv-metric-label"><span>Memory</span><span>${mem.toFixed(1)}%</span></div>
+          <div class="progress-bar"><div class="progress-fill ${barClass(mem)}" style="width:${Math.min(mem,100)}%"></div></div>
+        </div>
+        <div class="srv-metric">
+          <div class="srv-metric-label"><span>Disk (/)</span><span>${disk}%</span></div>
+          <div class="progress-bar"><div class="progress-fill ${barClass(disk)}" style="width:${Math.min(disk,100)}%"></div></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderServerError(msg) {
+  document.getElementById('serverGrid').innerHTML =
+    `<div class="empty-state"><div class="empty-icon">[!]</div><div class="empty-title">Failed to load server metrics</div><div class="empty-desc">${msg}</div></div>`;
+}
+
+// Incident stats
+async function fetchIncidentStats() {
+  try {
+    const r = await fetch('/api/incidents/stats', { headers: authHeaders() });
+    if (!r.ok) { renderIncidentError('API returned ' + r.status); return; }
+    const d = await r.json();
+    renderIncidentStats(d);
+  } catch (e) {
+    renderIncidentError(e.message);
+  }
+}
+
+function renderIncidentStats(d) {
+  const el = document.getElementById('incidentStats');
+  const chips = [
+    { label: 'Total',       value: d.total ?? '-',                       variant: '' },
+    { label: 'Open',        value: d.open ?? '-',                        variant: d.open > 0 ? 'danger' : '' },
+    { label: 'In Progress', value: d.inProgress ?? d.in_progress ?? '-', variant: d.inProgress > 0 ? 'warning' : '' },
+    { label: 'Resolved',    value: d.resolved ?? '-',                    variant: 'success' },
+    { label: 'Critical',    value: d.critical ?? '-',                    variant: d.critical > 0 ? 'danger' : '' },
+  ].filter(c => c.value !== undefined && c.value !== '-' || c.label === 'Total');
+  el.innerHTML = chips.map(c => `
+    <div class="stat-card ${c.variant}">
+      <div class="stat-label">${c.label}</div>
+      <div class="stat-value">${c.value}</div>
+    </div>`).join('');
+}
+
+function renderIncidentError(msg) {
+  document.getElementById('incidentStats').innerHTML =
+    `<div class="empty-state"><div class="empty-icon">[!]</div><div class="empty-title">Incident stats unavailable</div><div class="empty-desc">${msg}</div></div>`;
+}
+
+// Bootstrap
+function refreshAll() {
+  fetchMonitoringData();
+  fetchAgents();
+  fetchServerMetrics();
+  fetchIncidentStats();
+}
+
+refreshAll();
+setInterval(refreshAll, 10000);
+</script>
+</body>
+</html>

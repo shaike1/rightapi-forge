@@ -1,0 +1,44 @@
+.banner {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  right: 16px;
+  max-width: 460px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  z-index: 999;
+  color: var(--text);
+  font-size: 0.85rem;
+}
+.text { flex: 1; }
+.install {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+.install:hover { background: var(--accent-dark); }
+.close {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--text3);
+  padding: 4px;
+  display: flex;
+}
+.close:hover { color: var(--text); }
+
+@media (max-width: 640px) {
+  .banner { left: 8px; right: 8px; bottom: 8px; }
+}

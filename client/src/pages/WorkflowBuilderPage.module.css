@@ -1,0 +1,383 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   WorkflowBuilder — three-pane layout (palette • canvas • property editor)
+   ────────────────────────────────────────────────────────────────────────── */
+
+.shell {
+  display: grid;
+  grid-template-columns: 240px 1fr 360px;
+  height: calc(100vh - 56px); /* room for the page header */
+  min-height: 600px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg2);
+}
+
+@media (max-width: 1280px) {
+  .shell { grid-template-columns: 220px 1fr 320px; }
+}
+
+/* ── Top toolbar across all three panes ─────────────────────────────────── */
+.toolbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.toolbar input {
+  background: var(--bg4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.toolbar input:focus { outline: none; border-color: var(--accent); }
+.toolbar input.id   { width: 220px; font-family: ui-monospace, monospace; }
+.toolbar input.name { width: 240px; }
+.toolbar input.ver  { width: 80px;  font-family: ui-monospace, monospace; }
+
+.toolbarSpacer { flex: 1; }
+.toolbarStatus {
+  font-size: 11px;
+  color: var(--text2);
+  font-family: ui-monospace, monospace;
+  margin-right: 8px;
+}
+.toolbarStatus.ok { color: var(--success); }
+.toolbarStatus.danger { color: var(--danger); }
+
+/* ── Layout: split below the toolbar ────────────────────────────────────── */
+.split {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 240px 1fr 360px;
+  height: 100%;
+}
+@media (max-width: 1280px) {
+  .split { grid-template-columns: 220px 1fr 320px; }
+}
+
+/* ── Left: step palette ─────────────────────────────────────────────────── */
+.palette {
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+.paletteHeader {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+}
+.paletteList {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.paletteItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  transition: border-color 120ms ease, background 120ms ease;
+  user-select: none;
+}
+.paletteItem:hover {
+  border-color: var(--accent);
+  background: var(--bg4);
+}
+.paletteItem:active { cursor: grabbing; }
+.paletteDot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.paletteItemBody { flex: 1; min-width: 0; }
+.paletteItemLabel {
+  font-size: 13px; font-weight: 500; color: var(--text);
+  margin-bottom: 2px;
+}
+.paletteItemDesc {
+  font-size: 11px; color: var(--text3);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.paletteSection {
+  padding: 12px 14px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.libraryItem {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  transition: background 120ms ease;
+}
+.libraryItem:hover { background: var(--bg3); }
+.libraryItemSub { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+/* ── Center: React Flow canvas ──────────────────────────────────────────── */
+.canvas {
+  position: relative;
+  background: var(--bg);
+  /* React Flow consumes width/height; the wrapper defines the box. */
+}
+
+/* React Flow custom node card. We let RF own positioning; this is just
+   the visual chrome. */
+.node {
+  background: var(--bg3);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  min-width: 200px;
+  max-width: 240px;
+  font-size: 12px;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.nodeSelected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), var(--shadow-md);
+}
+.nodeHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg4);
+}
+.nodeDot { width: 8px; height: 8px; border-radius: 50%; }
+.nodeType {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  font-weight: 600;
+  flex: 1;
+}
+.nodeId {
+  font-size: 10px;
+  font-family: ui-monospace, monospace;
+  color: var(--text3);
+}
+.nodeBody {
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--text2);
+  word-break: break-word;
+  white-space: pre-wrap;
+  font-family: ui-monospace, monospace;
+  max-height: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+.nodeFooter {
+  padding: 4px 10px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text3);
+  display: flex;
+  justify-content: space-between;
+}
+.nodeBadge {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 9px;
+  background: var(--bg5);
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.nodeBadge.then { background: var(--success-bg); color: var(--success); }
+.nodeBadge.else { background: var(--danger-bg);  color: var(--danger); }
+.nodeBadge.err  { background: var(--warning-bg); color: var(--warning); }
+
+/* ── Right: property editor ─────────────────────────────────────────────── */
+.props {
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+.propsHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.propsField { margin-bottom: 12px; }
+.propsLabel {
+  display: block;
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 4px;
+}
+.propsInput, .propsSelect, .propsTextarea {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  padding: 7px 10px;
+  font-family: inherit;
+}
+.propsTextarea {
+  font-family: ui-monospace, monospace;
+  resize: vertical;
+  min-height: 80px;
+}
+.propsInput:focus, .propsSelect:focus, .propsTextarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.propsHint {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.propsDelete {
+  font-size: 11px;
+  color: var(--danger);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.runResult {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.runHeader {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+.runStatus {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.runStatus.success { background: var(--success-bg); color: var(--success); }
+.runStatus.failed { background: var(--danger-bg); color: var(--danger); }
+.runStatus.pending { background: var(--warning-bg); color: var(--warning); }
+
+.runStep {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.runStep:last-child { border-bottom: none; }
+.runStepId { color: var(--text2); min-width: 70px; }
+.runStepStatus.success { color: var(--success); }
+.runStepStatus.failed { color: var(--danger); }
+.runStepStatus.pending_approval { color: var(--warning); }
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  height: 100%;
+  color: var(--text3);
+  padding: 40px;
+}
+.emptyTitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+
+/* ── React Flow theme overrides — the lib's default is too light ────────── */
+:global(.react-flow__node) { font-family: inherit; }
+:global(.react-flow__handle) {
+  width: 10px;
+  height: 10px;
+  background: var(--bg5);
+  border: 2px solid var(--accent);
+}
+:global(.react-flow__handle.react-flow__handle-bottom):global(.then-handle)  {
+  background: var(--success);
+  border-color: var(--success);
+}
+:global(.react-flow__handle.react-flow__handle-bottom):global(.else-handle)  {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+:global(.react-flow__handle.react-flow__handle-bottom):global(.err-handle)   {
+  background: var(--warning);
+  border-color: var(--warning);
+}
+:global(.react-flow__background) { background-color: var(--bg); }
+:global(.react-flow__controls)   { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+:global(.react-flow__controls-button) {
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+}
+:global(.react-flow__controls-button:hover) { background: var(--bg4); color: var(--text); }
+:global(.react-flow__controls-button svg)   { fill: currentColor; }
+:global(.react-flow__minimap) {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+:global(.react-flow__edge-path)         { stroke: var(--accent); stroke-width: 1.5; }
+:global(.react-flow__edge.then path)     { stroke: var(--success); }
+:global(.react-flow__edge.else path)     { stroke: var(--danger); }
+:global(.react-flow__edge.err path)      { stroke: var(--warning); stroke-dasharray: 4 4; }
+:global(.react-flow__edge-text)         { fill: var(--text2); font-size: 10px; }
+:global(.react-flow__edge-textbg)       { fill: var(--bg2); }
+
+:global(.react-flow__attribution) { display: none; }

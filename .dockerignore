@@ -1,0 +1,13 @@
+.git
+.github
+.omx
+.env
+.env.*
+!.env.example
+node_modules
+client/node_modules
+dist
+coverage
+data
+*.log
+*.tsbuildinfo

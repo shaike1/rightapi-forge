@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Ops — Servers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --t-bg:#0a0a0a;
+    --t-fg:#33ff99;
+    --t-dim:#1a6644;
+    --t-cyan:#44aaaa;
+    --t-yellow:#ccaa33;
+    --t-red:#cc3333;
+    --t-blue:#4488cc;
+    --t-white:#e8e8d8;
+    --t-border:#1a3322;
+    --t-highlight:#112818;
+    --bar-bg:#001a0d;
+  }
+  html,body{height:100%;background:#000;overflow:hidden;}
+  body{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--t-fg);
+    display:flex;flex-direction:column;
+  }
+  body::after{
+    content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);
+    pointer-events:none;z-index:9999;
+  }
+  body::before{
+    content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+    background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.4) 100%);
+    pointer-events:none;z-index:9998;
+  }
+
+  /* ── Title bar ── */
+  .titlebar{
+    background:#224488;
+    padding:6px 16px;display:flex;justify-content:space-between;align-items:center;
+    flex-shrink:0;font-size:13px;
+  }
+  .titlebar-left{color:#e8e8d8;font-weight:bold;letter-spacing:0.1em;}
+  .titlebar-right{color:#44aaaa;font-size:11px;}
+
+  /* ── Nav bar ── */
+  .navbar{
+    background:var(--bar-bg);border-bottom:1px solid var(--t-border);
+    padding:0 8px;display:flex;align-items:stretch;
+    flex-shrink:0;font-size:12px;gap:0;
+  }
+  .nav-link{
+    color:var(--t-cyan);text-decoration:none;
+    padding:5px 14px;border-right:1px solid var(--t-border);
+    display:flex;align-items:center;
+  }
+  .nav-link:hover{background:var(--t-highlight);color:var(--t-white);}
+  .nav-link.active{background:var(--t-cyan);color:#000;font-weight:bold;}
+  .nav-spacer{flex:1;}
+  .nav-link.right{border-right:none;border-left:1px solid var(--t-border);color:var(--t-dim);}
+  .nav-link.right:hover{color:var(--t-white);}
+
+  /* ── Content area ── */
+  .content{
+    flex:1;overflow-y:auto;padding:12px 16px;
+    scrollbar-width:thin;scrollbar-color:var(--t-dim) var(--t-bg);
+  }
+  .content::-webkit-scrollbar{width:4px;}
+  .content::-webkit-scrollbar-track{background:var(--t-bg);}
+  .content::-webkit-scrollbar-thumb{background:var(--t-dim);}
+
+  .stats-line{
+    font-size:13px;margin-bottom:12px;padding:6px 0;
+    border-bottom:1px solid var(--t-border);color:var(--t-white);
+  }
+  .stats-line .s-label{color:var(--t-dim);font-weight:bold;}
+
+  .tui-table{font-size:12px;margin:4px 0 8px;}
+  .tui-table .tui-row{display:flex;border-bottom:1px solid #0d1f14;}
+  .tui-table .tui-row:hover{background:var(--t-highlight);}
+  .tui-table .tui-row.tui-header{color:var(--t-yellow);font-weight:bold;border-bottom:1px solid var(--t-border);}
+  .tui-table .tui-cell{padding:2px 8px 2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .s-ok{color:#33aa55;}
+  .s-warn{color:var(--t-yellow);}
+  .s-err{color:var(--t-red);}
+  .s-info{color:var(--t-cyan);}
+
+  .statusbar{
+    background:var(--bar-bg);border-top:1px solid var(--t-border);
+    padding:3px 16px;font-size:11px;color:var(--t-dim);
+    display:flex;justify-content:space-between;flex-shrink:0;
+  }
+
+  .empty-msg{color:var(--t-dim);font-size:13px;padding:16px 0;}
+
+  @media(max-width:600px){
+    .titlebar,.navbar,.statusbar{padding-left:8px;padding-right:8px;}
+    .content{padding:8px;}
+    .tui-table{font-size:11px;}
+    .nav-link{padding:5px 8px;font-size:11px;}
+  }
+</style>
+<script src="/auth-guard.js"></script>
+</head>
+<body>
+<div class="titlebar">
+  <span class="titlebar-left">[=] IT OPS</span>
+  <span class="titlebar-right" id="clock">--:--:--</span>
+</div>
+<div class="navbar">
+  <a href="/tui" class="nav-link">TERMINAL</a>
+  <a href="/tui-incidents" class="nav-link">INCIDENTS</a>
+  <a href="/tui-servers" class="nav-link active">SERVERS</a>
+  <a href="/tui-chat" class="nav-link">CHAT</a>
+  <a href="/tui-bridge" class="nav-link">BRIDGE</a>
+  <a href="/tui-workflows" class="nav-link">WORKFLOWS</a>
+  <a href="/tui-monitoring" class="nav-link">MONITORING</a>
+  <a href="/tui-audit" class="nav-link">AUDIT</a>
+  <a href="/tui-agents" class="nav-link">AGENTS</a>
+  <a href="/tui-irc" class="nav-link">IRC</a>
+  <span class="nav-spacer"></span>
+  <a href="/dashboard" class="nav-link right">GUI</a>
+  <a href="/login.html" class="nav-link right">LOGIN</a>
+</div>
+<div class="content" id="content">
+  <div class="stats-line" id="stats-line">
+    <span class="s-label">TOTAL:</span> --  |  <span class="s-label">ONLINE:</span> --  |  <span class="s-label">OFFLINE:</span> --
+  </div>
+  <div id="server-table"></div>
+</div>
+<div class="statusbar">
+  <span id="sb-left">LOADING...</span>
+  <span id="sb-right">Auto-refresh: 10s</span>
+</div>
+
+<script>
+var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token') || '';
+
+setInterval(() => { document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8); }, 1000);
+document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8);
+
+const sbLeft = document.getElementById('sb-left');
+const statsLine = document.getElementById('stats-line');
+const serverTable = document.getElementById('server-table');
+
+function statusBadge(status) {
+  const s = (status || '').toLowerCase();
+  if (s === 'online' || s === 'healthy' || s === 'active') return `<span class="s-ok">[${status}]</span>`;
+  if (s === 'offline' || s === 'down' || s === 'error') return `<span class="s-err">[${status}]</span>`;
+  if (s === 'degraded' || s === 'warning') return `<span class="s-warn">[${status}]</span>`;
+  return `<span class="s-info">[${status}]</span>`;
+}
+
+function buildTable(cols, rows, widths) {
+  const c = document.createElement('div');
+  c.className = 'tui-table';
+  const hr = document.createElement('div');
+  hr.className = 'tui-row tui-header';
+  cols.forEach((h, i) => {
+    const cell = document.createElement('span');
+    cell.className = 'tui-cell';
+    cell.style.width = widths[i] + 'px';
+    cell.style.minWidth = widths[i] + 'px';
+    cell.textContent = h;
+    hr.appendChild(cell);
+  });
+  c.appendChild(hr);
+  rows.forEach(row => {
+    const tr = document.createElement('div');
+    tr.className = 'tui-row';
+    row.forEach((val, i) => {
+      const cell = document.createElement('span');
+      cell.className = 'tui-cell';
+      cell.style.width = widths[i] + 'px';
+      cell.style.minWidth = widths[i] + 'px';
+      cell.innerHTML = val;
+      tr.appendChild(cell);
+    });
+    c.appendChild(tr);
+  });
+  return c;
+}
+
+async function loadServers() {
+  sbLeft.textContent = 'REFRESHING...';
+  try {
+    const r = await fetch('/api/servers', { headers: { Authorization: 'Bearer ' + token } });
+    if (r.status === 401) { window.location.href = '/login.html'; return; }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    const servers = Array.isArray(data) ? data : (data.servers || []);
+
+    const online = servers.filter(s => {
+      const st = (s.status || '').toLowerCase();
+      return st === 'online' || st === 'healthy' || st === 'active' || s.reachable === true;
+    }).length;
+    const offline = servers.length - online;
+
+    statsLine.innerHTML =
+      `<span class="s-label">TOTAL:</span> ${servers.length}  |  ` +
+      `<span class="s-label">ONLINE:</span> <span class="s-ok">${online}</span>  |  ` +
+      `<span class="s-label">OFFLINE:</span> ${offline > 0 ? '<span class="s-err">' + offline + '</span>' : '0'}`;
+
+    serverTable.innerHTML = '';
+    if (!servers.length) {
+      serverTable.innerHTML = '<div class="empty-msg">No servers configured.</div>';
+      sbLeft.textContent = 'READY — 0 servers';
+      return;
+    }
+
+    const table = buildTable(
+      ['HOSTNAME', 'IP', 'STATUS', 'CPU', 'MEMORY', 'OS'],
+      servers.map(s => {
+        const st = (s.status || 'unknown');
+        const stLower = st.toLowerCase();
+        const isOnline = stLower === 'online' || stLower === 'healthy' || stLower === 'active' || s.reachable === true;
+        const isDegraded = stLower === 'degraded' || stLower === 'warning';
+        const cpuVal = s.cpu != null ? s.cpu + '%' : (s.cpuUsage != null ? s.cpuUsage + '%' : '-');
+        const memVal = s.memory != null ? s.memory + '%' : (s.memUsedPct != null ? s.memUsedPct.toFixed(1) + '%' : '-');
+        const osVal = s.os || s.platform || '-';
+        let statusHtml;
+        if (isOnline) statusHtml = '<span class="s-ok">[ONLINE]</span>';
+        else if (isDegraded) statusHtml = '<span class="s-warn">[DEGRADED]</span>';
+        else statusHtml = '<span class="s-err">[OFFLINE]</span>';
+        return [
+          s.hostname || s.name || s.id || '-',
+          s.ip || '-',
+          statusHtml,
+          cpuVal,
+          memVal,
+          osVal
+        ];
+      }),
+      [180, 140, 110, 70, 80, 160]
+    );
+    serverTable.appendChild(table);
+    sbLeft.textContent = `READY — ${servers.length} servers, ${online} online`;
+  } catch (e) {
+    sbLeft.textContent = 'ERROR: ' + e.message;
+    serverTable.innerHTML = `<div class="empty-msg" style="color:var(--t-red)">Failed to load servers: ${e.message}</div>`;
+  }
+}
+
+loadServers();
+setInterval(loadServers, 10000);
+</script>
+</body>
+</html>

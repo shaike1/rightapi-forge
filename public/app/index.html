@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RightAPI Forge</title>
+    <meta name="description" content="RightAPI Forge - Self-hosted governed AI operations platform" />
+    <meta name="rightapi-source" content="https://github.com/shaike1/rightapi-forge" />
+    <meta name="theme-color" content="#306EF0" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <script type="module" crossorigin src="/app/assets/index-3Sfz9RY6.js"></script>
+    <link rel="modulepreload" crossorigin href="/app/assets/rolldown-runtime-hePW80VL.js">
+    <link rel="modulepreload" crossorigin href="/app/assets/vendor-charts-BtM25rId.js">
+    <link rel="modulepreload" crossorigin href="/app/assets/vendor-react-QnLOW5T6.js">
+    <link rel="stylesheet" crossorigin href="/app/assets/index-CkXZ0742.css">
+  </head>
+  <body>
+    <script>
+      (function(){var t=localStorage.getItem('beacon-theme');if(t==='light')document.documentElement.classList.add('light');})();
+    </script>
+    <div id="root"></div>
+    <script>
+      // Register the service worker. Scope is "/" so push events and
+      // navigations to /portal and /app both go through it. Failure is
+      // non-fatal — the SPA still works without PWA features.
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function (e) {
+            console.warn('[beacon] sw registration failed', e);
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

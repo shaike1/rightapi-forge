@@ -1,0 +1,71 @@
+network:
+  name: ITOpsIRC
+
+server:
+  name: itops.irc
+  listeners:
+    ":6667":
+  relaymsg:
+    enabled: false
+  max-sendq: 96k
+  ip-limits:
+    enabled: false
+  ip-check-script:
+    enabled: false
+
+accounts:
+  authentication-enabled: true
+  registration:
+    enabled: true
+    allow-before-connect: true
+    throttling:
+      enabled: false
+    bcrypt-cost: 4
+  nick-reservation:
+    enabled: false
+
+channels:
+  default-modes: +nt
+  registration:
+    enabled: false
+
+oper-classes:
+  "server-admin":
+    title: Server Admin
+    capabilities:
+      - "oper:local_kill"
+      - "oper:remote_kill"
+      - "oper:local_ban"
+      - "oper:remote_ban"
+      - "oper:rehash"
+      - "oper:die"
+
+opers: {}
+
+logging:
+  - method: stderr
+    level: info
+    type: "* -userinput -useroutput"
+
+limits:
+  nicklen: 32
+  identlen: 20
+  channellen: 64
+  awaylen: 500
+  kicklen: 510
+  topiclen: 1000
+
+history:
+  enabled: false
+
+fakelag:
+  enabled: false
+
+roleplay:
+  enabled: false
+
+extjwt:
+  enabled: false
+
+datastore:
+  path: /data/ircd.db

@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "id": "library.service-restart",
+  "name": "Service Restart (with approval)",
+  "description": "Status → operator approval → graceful stop → wait → start → health verify. Stays inside an `onError: continue` shape so a failed verify doesn't leave the operator without diagnostic context.",
+  "version": "1.0.0",
+  "tags": ["library", "service", "restart", "approval", "incident-response"],
+  "inputs": [
+    { "name": "host",    "type": "string", "required": true },
+    { "name": "service", "type": "string", "required": true },
+    { "name": "waitSeconds", "type": "number", "default": 5 }
+  ],
+  "onError": "continue",
+  "steps": [
+    {
+      "id": "status_before",
+      "type": "bash",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'systemctl status ${inputs.service} --no-pager -l | head -30'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "approval",
+      "type": "approval_gate",
+      "description": "Operator approval — restarts are scoped per host+service",
+      "command": "service.restart.${inputs.service}",
+      "ttlSeconds": 900
+    },
+    {
+      "id": "stop",
+      "type": "bash",
+      "description": "Graceful stop",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'sudo systemctl stop ${inputs.service}'",
+      "timeoutMs": 30000,
+      "onError": "fail"
+    },
+    {
+      "id": "wait",
+      "type": "bash",
+      "description": "Cool-down between stop and start so the service truly settles",
+      "command": "sleep ${inputs.waitSeconds}",
+      "timeoutMs": 30000
+    },
+    {
+      "id": "start",
+      "type": "bash",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'sudo systemctl start ${inputs.service}'",
+      "timeoutMs": 30000,
+      "onError": { "goto": "rollback" }
+    },
+    {
+      "id": "verify",
+      "type": "bash",
+      "description": "Confirm the service is healthy + ready",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'systemctl is-active ${inputs.service} && systemctl status ${inputs.service} --no-pager -l | head -20'",
+      "timeoutMs": 15000,
+      "onError": { "goto": "rollback" }
+    },
+    {
+      "id": "summary_ok",
+      "type": "bash",
+      "command": "echo 'Service ${inputs.service} restarted on ${inputs.host}; verify=ok.'",
+      "timeoutMs": 5000
+    },
+    {
+      "id": "rollback",
+      "type": "bash",
+      "description": "Restart attempt failed; capture the journal for triage and fail the run",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'journalctl -u ${inputs.service} -n 100 --no-pager'",
+      "timeoutMs": 30000,
+      "onError": "fail"
+    }
+  ]
+}

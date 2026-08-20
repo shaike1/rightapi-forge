@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RightAPI Forge - Offline</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #363737; background: #F7F7F7; }
+  body { display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .card { max-width: 420px; background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; padding: 32px; text-align: center; box-shadow: 0 12px 32px rgba(15,23,42,.08), 0 4px 8px rgba(15,23,42,.04); }
+  .mark { width: 56px; height: 56px; border-radius: 12px; background: #306EF0; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.4rem; margin-bottom: 16px; }
+  h1 { font-size: 1.2rem; font-weight: 700; margin-bottom: 6px; }
+  p { color: #6B7280; font-size: 0.92rem; line-height: 1.5; margin-bottom: 18px; }
+  button { appearance: none; border: 0; background: #306EF0; color: #fff; font-weight: 600; padding: 10px 18px; border-radius: 8px; cursor: pointer; font-size: 0.92rem; }
+  button:hover { background: #1E55D0; }
+  .pulse { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #E8734A; animation: pulse 1.4s ease-in-out infinite; margin-right: 8px; vertical-align: middle; }
+  @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="mark">B</div>
+  <h1><span class="pulse"></span>You're offline</h1>
+  <p>Reconnecting to RightAPI Forge... The dashboard will reload automatically as soon as your network is back.</p>
+  <button onclick="location.reload()">Retry now</button>
+</div>
+<script>
+  // Auto-retry every 6s while offline. Goes silent once back online —
+  // the reload picks up the live app shell from the cache.
+  let tries = 0;
+  const tick = () => {
+    if (navigator.onLine) location.reload();
+    else if (tries++ < 60) setTimeout(tick, 6000);
+  };
+  setTimeout(tick, 6000);
+  window.addEventListener('online', () => location.reload());
+</script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+/* AgentsPage.module.css */
+
+.statsRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+
+.loading { padding: 2rem; text-align: center; color: var(--text3); }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+
+.agentCard { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; transition: border-color .15s; }
+.agentCard:hover { border-color: var(--accent); }
+.agentCardSelected { border-color: var(--accent); }
+
+.cardTop { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.agentName { font-weight: 600; font-size: .95rem; margin-bottom: 4px; }
+
+.metaRow { display: flex; justify-content: space-between; margin: 4px 0; font-size: .8rem; }
+.metaLabel { color: var(--text3); }
+.metaVal { font-weight: 500; }
+
+.skillsSection { margin-top: 10px; margin-bottom: 10px; }
+.skillsLabel { font-size: .75rem; color: var(--text3); margin-bottom: 6px; }
+.tagList { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag { display: inline-block; padding: 2px 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: 20px; font-size: .7rem; color: var(--text2); }
+
+.cardActions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+.logPanel { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; font-size: .75rem; font-family: 'JetBrains Mono', monospace; max-height: 240px; overflow-y: auto; color: var(--text2); white-space: pre-wrap; margin: 0; }
+
+.logPanelWrap { margin-top: 1.5rem; }
+.logLoading { padding: 1rem; color: var(--text3); }
+.logEmpty { padding: 1rem; color: var(--text3); font-size: .875rem; }
+
+/* ── Memory button & modal ─────────────────────────────────────────── */
+.cardTopRight { display: flex; align-items: center; gap: 8px; }
+
+.memoryBtn {
+  background: none; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 2px 7px; cursor: pointer; font-size: .75rem; color: var(--text2);
+  display: flex; align-items: center; gap: 3px; transition: border-color .12s, color .12s;
+}
+.memoryBtn:hover { border-color: var(--accent); color: var(--accent); }
+.memoryCount { font-weight: 600; font-size: .7rem; }
+
+.memoryLoading { text-align: center; padding: 24px; color: var(--text3); font-size: .875rem; }
+.memoryContent { display: flex; flex-direction: column; gap: 16px; }
+
+.memoryStats { display: flex; gap: 16px; }
+.memoryStat {
+  flex: 1; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.memoryStatValue { font-size: 1.5rem; font-weight: 700; color: var(--text); }
+.memoryStatLabel { font-size: .75rem; color: var(--text3); }
+
+.memoryTabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); }
+.memoryTab {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  padding: 8px 16px; cursor: pointer; font-size: .875rem; color: var(--text2);
+  margin-bottom: -1px; transition: color .12s, border-color .12s;
+}
+.memoryTab:hover { color: var(--text); }
+.memoryTabActive { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+.memoryTabContent { min-height: 160px; max-height: 280px; overflow-y: auto; }
+
+.memoryEmpty { padding: 24px; text-align: center; color: var(--text3); font-size: .875rem; }
+
+.memoryTable { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.memoryTable th {
+  padding: 6px 10px; text-align: left; font-size: .7rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .05em;
+  color: var(--text3); border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.memoryTable td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--text); }
+.memoryTable tr:last-child td { border-bottom: none; }
+
+.severityBadge { padding: 1px 7px; border-radius: 999px; font-size: .7rem; font-weight: 600; }
+.sev_critical { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
+.sev_high     { background: color-mix(in srgb, var(--warning) 15%, transparent); color: var(--warning); }
+.sev_medium   { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+.sev_low      { background: var(--bg3); color: var(--text2); }
+
+.resolutionText { max-width: 240px; color: var(--text2); }
+.dateCell { white-space: nowrap; color: var(--text3); font-size: .75rem; }
+
+.factsList { display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }
+.factItem {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  padding: 8px 12px; background: var(--bg3); border-radius: var(--radius-sm); font-size: .8rem;
+}
+.factText { flex: 1; color: var(--text2); word-break: break-word; }
+.factDate { white-space: nowrap; color: var(--text3); font-size: .72rem; flex-shrink: 0; }
+
+.teachSection { border-top: 1px solid var(--border); padding-top: 14px; }
+.teachLabel { font-size: .78rem; font-weight: 600; color: var(--text3); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .04em; }
+.teachRow { display: flex; gap: 8px; }
+.teachInput {
+  flex: 1; padding: 7px 12px; border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--bg3); color: var(--text); font-size: .875rem;
+}
+.teachInput:focus { outline: none; border-color: var(--accent); }
+
+.memoryFooter { display: flex; justify-content: flex-start; }

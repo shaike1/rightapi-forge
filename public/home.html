@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — Mission Control</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .home-container { max-width: 1300px; margin: 0 auto; }
+    .home-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .home-grid-wide { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+    @media (max-width: 900px) { .home-grid-wide { grid-template-columns: 1fr; } }
+
+    .widget { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .widget-header { padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .widget-title { font-size: .8rem; font-weight: 600; color: var(--text); }
+    .widget-link { font-size: .65rem; color: var(--accent); text-decoration: none; }
+    .widget-link:hover { text-decoration: underline; }
+    .widget-body { padding: 14px; }
+
+    .metric-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .metric { text-align: center; flex: 1; min-width: 70px; }
+    .metric-val { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    .metric-val.danger { color: var(--danger); }
+    .metric-val.warning { color: var(--warning); }
+    .metric-val.success { color: var(--success); }
+    .metric-lbl { font-size: .65rem; color: var(--text3); text-transform: uppercase; letter-spacing: .3px; }
+
+    .mini-gauge { width: 100%; height: 6px; background: var(--bg3); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+    .mini-gauge-fill { height: 100%; border-radius: 3px; transition: width .5s; }
+    .mini-gauge-fill.ok { background: var(--success); }
+    .mini-gauge-fill.warn { background: var(--warning); }
+    .mini-gauge-fill.crit { background: var(--danger); }
+
+    .incident-list { display: flex; flex-direction: column; gap: 6px; max-height: 200px; overflow-y: auto; }
+    .incident-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--bg3); font-size: .75rem; }
+    .incident-item:last-child { border: none; }
+    .incident-sev { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .incident-sev.critical { background: #e74c3c; }
+    .incident-sev.high { background: #e67e22; }
+    .incident-sev.medium { background: #f1c40f; }
+    .incident-sev.low { background: #95a5a6; }
+    .incident-title { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .incident-time { color: var(--text3); font-size: .65rem; }
+
+    .notif-list { display: flex; flex-direction: column; gap: 4px; max-height: 180px; overflow-y: auto; }
+    .notif-item { padding: 5px 8px; border-radius: 4px; font-size: .72rem; color: var(--text2); border-left: 3px solid var(--border); }
+    .notif-item.warning { border-left-color: #f1c40f; }
+    .notif-item.critical, .notif-item.error { border-left-color: #e74c3c; }
+    .notif-item.info { border-left-color: var(--accent); }
+
+    .task-list { display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto; }
+    .task-item { display: flex; align-items: center; gap: 8px; font-size: .72rem; color: var(--text); padding: 4px 0; }
+    .task-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .task-dot.active { background: var(--success); }
+    .task-dot.paused { background: var(--warning); }
+    .task-next { color: var(--text3); font-size: .65rem; margin-left: auto; }
+
+    .agent-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .agent-chip { padding: 4px 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; font-size: .7rem; color: var(--text); cursor: pointer; }
+    .agent-chip:hover { border-color: var(--accent); }
+    .agent-chip .count { color: var(--accent); font-weight: 600; margin-left: 4px; }
+
+    .quick-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .qa-btn { padding: 8px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: .75rem; color: var(--text); cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    .qa-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .empty-mini { font-size: .72rem; color: var(--text3); padding: 10px 0; }
+    .status-line { font-size: .7rem; color: var(--text3); margin-top: 8px; }
+  </style>
+</head>
+<body>
+<script src="/sidebar.js"></script>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Mission Control</h1>
+      <p class="page-subtitle">IT Ops Agent System Overview</p>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="home-container">
+
+      <!-- Top row: Health metrics -->
+      <div class="home-grid">
+        <div class="widget">
+          <div class="widget-header"><span class="widget-title">System Health</span><a href="/health.html" class="widget-link">Details &rarr;</a></div>
+          <div class="widget-body">
+            <div class="metric-row" id="w-health-metrics">
+              <div class="metric"><div class="metric-val" id="w-cpu">—</div><div class="metric-lbl">CPU %</div></div>
+              <div class="metric"><div class="metric-val" id="w-mem">—</div><div class="metric-lbl">Memory %</div></div>
+              <div class="metric"><div class="metric-val" id="w-disk">—</div><div class="metric-lbl">Disk %</div></div>
+              <div class="metric"><div class="metric-val success" id="w-uptime">—</div><div class="metric-lbl">Uptime</div></div>
+            </div>
+            <div class="mini-gauge"><div class="mini-gauge-fill" id="w-cpu-gauge" style="width:0%"></div></div>
+          </div>
+        </div>
+
+        <div class="widget">
+          <div class="widget-header"><span class="widget-title">Agent Activity (24h)</span><a href="/stats.html" class="widget-link">Stats &rarr;</a></div>
+          <div class="widget-body">
+            <div class="metric-row" id="w-stats-metrics">
+              <div class="metric"><div class="metric-val" id="w-msgs">—</div><div class="metric-lbl">Messages</div></div>
+              <div class="metric"><div class="metric-val" id="w-delegs">—</div><div class="metric-lbl">Delegations</div></div>
+              <div class="metric"><div class="metric-val" id="w-tools">—</div><div class="metric-lbl">Tools Run</div></div>
+              <div class="metric"><div class="metric-val" id="w-rts">—</div><div class="metric-lbl">Roundtables</div></div>
+            </div>
+            <div class="agent-row" id="w-agent-usage" style="margin-top:10px;"></div>
+          </div>
+        </div>
+
+        <div class="widget">
+          <div class="widget-header"><span class="widget-title">Open Incidents</span><a href="/incidents" class="widget-link">All &rarr;</a></div>
+          <div class="widget-body">
+            <div class="incident-list" id="w-incidents"><div class="empty-mini">Loading...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Second row: Notifications + Scheduled Tasks -->
+      <div class="home-grid-wide">
+        <div class="widget">
+          <div class="widget-header"><span class="widget-title">Recent Notifications</span></div>
+          <div class="widget-body">
+            <div class="notif-list" id="w-notifs"><div class="empty-mini">Loading...</div></div>
+          </div>
+        </div>
+
+        <div class="widget">
+          <div class="widget-header"><span class="widget-title">Scheduled Tasks</span><a href="/scheduled-tasks.html" class="widget-link">Manage &rarr;</a></div>
+          <div class="widget-body">
+            <div class="task-list" id="w-tasks"><div class="empty-mini">Loading...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="widget">
+        <div class="widget-header"><span class="widget-title">Quick Actions</span></div>
+        <div class="widget-body">
+          <div class="quick-actions">
+            <a href="/agent-chat.html" class="qa-btn">Chat with Agent</a>
+            <a href="/roundtable.html" class="qa-btn">Ask the Team</a>
+            <a href="/knowledge-base.html" class="qa-btn">Search KB</a>
+            <a href="/scheduled-tasks.html" class="qa-btn">New Task</a>
+            <a href="/audit.html" class="qa-btn">Audit Log</a>
+            <a href="/incidents" class="qa-btn">Incidents</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="/auth-guard.js"></script>
+<script>
+(function() {
+  var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token');
+  if (!token) window.location.href = '/';
+  function hdr() { return { 'Authorization': 'Bearer ' + token }; }
+
+  function gaugeClass(pct) { return pct > 85 ? 'crit' : pct > 60 ? 'warn' : 'ok'; }
+  function metricColor(pct) { return pct > 85 ? 'danger' : pct > 60 ? 'warning' : ''; }
+  function formatUptime(s) { var d = Math.floor(s/86400); var h = Math.floor((s%86400)/3600); return d > 0 ? d+'d '+h+'h' : h+'h'; }
+  function timeAgo(ts) { if (!ts) return ''; var d = Date.now() - new Date(ts).getTime(); if (d<60000) return Math.round(d/1000)+'s'; if (d<3600000) return Math.round(d/60000)+'m'; if (d<86400000) return Math.round(d/3600000)+'h'; return Math.round(d/86400000)+'d'; }
+
+  // Health widget
+  function loadHealth() {
+    fetch('/api/health/current', { headers: hdr() }).then(function(r){return r.json();}).then(function(snap) {
+      var cpuPct = Math.round((snap.cpu.loadAvg1 / snap.cpu.cores) * 100);
+      document.getElementById('w-cpu').textContent = cpuPct + '%';
+      document.getElementById('w-cpu').className = 'metric-val ' + metricColor(cpuPct);
+      document.getElementById('w-mem').textContent = snap.memory.usedPct + '%';
+      document.getElementById('w-mem').className = 'metric-val ' + metricColor(snap.memory.usedPct);
+      var diskPct = snap.disk.length > 0 ? snap.disk[0].usedPct : 0;
+      document.getElementById('w-disk').textContent = diskPct + '%';
+      document.getElementById('w-disk').className = 'metric-val ' + metricColor(diskPct);
+      document.getElementById('w-uptime').textContent = formatUptime(snap.uptime);
+      document.getElementById('w-cpu-gauge').style.width = Math.min(cpuPct, 100) + '%';
+      document.getElementById('w-cpu-gauge').className = 'mini-gauge-fill ' + gaugeClass(cpuPct);
+    }).catch(function(){});
+  }
+
+  // Stats widget
+  function loadStats() {
+    fetch('/api/stats/overview', { headers: hdr() }).then(function(r){return r.json();}).then(function(d) {
+      document.getElementById('w-msgs').textContent = d.totalMessages || 0;
+      document.getElementById('w-delegs').textContent = d.totalDelegations || 0;
+      document.getElementById('w-tools').textContent = d.toolStats ? d.toolStats.total : 0;
+      document.getElementById('w-rts').textContent = d.totalRoundtables || 0;
+      var usage = d.agentUsage || {};
+      var el = document.getElementById('w-agent-usage');
+      var entries = Object.entries(usage).sort(function(a,b){return b[1]-a[1];}).slice(0,5);
+      el.innerHTML = entries.map(function(e) {
+        var name = e[0].length > 12 ? e[0].slice(0,12)+'...' : e[0];
+        return '<span class="agent-chip">' + name + '<span class="count">' + e[1] + '</span></span>';
+      }).join('');
+    }).catch(function(){});
+  }
+
+  // Incidents widget
+  function loadIncidents() {
+    fetch('/api/incidents?status=open&limit=5', { headers: hdr() }).then(function(r){return r.json();}).then(function(d) {
+      var el = document.getElementById('w-incidents');
+      var incidents = d.incidents || [];
+      if (incidents.length === 0) { el.innerHTML = '<div class="empty-mini">No open incidents</div>'; return; }
+      el.innerHTML = incidents.map(function(i) {
+        return '<div class="incident-item"><span class="incident-sev ' + (i.severity||'medium') + '"></span><span class="incident-title">' + (i.title||'Untitled') + '</span><span class="incident-time">' + timeAgo(i.createdAt || i.created_at) + '</span></div>';
+      }).join('');
+    }).catch(function(){ document.getElementById('w-incidents').innerHTML = '<div class="empty-mini">-</div>'; });
+  }
+
+  // Notifications widget
+  function loadNotifs() {
+    fetch('/api/notifications?limit=8', { headers: hdr() }).then(function(r){return r.json();}).then(function(data) {
+      var el = document.getElementById('w-notifs');
+      var notifs = Array.isArray(data) ? data : (data.notifications || []);
+      if (notifs.length === 0) { el.innerHTML = '<div class="empty-mini">No notifications</div>'; return; }
+      el.innerHTML = notifs.slice(0, 8).map(function(n) {
+        var cls = n.severity || n.type || 'info';
+        return '<div class="notif-item ' + cls + '">' + (n.title || n.message || '').slice(0, 80) + '</div>';
+      }).join('');
+    }).catch(function(){});
+  }
+
+  // Scheduled tasks widget
+  function loadTasks() {
+    fetch('/api/scheduled-tasks', { headers: hdr() }).then(function(r){return r.json();}).then(function(d) {
+      var el = document.getElementById('w-tasks');
+      var tasks = d.tasks || [];
+      if (tasks.length === 0) { el.innerHTML = '<div class="empty-mini">No scheduled tasks</div>'; return; }
+      el.innerHTML = tasks.slice(0, 6).map(function(t) {
+        var dotCls = t.enabled ? 'active' : 'paused';
+        return '<div class="task-item"><span class="task-dot ' + dotCls + '"></span><span>' + t.name + '</span><span class="task-next">' + t.cronExpr + '</span></div>';
+      }).join('');
+    }).catch(function(){});
+  }
+
+  loadHealth(); loadStats(); loadIncidents(); loadNotifs(); loadTasks();
+  setInterval(loadHealth, 15000);
+  setInterval(loadStats, 30000);
+  setInterval(loadIncidents, 30000);
+  setInterval(loadNotifs, 30000);
+})();
+</script>
+</body>
+</html>

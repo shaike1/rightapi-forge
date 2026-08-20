@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — Roundtable</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <script src="/marked.min.js"></script>
+  <style>
+    .roundtable-container { max-width: 1100px; margin: 0 auto; }
+    .rt-input-area { display: flex; gap: 12px; margin-bottom: 24px; }
+    .rt-input { flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: inherit; font-size: .9rem; }
+    .rt-input:focus { border-color: var(--accent); outline: none; }
+    .rt-btn { padding: 12px 24px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: .9rem; font-weight: 500; cursor: pointer; white-space: nowrap; }
+    .rt-btn:hover { background: var(--accent-light); }
+    .rt-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .rt-status { padding: 10px 16px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; font-size: .85rem; color: var(--text2); display: none; }
+    .rt-status.visible { display: block; }
+    .rt-status .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .rt-responses { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .rt-agent-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .2s; }
+    .rt-agent-card.received { border-color: var(--success); }
+    .rt-agent-card.pending { opacity: .6; }
+    .rt-agent-header { padding: 10px 14px; background: var(--bg3); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+    .rt-agent-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text3); }
+    .rt-agent-dot.done { background: var(--success); }
+    .rt-agent-dot.pending { background: var(--warning); animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+    .rt-agent-name { font-size: .85rem; font-weight: 600; color: var(--text); }
+    .rt-agent-role { font-size: .7rem; color: var(--text2); margin-left: auto; }
+    .rt-agent-body { padding: 12px 14px; font-size: .8rem; line-height: 1.5; color: var(--text); max-height: 200px; overflow-y: auto; }
+    .rt-agent-body p { margin: 4px 0; }
+    .rt-agent-body h3 { font-size: .85rem; margin: 6px 0 3px; }
+    .rt-agent-body code { background: var(--bg3); padding: 1px 3px; border-radius: 2px; font-size: .75rem; }
+    .rt-agent-body pre { background: var(--bg3); padding: 8px; border-radius: 4px; overflow-x: auto; font-size: .75rem; }
+
+    .rt-synthesis { background: var(--bg2); border: 2px solid var(--accent-border); border-radius: var(--radius); margin-top: 20px; display: none; }
+    .rt-synthesis.visible { display: block; }
+    .rt-synthesis-header { padding: 12px 16px; background: var(--accent-bg); border-bottom: 1px solid var(--accent-border); font-size: .85rem; font-weight: 600; color: var(--accent); }
+    .rt-synthesis-body { padding: 16px; font-size: .85rem; line-height: 1.6; color: var(--text); }
+    .rt-synthesis-body h1,.rt-synthesis-body h2,.rt-synthesis-body h3 { margin: 10px 0 5px; }
+    .rt-synthesis-body h2 { font-size: .95rem; }
+    .rt-synthesis-body p { margin: 5px 0; }
+    .rt-synthesis-body ul,.rt-synthesis-body ol { padding-left: 20px; margin: 5px 0; }
+    .rt-synthesis-body code { background: var(--bg3); padding: 1px 4px; border-radius: 3px; }
+    .rt-synthesis-body pre { background: var(--bg3); padding: 10px; border-radius: var(--radius-sm); overflow-x: auto; }
+    .rt-synthesis-body table { border-collapse: collapse; margin: 8px 0; }
+    .rt-synthesis-body th,.rt-synthesis-body td { border: 1px solid var(--border); padding: 4px 8px; font-size: .8rem; }
+  </style>
+</head>
+<body>
+<script src="/sidebar.js"></script>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Agent Roundtable</h1>
+      <p class="page-subtitle">Ask your entire team — get a synthesized answer</p>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="roundtable-container">
+
+      <div class="rt-input-area">
+        <input type="text" class="rt-input" id="rt-question" placeholder="Ask your team a question..." />
+        <button class="rt-btn" id="rt-ask-btn">Ask Team</button>
+      </div>
+
+      <div class="rt-status" id="rt-status">
+        <span class="spinner"></span> <span id="rt-status-text">Starting roundtable...</span>
+      </div>
+
+      <div class="rt-responses" id="rt-responses"></div>
+
+      <div class="rt-synthesis" id="rt-synthesis">
+        <div class="rt-synthesis-header" id="rt-synthesis-header">Director's Synthesis</div>
+        <div class="rt-synthesis-body" id="rt-synthesis-body"></div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+<script src="/auth-guard.js"></script>
+<script>
+(function() {
+  var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token');
+  if (!token) window.location.href = '/';
+
+  function hdr() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
+
+  function renderMd(text) {
+    try { if (typeof marked !== 'undefined') return marked.parse(text || '', { breaks: true, gfm: true }); } catch(e) {}
+    return (text || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+  }
+
+  var questionInput = document.getElementById('rt-question');
+  var askBtn = document.getElementById('rt-ask-btn');
+  var statusEl = document.getElementById('rt-status');
+  var statusText = document.getElementById('rt-status-text');
+  var responsesEl = document.getElementById('rt-responses');
+  var synthesisEl = document.getElementById('rt-synthesis');
+  var synthesisBody = document.getElementById('rt-synthesis-body');
+  var synthesisHeader = document.getElementById('rt-synthesis-header');
+
+  var agentCards = {};
+
+  function showStatus(msg) {
+    statusText.textContent = msg;
+    statusEl.classList.add('visible');
+  }
+  function hideStatus() { statusEl.classList.remove('visible'); }
+
+  function createAgentCards(agents) {
+    responsesEl.innerHTML = '';
+    agentCards = {};
+    agents.forEach(function(name) {
+      var card = document.createElement('div');
+      card.className = 'rt-agent-card pending';
+      card.innerHTML = '<div class="rt-agent-header"><span class="rt-agent-dot pending"></span><span class="rt-agent-name">' + name + '</span><span class="rt-agent-role">waiting...</span></div><div class="rt-agent-body"><em>Thinking...</em></div>';
+      responsesEl.appendChild(card);
+      agentCards[name] = card;
+    });
+  }
+
+  function updateAgentCard(name, response, role) {
+    var card = agentCards[name];
+    if (!card) return;
+    card.className = 'rt-agent-card received';
+    var dot = card.querySelector('.rt-agent-dot');
+    dot.className = 'rt-agent-dot done';
+    var roleEl = card.querySelector('.rt-agent-role');
+    roleEl.textContent = role || 'specialist';
+    var body = card.querySelector('.rt-agent-body');
+    body.innerHTML = renderMd(response);
+  }
+
+  function askTeam() {
+    var question = questionInput.value.trim();
+    if (!question) return;
+
+    askBtn.disabled = true;
+    synthesisEl.classList.remove('visible');
+    synthesisBody.innerHTML = '';
+    responsesEl.innerHTML = '';
+    showStatus('Starting roundtable...');
+
+    fetch('/api/roundtable', {
+      method: 'POST',
+      headers: hdr(),
+      body: JSON.stringify({ message: question })
+    }).then(function(response) {
+      if (!response.ok) return response.json().then(function(e) { throw new Error(e.error || 'Failed'); });
+
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      var synthesisText = '';
+
+      function processStream() {
+        return reader.read().then(function(result) {
+          if (result.done) {
+            hideStatus();
+            askBtn.disabled = false;
+            return;
+          }
+          buffer += decoder.decode(result.value, { stream: true });
+          var lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            if (line.startsWith('event: ')) {
+              var evtType = line.slice(7);
+              var nextLine = lines[i + 1];
+              if (nextLine && nextLine.startsWith('data: ')) {
+                var data = JSON.parse(nextLine.slice(6));
+                i++;
+
+                if (evtType === 'status') {
+                  if (data.type === 'started') {
+                    showStatus('Asking ' + data.participants.length + ' specialists...');
+                    createAgentCards(data.participants);
+                  } else if (data.type === 'synthesizing') {
+                    showStatus('Director is synthesizing...');
+                    synthesisEl.classList.add('visible');
+                  }
+                } else if (evtType === 'agent_response') {
+                  updateAgentCard(data.agent, data.response, data.role);
+                } else if (evtType === 'token') {
+                  synthesisText += data.content;
+                  synthesisBody.innerHTML = renderMd(synthesisText);
+                } else if (evtType === 'done') {
+                  hideStatus();
+                  askBtn.disabled = false;
+                  if (data.synthesizedBy) {
+                    synthesisHeader.textContent = data.synthesizedBy + "'s Synthesis";
+                  }
+                } else if (evtType === 'error') {
+                  hideStatus();
+                  askBtn.disabled = false;
+                  alert('Error: ' + data.message);
+                }
+              }
+            }
+          }
+          return processStream();
+        });
+      }
+      return processStream();
+    }).catch(function(err) {
+      hideStatus();
+      askBtn.disabled = false;
+      alert('Error: ' + err.message);
+    });
+  }
+
+  askBtn.addEventListener('click', askTeam);
+  questionInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') askTeam();
+  });
+})();
+</script>
+</body>
+</html>

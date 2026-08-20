@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — Scheduled Tasks</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .sched-container { max-width: 1100px; margin: 0 auto; }
+    .sched-create { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 24px; }
+    .sched-create h3 { margin: 0 0 12px; font-size: .9rem; color: var(--text); }
+    .sched-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .sched-form .full { grid-column: 1 / -1; }
+    .sched-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-family: inherit; font-size: .85rem; width: 100%; box-sizing: border-box; }
+    .sched-input:focus { border-color: var(--accent); outline: none; }
+    .sched-btn { padding: 8px 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-size: .85rem; font-weight: 500; cursor: pointer; }
+    .sched-btn:hover { background: var(--accent-light); }
+    .sched-btn.secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+    .sched-btn.danger { background: var(--danger); }
+
+    .sched-help { font-size: .7rem; color: var(--text3); margin-top: 4px; }
+
+    .task-list { display: flex; flex-direction: column; gap: 12px; }
+    .task-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .task-card.disabled { opacity: .6; }
+    .task-header { padding: 12px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--bg3); }
+    .task-status-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .task-status-dot.active { background: var(--success); }
+    .task-status-dot.paused { background: var(--warning); }
+    .task-status-dot.error { background: var(--danger); }
+    .task-name { font-size: .9rem; font-weight: 600; color: var(--text); flex: 1; }
+    .task-schedule { font-size: .75rem; color: var(--text2); background: var(--bg3); padding: 2px 8px; border-radius: 10px; }
+    .task-body { padding: 12px 16px; font-size: .8rem; color: var(--text); }
+    .task-body .task-msg { background: var(--bg3); padding: 6px 10px; border-radius: var(--radius-sm); font-family: monospace; font-size: .75rem; margin-bottom: 8px; }
+    .task-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: .7rem; color: var(--text3); }
+    .task-meta span { display: flex; align-items: center; gap: 4px; }
+    .task-result { margin-top: 8px; padding: 8px 10px; background: var(--bg3); border-radius: var(--radius-sm); font-size: .75rem; color: var(--text2); max-height: 100px; overflow-y: auto; white-space: pre-wrap; }
+    .task-actions { padding: 8px 16px; border-top: 1px solid var(--bg3); display: flex; gap: 8px; }
+    .task-actions button { padding: 4px 10px; font-size: .7rem; border-radius: 3px; border: 1px solid var(--border); background: var(--bg); color: var(--text2); cursor: pointer; }
+    .task-actions button:hover { border-color: var(--accent); color: var(--accent); }
+    .task-actions button.run { border-color: var(--success); color: var(--success); }
+    .task-actions button.del { border-color: var(--danger); color: var(--danger); }
+
+    .empty-state { text-align: center; padding: 40px; color: var(--text3); font-size: .85rem; }
+  </style>
+</head>
+<body>
+<script src="/sidebar.js"></script>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Scheduled Tasks</h1>
+      <p class="page-subtitle">Automate recurring agent actions on a timer</p>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="sched-container">
+
+      <div class="sched-create">
+        <h3>Create New Scheduled Task</h3>
+        <div class="sched-form">
+          <input type="text" class="sched-input" id="task-name" placeholder="Task name (e.g. Disk Check)">
+          <input type="text" class="sched-input" id="task-cron" placeholder="Schedule (e.g. every 1h, daily 09:00)">
+          <input type="text" class="sched-input" id="task-agent" placeholder="Agent ID or name">
+          <div>
+            <input type="text" class="sched-input" id="task-msg" placeholder="Message/instruction for the agent" class="full">
+          </div>
+          <div class="full" style="display:flex;gap:10px;align-items:center;">
+            <button class="sched-btn" onclick="createTask()">Create Task</button>
+            <span class="sched-help">Schedules: "every 5m", "every 1h", "every 6h", "daily", "daily 09:00", "hourly"</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="task-list" id="task-list">
+        <div class="empty-state">Loading tasks...</div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<div id="toast"></div>
+<script src="/auth-guard.js"></script>
+<script>
+(function() {
+  var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token');
+  if (!token) window.location.href = '/';
+
+  function hdr() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
+
+  function timeAgo(ts) {
+    if (!ts) return 'never';
+    var diff = Date.now() - new Date(ts).getTime();
+    if (diff < 0) return 'in ' + Math.round(-diff/60000) + 'm';
+    if (diff < 60000) return Math.round(diff/1000) + 's ago';
+    if (diff < 3600000) return Math.round(diff/60000) + 'm ago';
+    if (diff < 86400000) return Math.round(diff/3600000) + 'h ago';
+    return Math.round(diff/86400000) + 'd ago';
+  }
+
+  function loadTasks() {
+    fetch('/api/scheduled-tasks', { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var el = document.getElementById('task-list');
+        var tasks = data.tasks || [];
+        if (tasks.length === 0) {
+          el.innerHTML = '<div class="empty-state">No scheduled tasks yet. Create one above!</div>';
+          return;
+        }
+        el.innerHTML = tasks.map(function(t) {
+          var dotClass = !t.enabled ? 'paused' : (t.lastOk === false ? 'error' : 'active');
+          var statusLabel = !t.enabled ? 'Paused' : (t.lastOk === false ? 'Error' : 'Active');
+          return '<div class="task-card ' + (!t.enabled ? 'disabled' : '') + '">' +
+            '<div class="task-header">' +
+              '<span class="task-status-dot ' + dotClass + '" title="' + statusLabel + '"></span>' +
+              '<span class="task-name">' + t.name + '</span>' +
+              '<span class="task-schedule">' + t.cronExpr + '</span>' +
+            '</div>' +
+            '<div class="task-body">' +
+              '<div class="task-msg">' + t.message + '</div>' +
+              '<div class="task-meta">' +
+                '<span>Agent: <strong>' + t.agentId + '</strong></span>' +
+                '<span>Runs: ' + t.runCount + '</span>' +
+                '<span>Last: ' + timeAgo(t.lastRun) + '</span>' +
+                '<span>Next: ' + timeAgo(t.nextRun) + '</span>' +
+                '<span>By: ' + t.createdBy + '</span>' +
+              '</div>' +
+              (t.lastResult ? '<div class="task-result">' + (t.lastResult || '').slice(0,500) + '</div>' : '') +
+            '</div>' +
+            '<div class="task-actions">' +
+              '<button class="run" onclick="runTask(\'' + t.id + '\')">Run Now</button>' +
+              '<button onclick="toggleTask(\'' + t.id + '\',' + !t.enabled + ')">' + (t.enabled ? 'Pause' : 'Resume') + '</button>' +
+              '<button class="del" onclick="deleteTask(\'' + t.id + '\')">Delete</button>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      });
+  }
+
+  window.createTask = function() {
+    var name = document.getElementById('task-name').value.trim();
+    var cron = document.getElementById('task-cron').value.trim();
+    var agent = document.getElementById('task-agent').value.trim();
+    var msg = document.getElementById('task-msg').value.trim();
+    if (!name || !cron || !agent || !msg) { alert('All fields required'); return; }
+
+    fetch('/api/scheduled-tasks', {
+      method: 'POST', headers: hdr(),
+      body: JSON.stringify({ name: name, cronExpr: cron, agentId: agent, message: msg })
+    }).then(function(r) { return r.json(); }).then(function(d) {
+      if (d.error) { alert(d.error); return; }
+      document.getElementById('task-name').value = '';
+      document.getElementById('task-cron').value = '';
+      document.getElementById('task-agent').value = '';
+      document.getElementById('task-msg').value = '';
+      loadTasks();
+    });
+  };
+
+  window.runTask = function(id) {
+    fetch('/api/scheduled-tasks/' + id + '/run', { method: 'POST', headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function() { setTimeout(loadTasks, 500); });
+  };
+
+  window.toggleTask = function(id, enable) {
+    fetch('/api/scheduled-tasks/' + id, {
+      method: 'PUT', headers: hdr(),
+      body: JSON.stringify({ enabled: enable })
+    }).then(function() { loadTasks(); });
+  };
+
+  window.deleteTask = function(id) {
+    if (!confirm('Delete this scheduled task?')) return;
+    fetch('/api/scheduled-tasks/' + id, { method: 'DELETE', headers: hdr() })
+      .then(function() { loadTasks(); });
+  };
+
+  loadTasks();
+  setInterval(loadTasks, 15000);
+})();
+</script>
+</body>
+</html>

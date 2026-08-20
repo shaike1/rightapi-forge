@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Ops — Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --t-bg:#0a0a0a;
+    --t-fg:#33ff99;
+    --t-dim:#1a6644;
+    --t-cyan:#44aaaa;
+    --t-yellow:#ccaa33;
+    --t-red:#cc3333;
+    --t-blue:#4488cc;
+    --t-white:#e8e8d8;
+    --t-border:#1a3322;
+    --t-highlight:#112818;
+    --bar-bg:#001a0d;
+  }
+  html,body{height:100%;background:#000;overflow:hidden;}
+  body{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--t-fg);
+    display:flex;flex-direction:column;
+  }
+  body::after{
+    content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);
+    pointer-events:none;z-index:9999;
+  }
+  body::before{
+    content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+    background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.4) 100%);
+    pointer-events:none;z-index:9998;
+  }
+
+  /* ── Title bar ── */
+  .titlebar{
+    background:#224488;
+    padding:6px 16px;display:flex;justify-content:space-between;align-items:center;
+    flex-shrink:0;font-size:13px;
+  }
+  .titlebar-left{color:#e8e8d8;font-weight:bold;letter-spacing:0.1em;}
+  .titlebar-right{color:#44aaaa;font-size:11px;}
+
+  /* ── Nav bar ── */
+  .navbar{
+    background:var(--bar-bg);border-bottom:1px solid var(--t-border);
+    padding:0 8px;display:flex;align-items:stretch;
+    flex-shrink:0;font-size:12px;gap:0;
+  }
+  .nav-link{
+    color:var(--t-cyan);text-decoration:none;
+    padding:5px 14px;border-right:1px solid var(--t-border);
+    display:flex;align-items:center;
+  }
+  .nav-link:hover{background:var(--t-highlight);color:var(--t-white);}
+  .nav-link.active{background:var(--t-cyan);color:#000;font-weight:bold;}
+  .nav-spacer{flex:1;}
+  .nav-link.right{border-right:none;border-left:1px solid var(--t-border);color:var(--t-dim);}
+  .nav-link.right:hover{color:var(--t-white);}
+
+  /* ── Terminal ── */
+  .terminal{
+    flex:1;overflow-y:auto;padding:12px 16px;
+    scrollbar-width:thin;scrollbar-color:var(--t-dim) var(--t-bg);
+  }
+  .terminal::-webkit-scrollbar{width:4px;}
+  .terminal::-webkit-scrollbar-track{background:var(--t-bg);}
+  .terminal::-webkit-scrollbar-thumb{background:var(--t-dim);}
+
+  .line{line-height:1.6;font-size:13px;white-space:pre-wrap;word-break:break-all;}
+  .line.dim{color:var(--t-dim);}
+  .line.cyan{color:var(--t-cyan);}
+  .line.yellow{color:var(--t-yellow);}
+  .line.red{color:var(--t-red);}
+  .line.blue{color:var(--t-blue);}
+  .line.white{color:var(--t-white);}
+  .line.bold{font-weight:bold;}
+  .line.header{
+    color:var(--t-cyan);font-weight:bold;
+    border-bottom:1px solid var(--t-border);padding-bottom:2px;margin:8px 0 4px;
+  }
+
+  .tui-table{font-size:12px;margin:4px 0 8px;}
+  .tui-table .tui-row{display:flex;border-bottom:1px solid #0d1f14;}
+  .tui-table .tui-row:hover{background:var(--t-highlight);}
+  .tui-table .tui-row.tui-header{color:var(--t-yellow);font-weight:bold;border-bottom:1px solid var(--t-border);}
+  .tui-table .tui-cell{padding:2px 8px 2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .s-ok{color:#33aa55;}
+  .s-warn{color:var(--t-yellow);}
+  .s-err{color:var(--t-red);}
+  .s-info{color:var(--t-cyan);}
+  .s-run{color:var(--t-blue);}
+
+  /* ── Input bar ── */
+  .inputbar{
+    background:var(--bar-bg);border-top:1px solid var(--t-border);
+    padding:8px 16px;display:flex;align-items:center;gap:8px;flex-shrink:0;
+  }
+  .prompt-label{color:var(--t-cyan);font-weight:bold;font-size:13px;white-space:nowrap;}
+  .prompt-input{
+    flex:1;background:transparent;border:none;outline:none;
+    color:var(--t-fg);font-family:inherit;font-size:13px;
+    caret-color:var(--t-fg);
+  }
+  .cursor-block{
+    display:inline-block;width:8px;height:15px;
+    background:var(--t-fg);animation:blink 1s step-end infinite;
+    vertical-align:text-bottom;margin-left:2px;
+  }
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+
+  .statusbar{
+    background:var(--bar-bg);border-top:1px solid var(--t-border);
+    padding:3px 16px;font-size:11px;color:var(--t-dim);
+    display:flex;justify-content:space-between;flex-shrink:0;
+  }
+
+  @media(max-width:600px){
+    .titlebar,.navbar,.inputbar,.statusbar{padding-left:8px;padding-right:8px;}
+    .terminal{padding:8px;}
+    .line,.tui-table{font-size:11px;}
+    .nav-link{padding:5px 8px;font-size:11px;}
+  }
+</style>
+</head>
+<body>
+<div class="titlebar">
+  <span class="titlebar-left">[=] IT OPS</span>
+  <span class="titlebar-right" id="clock">--:--:--</span>
+</div>
+<div class="navbar">
+  <a href="/tui" class="nav-link active">TERMINAL</a>
+  <a href="/tui-incidents" class="nav-link">INCIDENTS</a>
+  <a href="/tui-servers" class="nav-link">SERVERS</a>
+  <a href="/tui-chat" class="nav-link">CHAT</a>
+  <a href="/tui-bridge" class="nav-link">BRIDGE</a>
+  <a href="/tui-workflows" class="nav-link">WORKFLOWS</a>
+  <a href="/tui-monitoring" class="nav-link">MONITORING</a>
+  <a href="/tui-audit" class="nav-link">AUDIT</a>
+  <a href="/tui-agents" class="nav-link">AGENTS</a>
+  <a href="/tui-irc" class="nav-link">IRC</a>
+  <span class="nav-spacer"></span>
+  <a href="/dashboard" class="nav-link right">GUI</a>
+  <a href="/login.html" class="nav-link right">LOGIN</a>
+</div>
+<div class="terminal" id="terminal"></div>
+<div class="inputbar">
+  <span class="prompt-label">itops&gt;</span>
+  <input type="text" class="prompt-input" id="input" autocomplete="off" autofocus spellcheck="false" placeholder="type 'help' for commands">
+  <span class="cursor-block" id="cursor"></span>
+</div>
+<div class="statusbar">
+  <span id="sb-left">READY</span>
+  <span>TAB=autocomplete | UP/DOWN=history</span>
+</div>
+
+<script>
+const term = document.getElementById('terminal');
+const input = document.getElementById('input');
+const sbLeft = document.getElementById('sb-left');
+let history = [];
+let histIdx = -1;
+var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token') || '';
+var loginState = null;
+const hdrs = () => ({ Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' });
+
+setInterval(() => { document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8); }, 1000);
+
+function out(text, cls='') {
+  const d = document.createElement('div');
+  d.className = 'line' + (cls ? ' ' + cls : '');
+  d.textContent = text;
+  term.appendChild(d);
+}
+function outHtml(html) {
+  const d = document.createElement('div');
+  d.className = 'line';
+  d.innerHTML = html;
+  term.appendChild(d);
+}
+function outHeader(text) { out(text, 'header'); }
+function outBlank() { out(''); }
+function scroll() { term.scrollTop = term.scrollHeight; }
+
+function outTable(cols, rows, widths) {
+  const c = document.createElement('div');
+  c.className = 'tui-table';
+  const hr = document.createElement('div');
+  hr.className = 'tui-row tui-header';
+  cols.forEach((h, i) => {
+    const cell = document.createElement('span');
+    cell.className = 'tui-cell';
+    cell.style.width = widths[i] + 'px';
+    cell.style.minWidth = widths[i] + 'px';
+    cell.textContent = h;
+    hr.appendChild(cell);
+  });
+  c.appendChild(hr);
+  rows.forEach(row => {
+    const tr = document.createElement('div');
+    tr.className = 'tui-row';
+    row.forEach((val, i) => {
+      const cell = document.createElement('span');
+      cell.className = 'tui-cell';
+      cell.style.width = widths[i] + 'px';
+      cell.style.minWidth = widths[i] + 'px';
+      cell.innerHTML = val;
+      tr.appendChild(cell);
+    });
+    c.appendChild(tr);
+  });
+  term.appendChild(c);
+}
+
+function statusBadge(status) {
+  const s = (status || '').toLowerCase();
+  const map = {
+    active:'s-ok',online:'s-ok',healthy:'s-ok',success:'s-ok',resolved:'s-ok',deployed:'s-ok',completed:'s-ok',
+    warning:'s-warn',degraded:'s-warn',pending:'s-warn',idle:'s-warn',
+    critical:'s-err',error:'s-err',failure:'s-err',failed:'s-err',offline:'s-err',open:'s-err',
+    running:'s-run',deploying:'s-run',in_progress:'s-run',investigating:'s-run',
+  };
+  return `<span class="${map[s]||'s-info'}">[${status}]</span>`;
+}
+
+function timeAgo(ts) {
+  if (!ts) return '-';
+  const m = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+  if (m < 1) return 'now';
+  if (m < 60) return m + 'm';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + 'h';
+  return Math.floor(h / 24) + 'd';
+}
+
+async function api(url) {
+  try {
+    const r = await fetch(url, { headers: hdrs() });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+  } catch (e) { out('ERROR: ' + e.message, 'red'); return null; }
+}
+
+const COMMANDS = {
+  help: { desc: 'Show commands', fn() {
+    outHeader('COMMANDS');
+    [
+      ['help','Show this help'],['clear','Clear output'],['status','System overview'],
+      ['agents','List agents'],['tasks','List tasks'],['incidents','List incidents'],
+      ['servers','List servers'],['workflows','List workflows'],['pipelines','CI/CD pipelines'],
+      ['deployments','Deployments'],['plugins','Plugins'],['audit','Audit log'],
+      ['health','Health check'],['login','Login'],['logout','Sign out'],
+      ['theme green|amber|blue|white','Change colors'],['banner','Show banner'],
+    ].forEach(([c,d]) => outHtml(`  <span class="s-info">${c.padEnd(34)}</span> ${d}`));
+  }},
+  clear: { desc: 'Clear', fn() { term.innerHTML = ''; } },
+  banner: { desc: 'Banner', fn: showBanner },
+
+  login: { desc: 'Login', async fn() {
+    if (token) {
+      const me = await api('/api/auth/me');
+      if (me && me.username) { outHtml(`  Logged in as <span class="s-ok">${me.username}</span> (${me.role})`); return; }
+    }
+    out('  Username:', 'cyan');
+    loginState = { step: 'username' };
+    input.placeholder = 'enter username';
+  }},
+  logout: { desc: 'Logout', fn() {
+    token = '';
+    sessionStorage.removeItem('itops_token'); localStorage.removeItem('itops_token');
+    try { localStorage.removeItem('dashboard.ops.token'); localStorage.removeItem('itops_global_token'); } catch(e) {}
+    outHtml('  <span class="s-ok">[OK]</span> Logged out.');
+  }},
+
+  theme: { desc: 'Theme', fn(args) {
+    const themes = {
+      green:  { fg:'#33ff99', dim:'#1a6644', border:'#1a3322', hl:'#112818', bar:'#001a0d' },
+      amber:  { fg:'#ffaa33', dim:'#664411', border:'#332211', hl:'#1a1108', bar:'#0d0800' },
+      blue:   { fg:'#44aaff', dim:'#1a4466', border:'#0d2233', hl:'#081620', bar:'#000d1a' },
+      white:  { fg:'#e8e8d8', dim:'#555555', border:'#333333', hl:'#1a1a1a', bar:'#0a0a0a' },
+    };
+    const n = (args[0] || '').toLowerCase();
+    if (!themes[n]) { out('Usage: theme [green|amber|blue|white]', 'yellow'); return; }
+    const t = themes[n];
+    const r = document.documentElement.style;
+    r.setProperty('--t-fg', t.fg); r.setProperty('--t-dim', t.dim);
+    r.setProperty('--t-border', t.border); r.setProperty('--t-highlight', t.hl);
+    r.setProperty('--bar-bg', t.bar);
+    out('Theme: ' + n, 'cyan');
+  }},
+
+  health: { desc: 'Health', async fn() {
+    sbLeft.textContent = 'Checking...';
+    const d = await api('/api/health');
+    if (d) {
+      outHeader('HEALTH');
+      out('  Status:  ' + (d.status || 'ok'));
+      out('  Uptime:  ' + (d.uptime ? Math.floor(d.uptime) + 's' : '-'));
+      out('  Memory:  ' + (d.memory ? Math.round(d.memory.heapUsed/1048576) + 'MB' : '-'));
+    }
+    sbLeft.textContent = 'READY';
+  }},
+
+  status: { desc: 'Overview', async fn() {
+    sbLeft.textContent = 'Loading...';
+    const [h, ag, tk, inc, srv] = await Promise.all([
+      api('/api/health'), api('/api/agents'), api('/api/tasks'), api('/api/incidents'), api('/api/servers'),
+    ]);
+    outHeader('SYSTEM STATUS');
+    if (h) outHtml(`  API:        ${statusBadge(h.status||'ok')}  uptime ${h.uptime ? Math.floor(h.uptime/3600)+'h' : '-'}`);
+    const agents = Array.isArray(ag) ? ag : (ag?.agents || []);
+    const tasks = Array.isArray(tk) ? tk : (tk?.tasks || []);
+    const incs = Array.isArray(inc) ? inc : (inc?.incidents || []);
+    const srvs = Array.isArray(srv) ? srv : (srv?.servers || []);
+    const on = agents.filter(a => a.status==='active'||a.status==='online').length;
+    outHtml(`  Agents:     <span class="s-ok">${on}</span>/${agents.length}`);
+    const open = incs.filter(i => i.status!=='resolved'&&i.status!=='closed').length;
+    outHtml(`  Incidents:  ${open>0?'<span class="s-err">'+open+' open</span>':'<span class="s-ok">0 open</span>'} / ${incs.length}`);
+    outHtml(`  Tasks:      ${tasks.length}`);
+    const onSrv = srvs.filter(s => s.status==='online'||s.status==='healthy').length;
+    outHtml(`  Servers:    <span class="s-ok">${onSrv}</span>/${srvs.length}`);
+    outBlank(); sbLeft.textContent = 'READY';
+  }},
+
+  agents: { desc: 'Agents', async fn() {
+    sbLeft.textContent = 'Loading...';
+    const data = await api('/api/agents');
+    if (!data) { sbLeft.textContent = 'READY'; return; }
+    const a = Array.isArray(data) ? data : (data.agents || []);
+    outHeader('AGENTS (' + a.length + ')');
+    if (!a.length) { out('  None.', 'dim'); sbLeft.textContent = 'READY'; return; }
+    outTable(['NAME','TYPE','STATUS','TASKS'], a.map(x => [
+      x.name||x.id, x.type||x.role||'-', statusBadge(x.status||'unknown'), String(x.taskCount||x.completedTasks||0)
+    ]), [200,130,120,80]);
+    sbLeft.textContent = 'READY';
+  }},
+
+  tasks: { desc: 'Tasks', async fn() {
+    sbLeft.textContent = 'Loading...';
+    const data = await api('/api/tasks');
+    if (!data) { sbLeft.textContent = 'READY'; return; }
+    const t = Array.isArray(data) ? data : (data.tasks || []);
+    outHeader('TASKS (' + t.length + ')');
+    if (!t.length) { out('  None.', 'dim'); sbLeft.textContent = 'READY'; return; }
+    outTable(['ID','TITLE','STATUS','ASSIGNED','AGE'], t.slice(0,30).map(x => [
+      (x.id||'').slice(0,8), (x.title||x.description||'-').slice(0,40),
+      statusBadge(x.status||'unknown'), x.assignedTo||x.agentId||'-', timeAgo(x.createdAt)
+    ]), [80,280,120,140,80]);
+    sbLeft.textContent = 'READY';
+  }},
+
+  incidents: { desc: 'Incidents', async fn() {
+    sbLeft.textContent = 'Loading...';
+    const data = await api('/api/incidents');
+    if (!data) { sbLeft.textContent = 'READY'; return; }
+    const i = Array.isArray(data) ? data : (data.incidents || []);
+    outHeader('INCIDENTS (' + i.length + ')');
+    if (!i.length) { out('  None.', 'dim'); sbLeft.textContent = 'READY'; return; }
+    outTable(['ID','TITLE','SEV','STATUS','AGE'], i.slice(0,30).map(x => [
+      (x.id||'').slice(0,8), (x.title||'-').slice(0,40),
+      `<span class="${x.severity==='critical'?'s-err':x.severity==='warning'?'s-warn':'s-info'}">${x.severity||'-'}</span>`,
+      statusBadge(x.status||'unknown'), timeAgo(x.createdAt)
+    ]), [80,280,80,120,80]);
+    sbLeft.textContent = 'READY';
+  }},
+
+  servers: { desc: 'Servers', async fn() {
+    sbLeft.textContent = 'Loading...';
+    const data = await api('/api/servers');
+    if (!data) { sbLeft.textContent = 'READY'; return; }
+    const s = Array.isArray(data) ? data : (data.servers || []);
+    outHeader('SERVERS (' + s.length + ')');
+    if (!s.length) { out('  None.', 'dim'); sbLeft.textContent = 'READY'; return; }
+    outTable(['HOST','IP','STATUS','CPU','MEM'], s.map(x => [
+      x.hostname||x.name||x.id, x.ip||'-', statusBadge(x.status||'unknown'),
+      x.cpu?x.cpu+'%':'-', x.memory?x.memory+'%':'-'
+    ]), [180,140,120,70,70]);
+    sbLeft.textContent = 'READY';
+  }},
+
+  workflows: { desc: 'Workflows', async fn() {
+    sbLeft.textContent = 'Loading...';
+    const data = await api('/api/workflows');
+    if (!data) { sbLeft.textContent = 'READY'; return; }
+    const w = Array.isArray(data) ? data : (data.workflows || []);
+    outHeader('WORKFLOWS (' + w.length + ')');
+    if (!w.length) { out('  None.', 'dim'); sbLeft.textContent = 'READY'; return; }
+    outTable(['ID','NAME','STATUS','STEPS'], w.slice(0,20).map(x => [
+      (x.id||'').slice(0,8), (x.name||'-').slice(0,35),
+      statusBadge(x.status||'unknown'), String(x.steps?x.steps.length:(x.stepCount||'-'))
+    ]), [80,260,120,60]);
+    sbLeft.textContent = 'READY';
+  }},
+
+  pipelines: { desc: 'Pipelines', async fn() {
+    sbLeft.textContent = 'Loading...';
+    const data = await api('/api/cicd/pipelines');
+    if (!data) { sbLeft.textContent = 'READY'; return; }
+    const p = Array.isArray(data) ? data : [];
+    outHeader('PIPELINES (' + p.length + ')');
+    if (!p.length) { out('  None.', 'dim'); sbLeft.textContent = 'READY'; return; }
+    p.forEach(x => {
+      outHtml(`  <span class="s-info">${(x.name||x.id).padEnd(24)}</span> ${statusBadge(x.status)} ${x.repo||''} / ${x.branch||''}`);
+      if (x.steps && x.steps.length) {
+        outHtml('    ' + x.steps.map(s => `<span class="${s.status==='success'?'s-ok':s.status==='failure'?'s-err':s.status==='running'?'s-run':''}">${s.name}</span>`).join(' -> '));
+      }
+    });
+    outBlank(); sbLeft.textContent = 'READY';
+  }},
+
+  deployments: { desc: 'Deployments', async fn() {
+    sbLeft.textContent = 'Loading...';
+    const data = await api('/api/cicd/deployments');
+    if (!data) { sbLeft.textContent = 'READY'; return; }
+    const d = Array.isArray(data) ? data : [];
+    outHeader('DEPLOYMENTS (' + d.length + ')');
+    if (!d.length) { out('  None.', 'dim'); sbLeft.textContent = 'READY'; return; }
+    outTable(['VER','PIPELINE','ENV','STATUS','BY','AGE'], d.slice(0,20).map(x => [
+      x.version||'-', (x.pipelineName||'-').slice(0,18), x.environment||'-',
+      statusBadge(x.status||'unknown'), x.deployedBy||'-', timeAgo(x.startedAt)
+    ]), [90,150,90,120,90,70]);
+    sbLeft.textContent = 'READY';
+  }},
+
+  plugins: { desc: 'Plugins', async fn() {
+    sbLeft.textContent = 'Loading...';
+    const data = await api('/api/plugins');
+    if (!data) { sbLeft.textContent = 'READY'; return; }
+    const p = data.plugins || [];
+    outHeader(`PLUGINS (${data.total||p.length} total, ${data.active||0} active)`);
+    if (!p.length) { out('  None.', 'dim'); sbLeft.textContent = 'READY'; return; }
+    outTable(['NAME','VER','STATUS','CATEGORY'], p.map(x => [
+      x.name||x.id, 'v'+(x.version||'?'), statusBadge(x.status||'unknown'), x.category||'general'
+    ]), [200,80,120,120]);
+    sbLeft.textContent = 'READY';
+  }},
+
+  audit: { desc: 'Audit', async fn() {
+    sbLeft.textContent = 'Loading...';
+    const data = await api('/api/audit');
+    if (!data) { sbLeft.textContent = 'READY'; return; }
+    const e = Array.isArray(data) ? data : (data.entries || []);
+    outHeader('AUDIT (' + e.length + ')');
+    if (!e.length) { out('  None.', 'dim'); sbLeft.textContent = 'READY'; return; }
+    outTable(['AGE','ACTION','USER','TARGET'], e.slice(0,30).map(x => [
+      timeAgo(x.timestamp||x.ts), (x.action||x.event||'-').slice(0,20),
+      x.user||x.actor||'-', (x.target||x.resource||'-').slice(0,30)
+    ]), [60,160,100,220]);
+    sbLeft.textContent = 'READY';
+  }},
+};
+
+// ── Dispatch ──
+async function exec(line) {
+  const trimmed = line.trim();
+  if (!trimmed) return;
+
+  if (loginState) {
+    if (loginState.step === 'username') {
+      outHtml(`<span style="color:var(--t-cyan)">username:</span> ${trimmed}`);
+      loginState = { step: 'password', username: trimmed };
+      out('  Password:', 'cyan');
+      input.placeholder = 'enter password';
+      input.type = 'password';
+      scroll(); return;
+    }
+    if (loginState.step === 'password') {
+      outHtml('<span style="color:var(--t-cyan)">password:</span> ********');
+      const u = loginState.username, p = trimmed;
+      loginState = null;
+      input.placeholder = "type 'help' for commands";
+      input.type = 'text';
+      sbLeft.textContent = 'Authenticating...';
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: u, password: p })
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          token = data.token;
+          sessionStorage.setItem('itops_token', token);
+          localStorage.setItem('itops_token', token);
+          outHtml(`  <span class="s-ok">[OK]</span> Authenticated as ${u}`);
+        } else {
+          out('  FAILED: ' + (data.error || data.message || 'invalid credentials'), 'red');
+        }
+      } catch (e) { out('  ERROR: ' + e.message, 'red'); }
+      sbLeft.textContent = 'READY'; scroll(); return;
+    }
+  }
+
+  outHtml(`<span style="color:var(--t-cyan)">itops&gt;</span> ${trimmed}`);
+  history.unshift(trimmed);
+  if (history.length > 100) history.pop();
+  histIdx = -1;
+
+  const parts = trimmed.split(/\s+/);
+  const cmd = parts[0].toLowerCase();
+  const args = parts.slice(1);
+  if (COMMANDS[cmd]) { await COMMANDS[cmd].fn(args); }
+  else { out(`Unknown command: ${cmd}. Type 'help'.`, 'red'); }
+  scroll();
+}
+
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { const v = input.value; input.value = ''; exec(v); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); if (histIdx < history.length-1) { histIdx++; input.value = history[histIdx]; } }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); if (histIdx > 0) { histIdx--; input.value = history[histIdx]; } else { histIdx = -1; input.value = ''; } }
+  else if (e.key === 'Tab') {
+    e.preventDefault();
+    const p = input.value.trim().toLowerCase();
+    if (p) { const m = Object.keys(COMMANDS).filter(c => c.startsWith(p)); if (m.length===1) input.value = m[0]+' '; else if (m.length>1) { out(m.join('  '), 'dim'); scroll(); } }
+  }
+  else if (e.key === 'Escape') { input.value = ''; }
+  else if (e.key === 'l' && e.ctrlKey) { e.preventDefault(); term.innerHTML = ''; }
+});
+
+document.addEventListener('click', () => input.focus());
+
+function showBanner() {
+  out('');
+  out('  +--------------------------------------------------+', 'cyan');
+  out('  |                                                  |', 'cyan');
+  out('  |   [=] I T   O P S   T E R M I N A L             |', 'cyan');
+  out('  |                                                  |', 'cyan');
+  out('  |   Infrastructure Operations Command Interface    |', 'cyan');
+  out('  |                                                  |', 'cyan');
+  out('  +--------------------------------------------------+', 'cyan');
+  out('');
+}
+
+async function boot() {
+  showBanner();
+  out('  Initializing...', 'dim');
+  const h = await api('/api/health');
+  if (h) {
+    outHtml('  API:     <span class="s-ok">[OK]</span>');
+    outHtml('  Uptime:  ' + (h.uptime ? Math.floor(h.uptime/3600) + 'h ' + Math.floor((h.uptime%3600)/60) + 'm' : '-'));
+  } else {
+    outHtml('  API:     <span class="s-err">[FAILED]</span>');
+    out('  Type "login" to authenticate.', 'yellow');
+  }
+  outBlank();
+  out("  Type 'help' for commands, or use the nav bar above.", 'dim');
+  outBlank();
+  scroll();
+}
+boot();
+</script>
+</body>
+</html>

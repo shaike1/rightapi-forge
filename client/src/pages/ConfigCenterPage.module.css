@@ -1,0 +1,215 @@
+/* Config Center — tabbed page bringing together env config / tenants
+   / RBAC / credentials / schedules + the Deploy panel. */
+
+.shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  height: calc(100vh - 56px);
+  min-height: 600px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg2);
+}
+@media (max-width: 1024px) { .shell { grid-template-columns: 180px 1fr; } }
+
+/* ── Tabs rail ────────────────────────────────────────────────────────── */
+.tabs {
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+.tabsHeader {
+  padding: 4px 16px 12px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  font-weight: 600;
+}
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  color: var(--text2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+  text-align: left;
+}
+.tab:hover { background: var(--bg3); color: var(--text); }
+.tabActive {
+  background: var(--accent-bg);
+  color: var(--text);
+  border-left-color: var(--accent);
+}
+.tabIcon { font-size: 14px; }
+
+/* ── Main pane ────────────────────────────────────────────────────────── */
+.main {
+  overflow-y: auto;
+  background: var(--bg);
+  padding: 24px;
+}
+.title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--text);
+}
+.subtitle {
+  font-size: 12px;
+  color: var(--text2);
+  margin: 0 0 20px;
+}
+
+/* Reusable card */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+/* Env config table */
+.kvTable { width: 100%; font-size: 12px; border-collapse: collapse; }
+.kvTable th, .kvTable td {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+.kvTable th {
+  background: var(--bg3);
+  color: var(--text3);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+.kvTable td.key {
+  color: var(--text);
+  font-family: ui-monospace, monospace;
+  font-weight: 500;
+  width: 30%;
+}
+.kvTable td.desc {
+  color: var(--text3);
+  font-size: 11px;
+  width: 35%;
+}
+.kvTable td.val { width: 35%; }
+.kvTable input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  padding: 5px 8px;
+  font-family: ui-monospace, monospace;
+}
+.kvTable input:focus { outline: none; border-color: var(--accent); }
+.kvTable input.dangerous { border-color: var(--warning); }
+.kvTable input:disabled { color: var(--text3); }
+.kvBadge {
+  display: inline-block;
+  padding: 1px 6px;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  border-radius: 6px;
+  background: var(--warning-bg);
+  color: var(--warning);
+  margin-left: 6px;
+}
+.kvBadge.secret { background: var(--danger-bg); color: var(--danger); }
+
+/* Tenants table */
+.simpleTable { width: 100%; font-size: 12px; border-collapse: collapse; }
+.simpleTable thead { background: var(--bg3); color: var(--text3); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.simpleTable th, .simpleTable td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+.simpleTable td.id { font-family: ui-monospace, monospace; color: var(--text2); font-size: 11px; }
+
+/* RBAC */
+.rbacGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.rbacGrid .card { margin-bottom: 0; }
+.permissionList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+.permissionPill {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+/* Deploy panel */
+.deployHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.deployHeader .status {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 10px;
+  border-radius: 8px;
+}
+.deployHeader .status.configured { background: var(--success-bg); color: var(--success); }
+.deployHeader .status.unconfigured { background: var(--warning-bg); color: var(--warning); }
+
+.runRow {
+  display: grid;
+  grid-template-columns: 130px 1fr 100px 100px 90px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.runRow .sha {
+  font-family: ui-monospace, monospace;
+  color: var(--text3);
+  font-size: 11px;
+}
+.runRow .ts { color: var(--text3); font-size: 11px; }
+.runRow .title { color: var(--text); }
+.runStatus {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.runStatus.success     { background: var(--success-bg); color: var(--success); }
+.runStatus.failure     { background: var(--danger-bg);  color: var(--danger); }
+.runStatus.cancelled   { background: var(--bg5);        color: var(--text2); }
+.runStatus.in_progress { background: var(--info-bg);    color: var(--info); }
+.runStatus.queued      { background: var(--warning-bg); color: var(--warning); }
+.runStatus.completed   { background: var(--success-bg); color: var(--success); }
+
+.deployActions { display: flex; gap: 8px; margin-top: 16px; }

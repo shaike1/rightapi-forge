@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Ops — Agent Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --t-bg:#0a0a0a;
+    --t-fg:#33ff99;
+    --t-dim:#1a6644;
+    --t-cyan:#44aaaa;
+    --t-yellow:#ccaa33;
+    --t-red:#cc3333;
+    --t-blue:#4488cc;
+    --t-white:#e8e8d8;
+    --t-border:#1a3322;
+    --t-highlight:#112818;
+    --bar-bg:#001a0d;
+  }
+  html,body{height:100%;background:#000;overflow:hidden;}
+  body{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--t-fg);
+    display:flex;flex-direction:column;
+  }
+  body::after{
+    content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);
+    pointer-events:none;z-index:9999;
+  }
+  body::before{
+    content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+    background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.4) 100%);
+    pointer-events:none;z-index:9998;
+  }
+
+  /* ── Title bar ── */
+  .titlebar{
+    background:#224488;
+    padding:6px 16px;display:flex;justify-content:space-between;align-items:center;
+    flex-shrink:0;font-size:13px;
+  }
+  .titlebar-left{color:#e8e8d8;font-weight:bold;letter-spacing:0.1em;}
+  .titlebar-right{color:#44aaaa;font-size:11px;}
+
+  /* ── Nav bar ── */
+  .navbar{
+    background:var(--bar-bg);border-bottom:1px solid var(--t-border);
+    padding:0 8px;display:flex;align-items:stretch;
+    flex-shrink:0;font-size:12px;
+  }
+  .nav-link{
+    color:var(--t-cyan);text-decoration:none;
+    padding:5px 14px;border-right:1px solid var(--t-border);
+    display:flex;align-items:center;
+  }
+  .nav-link:hover{background:var(--t-highlight);color:var(--t-white);}
+  .nav-link.active{background:var(--t-cyan);color:#000;font-weight:bold;}
+  .nav-spacer{flex:1;}
+  .nav-link.right{border-right:none;border-left:1px solid var(--t-border);color:var(--t-dim);}
+  .nav-link.right:hover{color:var(--t-white);}
+
+  /* ── Split layout ── */
+  .split{flex:1;display:flex;overflow:hidden;}
+
+  /* ── Left: agent list ── */
+  .agents{
+    width:200px;min-width:160px;border-right:1px solid var(--t-border);
+    display:flex;flex-direction:column;background:#050a07;
+  }
+  .agents-header{
+    padding:5px 10px;font-size:11px;color:var(--t-yellow);font-weight:bold;
+    text-transform:uppercase;letter-spacing:0.06em;
+    border-bottom:1px solid var(--t-border);background:var(--bar-bg);
+  }
+  .agents-list{
+    flex:1;overflow-y:auto;
+    scrollbar-width:thin;scrollbar-color:var(--t-dim) #050a07;
+  }
+  .agents-list::-webkit-scrollbar{width:3px;}
+  .agents-list::-webkit-scrollbar-track{background:#050a07;}
+  .agents-list::-webkit-scrollbar-thumb{background:var(--t-dim);}
+  .agent{
+    padding:5px 10px;font-size:12px;cursor:pointer;
+    border-bottom:1px solid #0d1f14;
+    display:flex;align-items:center;gap:6px;
+  }
+  .agent:hover{background:var(--t-highlight);}
+  .agent.sel{background:var(--t-highlight);border-left:2px solid var(--t-cyan);}
+  .agent .dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;background:#444;}
+  .agent .dot.on{background:#33aa55;}
+  .agent-info{overflow:hidden;}
+  .agent-name{color:var(--t-fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .agent-type{font-size:10px;color:var(--t-dim);}
+
+  /* ── Right: chat area ── */
+  .chat{flex:1;display:flex;flex-direction:column;}
+  .chat-head{
+    padding:5px 12px;font-size:12px;color:var(--t-yellow);font-weight:bold;
+    border-bottom:1px solid var(--t-border);background:var(--bar-bg);
+  }
+  .messages{
+    flex:1;overflow-y:auto;padding:8px 12px;
+    scrollbar-width:thin;scrollbar-color:var(--t-dim) var(--t-bg);
+  }
+  .messages::-webkit-scrollbar{width:3px;}
+  .messages::-webkit-scrollbar-track{background:var(--t-bg);}
+  .messages::-webkit-scrollbar-thumb{background:var(--t-dim);}
+
+  .msg{margin-bottom:6px;font-size:12px;line-height:1.5;}
+  .msg-line{display:flex;gap:8px;}
+  .msg-who{font-weight:bold;flex-shrink:0;min-width:70px;}
+  .msg-who.user{color:var(--t-cyan);}
+  .msg-who.agent{color:var(--t-yellow);}
+  .msg-who.system{color:var(--t-dim);}
+  .msg-text{color:var(--t-white);white-space:pre-wrap;word-break:break-word;}
+  .msg-time{color:var(--t-dim);font-size:10px;margin-left:78px;}
+
+  .empty-chat{color:var(--t-dim);font-size:12px;padding:20px;text-align:center;}
+
+  /* ── Input ── */
+  .chat-input{
+    border-top:1px solid var(--t-border);
+    padding:6px 12px;display:flex;align-items:center;gap:8px;
+    background:var(--bar-bg);
+  }
+  .chat-prompt{color:var(--t-cyan);font-weight:bold;font-size:12px;white-space:nowrap;}
+  .chat-field{
+    flex:1;background:transparent;border:none;outline:none;
+    color:var(--t-fg);font-family:inherit;font-size:12px;
+    caret-color:var(--t-fg);
+  }
+
+  .statusbar{
+    background:var(--bar-bg);border-top:1px solid var(--t-border);
+    padding:3px 16px;font-size:11px;color:var(--t-dim);
+    display:flex;justify-content:space-between;flex-shrink:0;
+  }
+
+  @media(max-width:600px){
+    .agents{width:120px;min-width:100px;}
+    .agent{padding:4px 6px;font-size:11px;}
+  }
+</style>
+<script src="/auth-guard.js"></script>
+</head>
+<body>
+<div class="titlebar">
+  <span class="titlebar-left">[=] IT OPS</span>
+  <span class="titlebar-right" id="clock">--:--:--</span>
+</div>
+<div class="navbar">
+  <a href="/tui" class="nav-link">TERMINAL</a>
+  <a href="/tui-incidents" class="nav-link">INCIDENTS</a>
+  <a href="/tui-servers" class="nav-link">SERVERS</a>
+  <a href="/tui-chat" class="nav-link active">CHAT</a>
+  <a href="/tui-bridge" class="nav-link">BRIDGE</a>
+  <a href="/tui-workflows" class="nav-link">WORKFLOWS</a>
+  <a href="/tui-monitoring" class="nav-link">MONITORING</a>
+  <a href="/tui-audit" class="nav-link">AUDIT</a>
+  <a href="/tui-agents" class="nav-link">AGENTS</a>
+  <a href="/tui-irc" class="nav-link">IRC</a>
+  <span class="nav-spacer"></span>
+  <a href="/dashboard" class="nav-link right">GUI</a>
+  <a href="/login.html" class="nav-link right">LOGIN</a>
+</div>
+<div class="split">
+  <div class="agents">
+    <div class="agents-header">AGENTS</div>
+    <div class="agents-list" id="agent-list"></div>
+  </div>
+  <div class="chat">
+    <div class="chat-head" id="chat-head">SELECT AN AGENT</div>
+    <div class="messages" id="messages">
+      <div class="empty-chat" id="empty">Click an agent on the left to start chatting.</div>
+    </div>
+    <div class="chat-input">
+      <span class="chat-prompt" id="prompt">&gt;</span>
+      <input type="text" class="chat-field" id="chat-input" placeholder="select an agent first" disabled autocomplete="off" spellcheck="false">
+    </div>
+  </div>
+</div>
+<div class="statusbar">
+  <span id="sb">READY</span>
+  <span>ENTER=send</span>
+</div>
+
+<script>
+var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token') || '';
+var selId = null, selName = '';
+var poll = null;
+const hdr = () => ({ Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' });
+
+setInterval(() => { document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8); }, 1000);
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+async function loadAgents() {
+  try {
+    const r = await fetch('/api/agents', { headers: hdr() });
+    if (!r.ok) return;
+    const data = await r.json();
+    const list = Array.isArray(data) ? data : (data.agents || [].concat(data.director ? [data.director] : []).concat(data.sysadmins || []).concat(data.specialists || []));
+    const el = document.getElementById('agent-list');
+    if (!list.length) { el.innerHTML = '<div style="padding:10px;color:var(--t-dim);font-size:11px">No agents</div>'; return; }
+    el.innerHTML = list.map(a => {
+      const on = (a.status||'').match(/active|online/i);
+      return `<div class="agent${a.id===selId?' sel':''}" onclick="pick('${a.id}','${esc(a.name||a.id)}')">
+        <span class="dot${on?' on':''}"></span>
+        <div class="agent-info">
+          <div class="agent-name">${esc(a.name||a.id)}</div>
+          <div class="agent-type">${esc(a.type||a.role||'agent')}</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+function pick(id, name) {
+  selId = id; selName = name;
+  document.getElementById('chat-head').textContent = name.toUpperCase();
+  document.getElementById('prompt').textContent = name.toLowerCase().replace(/\s+/g,'-') + '>';
+  const inp = document.getElementById('chat-input');
+  inp.disabled = false; inp.placeholder = 'type a message...'; inp.focus();
+  document.getElementById('empty').style.display = 'none';
+  loadAgents();
+  loadMessages();
+  if (poll) clearInterval(poll);
+  poll = setInterval(loadMessages, 5000);
+}
+
+async function loadMessages() {
+  if (!selId) return;
+  try {
+    const r = await fetch('/api/agents/' + selId + '/conversations', { headers: hdr() });
+    if (!r.ok) return;
+    const data = await r.json();
+    const msgs = Array.isArray(data) ? data : (data.messages || data.conversations || []);
+    renderMsgs(msgs);
+  } catch(e) {}
+}
+
+function renderMsgs(msgs) {
+  const el = document.getElementById('messages');
+  if (!msgs.length) {
+    el.innerHTML = '<div class="empty-chat">No messages yet. Type below to start.</div>';
+    return;
+  }
+  const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
+  el.innerHTML = msgs.map(m => {
+    const from = m.from || m.sender || m.role || 'system';
+    const isUser = from === 'user' || from === 'human';
+    const isSys = from === 'system';
+    const cls = isUser ? 'user' : isSys ? 'system' : 'agent';
+    const ts = m.timestamp || m.ts || m.createdAt;
+    const body = m.content || m.text || m.message || '';
+    return `<div class="msg">
+      <div class="msg-line"><span class="msg-who ${cls}">${esc(from)}</span><span class="msg-text">${esc(body)}</span></div>
+      ${ts ? '<div class="msg-time">' + new Date(ts).toLocaleTimeString() + '</div>' : ''}
+    </div>`;
+  }).join('');
+  if (atBottom) el.scrollTop = el.scrollHeight;
+}
+
+const chatInput = document.getElementById('chat-input');
+chatInput.addEventListener('keydown', async (e) => {
+  if (e.key !== 'Enter') return;
+  const text = chatInput.value.trim();
+  if (!text || !selId) return;
+  chatInput.value = '';
+  document.getElementById('sb').textContent = 'Sending...';
+
+  // Show immediately
+  const el = document.getElementById('messages');
+  const empt = el.querySelector('.empty-chat');
+  if (empt) empt.remove();
+  el.innerHTML += `<div class="msg"><div class="msg-line"><span class="msg-who user">you</span><span class="msg-text">${esc(text)}</span></div><div class="msg-time">${new Date().toLocaleTimeString()}</div></div>`;
+  el.scrollTop = el.scrollHeight;
+
+  try {
+    const r = await fetch('/api/agents/' + selId + '/message', {
+      method: 'POST', headers: hdr(),
+      body: JSON.stringify({ message: text, content: text })
+    });
+    if (r.ok) {
+      const data = await r.json();
+      const reply = data.reply || data.response || data.message;
+      if (reply) {
+        el.innerHTML += `<div class="msg"><div class="msg-line"><span class="msg-who agent">${esc(selName)}</span><span class="msg-text">${esc(reply)}</span></div><div class="msg-time">${new Date().toLocaleTimeString()}</div></div>`;
+        el.scrollTop = el.scrollHeight;
+      }
+    }
+  } catch(err) {
+    el.innerHTML += `<div class="msg"><div class="msg-line"><span class="msg-who system">error</span><span class="msg-text">${esc(err.message)}</span></div></div>`;
+  }
+  document.getElementById('sb').textContent = 'READY';
+});
+
+document.querySelector('.chat').addEventListener('click', () => {
+  if (!chatInput.disabled) chatInput.focus();
+});
+
+loadAgents();
+setInterval(loadAgents, 15000);
+</script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — Stats Dashboard</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .stats-container { max-width: 1200px; margin: 0 auto; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--accent); margin: 4px 0; }
+    .stat-label { font-size: .75rem; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; }
+    .stat-sub { font-size: .7rem; color: var(--text3); margin-top: 4px; }
+
+    .stats-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 20px; overflow: hidden; }
+    .stats-section-header { padding: 12px 16px; background: var(--bg3); border-bottom: 1px solid var(--border); font-size: .85rem; font-weight: 600; color: var(--text); display: flex; align-items: center; justify-content: space-between; }
+    .stats-section-body { padding: 16px; }
+
+    .flow-chart { display: flex; flex-wrap: wrap; gap: 8px; }
+    .flow-item { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; font-size: .75rem; color: var(--text); display: flex; align-items: center; gap: 6px; }
+    .flow-arrow { color: var(--accent); font-weight: 700; }
+    .flow-count { background: var(--accent); color: #fff; border-radius: 10px; padding: 1px 6px; font-size: .65rem; font-weight: 600; }
+
+    .agent-bars { display: flex; flex-direction: column; gap: 8px; }
+    .agent-bar { display: flex; align-items: center; gap: 10px; }
+    .agent-bar-name { font-size: .8rem; color: var(--text); min-width: 100px; }
+    .agent-bar-track { flex: 1; height: 20px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+    .agent-bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .5s; }
+    .agent-bar-count { font-size: .75rem; color: var(--text2); min-width: 30px; text-align: right; }
+
+    .tool-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+    .tool-stat { text-align: center; }
+    .tool-stat-value { font-size: 1.4rem; font-weight: 600; }
+    .tool-stat-label { font-size: .7rem; color: var(--text2); text-transform: uppercase; }
+    .tool-stat.safe .tool-stat-value { color: var(--success); }
+    .tool-stat.moderate .tool-stat-value { color: var(--warning); }
+    .tool-stat.blocked .tool-stat-value { color: var(--danger); }
+    .tool-stat.total .tool-stat-value { color: var(--accent); }
+
+    .recent-table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+    .recent-table th { text-align: left; padding: 6px 10px; background: var(--bg3); color: var(--text2); font-weight: 500; border-bottom: 1px solid var(--border); }
+    .recent-table td { padding: 6px 10px; border-bottom: 1px solid var(--bg3); color: var(--text); }
+    .recent-table tr:hover td { background: var(--bg3); }
+    .badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: .65rem; font-weight: 600; }
+    .badge-safe { background: rgba(46,204,113,.15); color: var(--success); }
+    .badge-moderate { background: rgba(241,196,15,.15); color: var(--warning); }
+    .badge-blocked { background: rgba(231,76,60,.15); color: var(--danger); }
+    .badge-ok { background: rgba(46,204,113,.15); color: var(--success); }
+    .badge-fail { background: rgba(231,76,60,.15); color: var(--danger); }
+
+    .refresh-btn { padding: 4px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text2); font-size: .75rem; cursor: pointer; }
+    .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .empty-state { text-align: center; padding: 30px; color: var(--text3); font-size: .85rem; }
+  </style>
+</head>
+<body>
+<script src="/sidebar.js"></script>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Delegation Stats</h1>
+      <p class="page-subtitle">Agent activity, tool usage, and delegation flow</p>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="stats-container">
+
+      <!-- Top-level metrics -->
+      <div class="stats-grid" id="top-stats">
+        <div class="stat-card"><div class="stat-label">Messages (24h)</div><div class="stat-value" id="s-messages">—</div></div>
+        <div class="stat-card"><div class="stat-label">Delegations (24h)</div><div class="stat-value" id="s-delegations">—</div></div>
+        <div class="stat-card"><div class="stat-label">Roundtables (24h)</div><div class="stat-value" id="s-roundtables">—</div></div>
+        <div class="stat-card"><div class="stat-label">Avg Response</div><div class="stat-value" id="s-avgtime">—</div><div class="stat-sub">milliseconds</div></div>
+      </div>
+
+      <!-- Agent Usage -->
+      <div class="stats-section">
+        <div class="stats-section-header"><span>Agent Usage (24h)</span><button class="refresh-btn" onclick="loadStats()">Refresh</button></div>
+        <div class="stats-section-body">
+          <div class="agent-bars" id="agent-usage"><div class="empty-state">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- Delegation Flow -->
+      <div class="stats-section">
+        <div class="stats-section-header"><span>Delegation Flow (24h)</span></div>
+        <div class="stats-section-body">
+          <div class="flow-chart" id="deleg-flow"><div class="empty-state">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- Tool Execution Stats -->
+      <div class="stats-section">
+        <div class="stats-section-header"><span>Tool Executions (24h)</span></div>
+        <div class="stats-section-body">
+          <div class="tool-stats" id="tool-stats"><div class="empty-state">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- Recent Delegations -->
+      <div class="stats-section">
+        <div class="stats-section-header"><span>Recent Delegations</span></div>
+        <div class="stats-section-body" style="padding:0;">
+          <table class="recent-table" id="recent-delegations">
+            <thead><tr><th>From</th><th>To</th><th>Question</th><th>Duration</th><th>Time</th></tr></thead>
+            <tbody><tr><td colspan="5" class="empty-state">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Recent Tool Executions -->
+      <div class="stats-section">
+        <div class="stats-section-header"><span>Recent Tool Executions</span></div>
+        <div class="stats-section-body" style="padding:0;">
+          <table class="recent-table" id="recent-tools">
+            <thead><tr><th>Agent</th><th>Command</th><th>Level</th><th>Result</th><th>Time</th></tr></thead>
+            <tbody><tr><td colspan="5" class="empty-state">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="/auth-guard.js"></script>
+<script>
+(function() {
+  var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token');
+  if (!token) window.location.href = '/';
+
+  function hdr() { return { 'Authorization': 'Bearer ' + token }; }
+
+  function timeAgo(ts) {
+    var diff = Date.now() - new Date(ts).getTime();
+    if (diff < 60000) return Math.round(diff/1000) + 's ago';
+    if (diff < 3600000) return Math.round(diff/60000) + 'm ago';
+    if (diff < 86400000) return Math.round(diff/3600000) + 'h ago';
+    return Math.round(diff/86400000) + 'd ago';
+  }
+
+  function loadStats() {
+    fetch('/api/stats/overview', { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        document.getElementById('s-messages').textContent = data.totalMessages || 0;
+        document.getElementById('s-delegations').textContent = data.totalDelegations || 0;
+        document.getElementById('s-roundtables').textContent = data.totalRoundtables || 0;
+        document.getElementById('s-avgtime').textContent = data.avgResponseMs || 0;
+
+        // Agent usage bars
+        var usage = data.agentUsage || {};
+        var agentEl = document.getElementById('agent-usage');
+        var entries = Object.entries(usage).sort(function(a,b) { return b[1] - a[1]; });
+        var maxVal = entries.length > 0 ? entries[0][1] : 1;
+        if (entries.length === 0) {
+          agentEl.innerHTML = '<div class="empty-state">No agent activity yet</div>';
+        } else {
+          agentEl.innerHTML = entries.map(function(e) {
+            var pct = Math.round((e[1] / maxVal) * 100);
+            return '<div class="agent-bar"><span class="agent-bar-name">' + e[0] + '</span><div class="agent-bar-track"><div class="agent-bar-fill" style="width:' + pct + '%"></div></div><span class="agent-bar-count">' + e[1] + '</span></div>';
+          }).join('');
+        }
+
+        // Delegation flow
+        var flow = data.delegationFlow || {};
+        var flowEl = document.getElementById('deleg-flow');
+        var flowEntries = Object.entries(flow).sort(function(a,b) { return b[1] - a[1]; });
+        if (flowEntries.length === 0) {
+          flowEl.innerHTML = '<div class="empty-state">No delegations yet</div>';
+        } else {
+          flowEl.innerHTML = flowEntries.map(function(e) {
+            var parts = e[0].split(' -> ');
+            return '<div class="flow-item"><span>' + parts[0] + '</span><span class="flow-arrow">&rarr;</span><span>' + parts[1] + '</span><span class="flow-count">' + e[1] + '</span></div>';
+          }).join('');
+        }
+
+        // Tool stats
+        var ts = data.toolStats || {};
+        var toolEl = document.getElementById('tool-stats');
+        toolEl.innerHTML = '<div class="tool-stat total"><div class="tool-stat-value">' + (ts.total || 0) + '</div><div class="tool-stat-label">Total</div></div>' +
+          '<div class="tool-stat safe"><div class="tool-stat-value">' + (ts.safe || 0) + '</div><div class="tool-stat-label">Safe</div></div>' +
+          '<div class="tool-stat moderate"><div class="tool-stat-value">' + (ts.moderate || 0) + '</div><div class="tool-stat-label">Moderate</div></div>' +
+          '<div class="tool-stat blocked"><div class="tool-stat-value">' + (ts.blocked || 0) + '</div><div class="tool-stat-label">Blocked</div></div>' +
+          '<div class="tool-stat safe"><div class="tool-stat-value">' + (ts.success || 0) + '</div><div class="tool-stat-label">Success</div></div>';
+
+        // Recent delegations table
+        var delTable = document.getElementById('recent-delegations').querySelector('tbody');
+        var dels = data.recentDelegations || [];
+        if (dels.length === 0) {
+          delTable.innerHTML = '<tr><td colspan="5" class="empty-state">No delegations yet</td></tr>';
+        } else {
+          delTable.innerHTML = dels.map(function(d) {
+            return '<tr><td>' + d.from + '</td><td>' + d.to + '</td><td>' + (d.question || '').slice(0,50) + '</td><td>' + d.durationMs + 'ms</td><td>' + timeAgo(d.timestamp) + '</td></tr>';
+          }).join('');
+        }
+
+        // Recent tools table
+        var toolTable = document.getElementById('recent-tools').querySelector('tbody');
+        var tools = data.recentTools || [];
+        if (tools.length === 0) {
+          toolTable.innerHTML = '<tr><td colspan="5" class="empty-state">No tool executions yet</td></tr>';
+        } else {
+          toolTable.innerHTML = tools.map(function(t) {
+            var lvlBadge = '<span class="badge badge-' + t.level + '">' + t.level + '</span>';
+            var okBadge = t.ok ? '<span class="badge badge-ok">OK</span>' : '<span class="badge badge-fail">FAIL</span>';
+            return '<tr><td>' + t.agent + '</td><td><code>' + (t.command || '').slice(0,40) + '</code></td><td>' + lvlBadge + '</td><td>' + okBadge + '</td><td>' + timeAgo(t.timestamp) + '</td></tr>';
+          }).join('');
+        }
+      })
+      .catch(function(err) {
+        console.error('Stats load error:', err);
+      });
+  }
+
+  window.loadStats = loadStats;
+  loadStats();
+  // Auto-refresh every 30s
+  setInterval(loadStats, 30000);
+})();
+</script>
+</body>
+</html>

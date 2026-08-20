@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "id": "library.disk-cleanup",
+  "name": "Disk Cleanup (with approval)",
+  "description": "Surveys disk pressure, identifies cleanup candidates (large files, /tmp, old logs), then pauses at an approval gate before doing anything destructive. Resume by passing the approval token via opts.approvals.cleanup_gate.",
+  "version": "1.0.0",
+  "tags": ["library", "disk", "cleanup", "approval"],
+  "inputs": [
+    { "name": "host", "type": "string", "required": true },
+    { "name": "minSizeMb", "type": "number", "default": 100, "description": "Minimum file size to flag" },
+    { "name": "logRetentionDays", "type": "number", "default": 14 }
+  ],
+  "onError": "continue",
+  "steps": [
+    {
+      "id": "before",
+      "type": "bash",
+      "description": "Disk usage snapshot before cleanup",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'df -h | head -20'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "large_files",
+      "type": "bash",
+      "description": "Find files larger than minSizeMb (read-only survey)",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'find / -type f -size +${inputs.minSizeMb}M -not -path \"/proc/*\" -not -path \"/sys/*\" 2>/dev/null | head -30'",
+      "timeoutMs": 60000
+    },
+    {
+      "id": "tmp_survey",
+      "type": "bash",
+      "description": "/tmp + /var/tmp survey",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'du -sh /tmp /var/tmp 2>/dev/null'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "old_logs",
+      "type": "bash",
+      "description": "Survey logs older than logRetentionDays (read-only)",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'find /var/log -type f -name \"*.log*\" -mtime +${inputs.logRetentionDays} 2>/dev/null | head -50'",
+      "timeoutMs": 30000
+    },
+    {
+      "id": "cleanup_gate",
+      "type": "approval_gate",
+      "description": "Operator must approve before deletion runs",
+      "command": "disk-cleanup.execute",
+      "ttlSeconds": 1800
+    },
+    {
+      "id": "delete_old_logs",
+      "type": "bash",
+      "description": "Delete logs older than logRetentionDays — runs only after the gate is approved",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'find /var/log -type f -name \"*.log*\" -mtime +${inputs.logRetentionDays} -delete 2>&1 | tail -5'",
+      "timeoutMs": 60000,
+      "onError": "continue"
+    },
+    {
+      "id": "after",
+      "type": "bash",
+      "description": "Disk usage snapshot after cleanup",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'df -h | head -20'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "report",
+      "type": "bash",
+      "description": "One-line summary",
+      "command": "echo 'Disk cleanup on ${inputs.host} complete. before/after captured in steps.before / steps.after.'",
+      "timeoutMs": 5000
+    }
+  ]
+}

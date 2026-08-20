@@ -1,0 +1,51 @@
+.tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+.tab { padding: 8px 16px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text2); cursor: pointer; font-size: .875rem; font-weight: 500; margin-bottom: -1px; }
+.tabActive { border-bottom-color: var(--accent); color: var(--accent); }
+.formGrid { max-width: 520px; }
+.field { margin-bottom: 16px; }
+.label { display: block; font-size: .8rem; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+.input { width: 100%; padding: 8px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: .875rem; box-sizing: border-box; }
+.input:focus { outline: none; border-color: var(--accent); }
+.select { width: 100%; padding: 8px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: .875rem; box-sizing: border-box; }
+.hint { font-size: .75rem; color: var(--text3); margin-top: 4px; }
+.radioGroup { display: flex; gap: 8px; margin-bottom: 16px; }
+.radioLabel { display: flex; align-items: center; padding: 8px 16px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: .875rem; color: var(--text2); gap: 6px; }
+.radioLabel:hover { border-color: var(--accent); }
+.description { font-size: .875rem; color: var(--text3); margin-bottom: 1.5rem; }
+.buttonRow { display: flex; gap: 12px; margin-top: 8px; }
+
+/* ── Mobile responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .formGrid {
+    max-width: 100%;
+  }
+
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+
+  .tab {
+    flex-shrink: 0;
+    min-height: 44px;
+  }
+
+  .radioGroup {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .radioLabel {
+    min-height: 44px;
+  }
+
+  .buttonRow {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .buttonRow > * {
+    width: 100%;
+  }
+}

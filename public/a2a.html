@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — A2A Agent Mesh</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    /* ---- WebSocket indicator ---- */
+    .ws-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--bg4); flex-shrink: 0; transition: background .3s; display: inline-block; }
+    .ws-dot.connected    { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .ws-dot.disconnected { background: var(--danger); }
+
+    /* ---- Agent grid ---- */
+    .agent-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 1100px) { .agent-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 640px)  { .agent-grid { grid-template-columns: 1fr; } }
+
+    /* ---- Agent Card ---- */
+    .agent-card {
+      background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg);
+      overflow: hidden; display: flex; flex-direction: column; transition: border-color .15s, transform .1s;
+    }
+    .agent-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+    .agent-card-header { padding: 16px 16px 12px; }
+    .agent-card-title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+    .agent-name { font-size: 15px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .role-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 0; text-transform: uppercase; letter-spacing: .05em; flex-shrink: 0; }
+    .role-director   { background: var(--accent-bg); color: var(--accent-light); border: 1px solid var(--accent-border); }
+    .role-sysadmin   { background: var(--accent-bg); color: var(--accent-light); border: 1px solid var(--accent-border); }
+    .role-specialist { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
+    .role-default    { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+    .agent-description { font-size: 12px; color: var(--text2); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .agent-card-divider { height: 1px; background: var(--border); margin: 0 16px; }
+
+    /* ---- Skills section ---- */
+    .agent-skills { padding: 10px 16px; }
+    .skills-toggle { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; padding: 2px 0; }
+    .skills-toggle:hover .skills-toggle-label { color: var(--text); }
+    .skills-toggle-label { font-size: 12px; font-weight: 600; color: var(--text2); transition: color .15s; }
+    .skills-toggle-arrow { font-size: 11px; color: var(--text2); transition: transform .2s; }
+    .skills-toggle-arrow.open { transform: rotate(180deg); }
+    .skills-list { display: none; flex-direction: column; gap: 4px; margin-top: 8px; }
+    .skills-list.open { display: flex; }
+    .skill-item { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: var(--bg3); border: 1px solid var(--border); border-radius: 0; gap: 8px; }
+    .skill-name { font-size: 11px; color: var(--text); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .skill-category { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 0; background: var(--accent-bg); color: var(--accent-light); border: 1px solid var(--accent-border); flex-shrink: 0; text-transform: lowercase; }
+    .skills-more { font-size: 11px; color: var(--text2); padding: 3px 8px; text-align: center; }
+
+    /* ---- Card footer ---- */
+    .agent-card-footer { padding: 10px 16px 14px; margin-top: auto; }
+    .agent-endpoint-row { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 10px; }
+    .endpoint-icon { font-size: 11px; flex-shrink: 0; }
+    .endpoint-url { font-family: "Courier New", monospace; font-size: 10px; color: var(--text2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .copy-btn { background: none; border: none; cursor: pointer; color: var(--text2); font-size: 12px; padding: 2px 4px; border-radius: 0; transition: color .15s, background .15s; flex-shrink: 0; }
+    .copy-btn:hover { color: var(--text); background: rgba(255,255,255,.08); }
+    .agent-card-actions { display: flex; justify-content: flex-end; gap: 6px; }
+
+    /* ---- Hero stats ---- */
+    .hero-stats { display: flex; align-items: center; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+    .stat-chip { display: flex; align-items: center; gap: 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: 0; padding: 4px 14px; font-size: 13px; font-weight: 600; color: var(--text); }
+    .stat-chip .stat-label { color: var(--text2); font-weight: 400; font-size: 12px; }
+    .stat-chip.green { border-color: var(--success); background: var(--success-bg); color: var(--success); }
+
+    /* ---- Grid section ---- */
+    .grid-section { margin-bottom: 32px; }
+    .grid-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .grid-header h2 { font-size: 15px; font-weight: 700; color: var(--text); }
+    .grid-count { font-size: 12px; color: var(--text2); }
+
+    /* ---- JSON pre ---- */
+    .json-pre { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: "Courier New", monospace; font-size: 12px; color: var(--success); white-space: pre; overflow-x: auto; line-height: 1.6; tab-size: 2; }
+
+    /* ---- Send Task form ---- */
+    .modal-wide { max-width: 860px !important; }
+    .field-label { display: block; font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+    .field-hint { font-size: 11px; color: var(--text2); margin-top: 4px; }
+    .field-hint code { background: var(--bg3); padding: 1px 4px; border-radius: 0; font-family: monospace; }
+    .form-input { width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 8px 10px; font-size: 13px; font-family: "Courier New", monospace; outline: none; box-sizing: border-box; resize: vertical; }
+    .form-input:focus { border-color: var(--accent); }
+
+    /* ---- Task status badges ---- */
+    .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 0; font-size: 11px; font-weight: 600; }
+    .badge-working   { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning); }
+    .badge-completed { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
+    .badge-failed    { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
+    .badge-canceled  { background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
+
+    /* ---- Task Feed ---- */
+    .task-feed-list { display: flex; flex-direction: column; gap: 8px; }
+    .task-feed-item { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; cursor: pointer; transition: border-color .15s; }
+    .task-feed-item:hover { border-color: var(--border2); }
+    .task-feed-item.expanded { border-color: var(--accent); }
+    .task-feed-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .task-agent-label { font-size: 11px; color: var(--accent-light); font-weight: 600; }
+    .task-command-label { font-size: 12px; color: var(--text); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .task-time-label { font-size: 10px; color: var(--text2); white-space: nowrap; }
+    .task-delegation-badge { font-size: 10px; color: var(--warning); background: var(--warning-bg); border: 1px solid var(--warning); padding: 1px 6px; border-radius: 0; white-space: nowrap; }
+    .task-detail { margin-top: 10px; display: none; }
+    .task-feed-item.expanded .task-detail { display: block; }
+
+    /* ---- Modal title sub ---- */
+    .modal-title-sub { font-size: 11px; color: var(--text2); font-weight: 400; font-family: "Courier New", monospace; }
+    .modal-header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo"><span>[=] IT OPS</span></div>
+  <nav class="sidebar-nav">
+    <span class="sidebar-section">Operations</span>
+    <a href="/incidents" class="nav-item"><span class="nav-icon">!</span>Incidents</a>
+    <a href="/workflows" class="nav-item"><span class="nav-icon">></span>Workflows</a>
+    <a href="/runbooks" class="nav-item"><span class="nav-icon">#</span>Runbooks</a>
+    <a href="/servers" class="nav-item"><span class="nav-icon">@</span>Servers</a>
+    <a href="/monitoring.html" class="nav-item"><span class="nav-icon">%</span>Monitoring</a>
+    <span class="sidebar-section">Integrations</span>
+    <a href="/jira.html" class="nav-item"><span class="nav-icon">*</span>Jira</a>
+    <a href="/a2a.html" class="nav-item active"><span class="nav-icon">&amp;</span>A2A Mesh</a>
+    <span class="sidebar-section">System</span>
+    <a href="/agent-details.html" class="nav-item"><span class="nav-icon">$</span>Agents</a>
+    <a href="/scheduler" class="nav-item"><span class="nav-icon">~</span>Scheduler</a>
+    <a href="/security.html" class="nav-item"><span class="nav-icon">^</span>Security</a>
+    <a href="/users.html" class="nav-item" id="nav-users" style="display:none"><span class="nav-icon">+</span>Users</a>
+    <span class="sidebar-section">Communication</span>
+    <a href="/agent-chat.html" class="nav-item"><span class="nav-icon">&lt;</span>Agent Chat</a>
+    <a href="/agent-bridge" class="nav-item"><span class="nav-icon">&lt;&gt;</span>Agent Bridge</a>
+    <span class="sidebar-section">Tools</span>
+    <a href="/dashboard" class="nav-item"><span class="nav-icon">=</span>Dashboard</a>
+    <a href="/cicd" class="nav-item"><span class="nav-icon">|</span>CI/CD</a>
+    <a href="/audit" class="nav-item"><span class="nav-icon">.</span>Audit</a>
+    <a href="/rbac" class="nav-item"><span class="nav-icon">:</span>RBAC</a>
+    <a href="/plugin-manager" class="nav-item"><span class="nav-icon">,</span>Plugins</a>
+    <a href="/agent-runtime" class="nav-item"><span class="nav-icon">&gt;&gt;</span>Agent Runtime</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="user-avatar">?</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-username" id="user-name">---</div>
+        <div class="sidebar-role" id="user-role"></div>
+      </div>
+    </div>
+    <div class="sidebar-actions">
+      <button class="btn-icon" onclick="doLogout()" title="Logout">[X]</button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">A2A Agent Mesh</h1>
+      <p class="page-subtitle">Multi-agent communication and task routing</p>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <span class="ws-dot" id="ws-dot" title="WebSocket"></span>
+      <span id="ws-label" style="font-size:11px;color:var(--text2)">connecting…</span>
+      <button class="btn btn-secondary btn-sm" onclick="openSystemCardModal()">View System Card</button>
+      <button class="btn btn-primary btn-sm" id="refreshBtn" onclick="doRefresh()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <div class="page-content">
+
+    <!-- Hero stats -->
+    <div class="hero-stats" style="margin-bottom:24px">
+      <div class="stat-chip">
+        <span id="stat-agents">—</span>
+        <span class="stat-label">Agents</span>
+      </div>
+      <div class="stat-chip">
+        <span id="stat-skills">—</span>
+        <span class="stat-label">Skills</span>
+      </div>
+      <div class="stat-chip green">
+        OK A2A Compatible
+      </div>
+    </div>
+
+    <!-- Registered Agents -->
+    <div class="grid-section">
+      <div class="grid-header">
+        <h2>Registered Agents</h2>
+        <span class="grid-count" id="grid-count"></span>
+      </div>
+      <div id="agent-grid-container">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <span>Loading agents…</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Task Feed -->
+    <div class="grid-section" id="task-feed-section">
+      <div class="grid-header">
+        <h2>Task Feed</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="grid-count" id="task-feed-count"></span>
+          <button class="btn btn-secondary btn-xs" onclick="refreshTaskFeed()">↺ Refresh</button>
+        </div>
+      </div>
+      <div id="task-feed-container">
+        <div class="empty-state" style="padding:24px 0;text-align:center;color:var(--text2);font-size:13px">
+          No tasks yet — use [>] Send Task on any agent card above.
+        </div>
+      </div>
+    </div>
+
+    <!-- External Agents (Phase 4) -->
+    <div class="grid-section">
+      <div class="grid-header">
+        <h2>[@] External Agents</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="grid-count" id="external-count"></span>
+          <button class="btn btn-primary btn-xs" onclick="openRegisterExternalModal()">+ Register</button>
+        </div>
+      </div>
+      <div id="external-agents-container">
+        <div class="empty-state" style="padding:24px 0;text-align:center;color:var(--text2);font-size:13px">
+          No external agents registered yet.<br>
+          Register any A2A-compatible system to include it in peer routing.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script src="/auth-guard.js"></script>
+<div id="toast"></div>
+
+<!-- System Card Modal -->
+<div class="modal-overlay" id="system-card-modal" onclick="closeModalOnOverlay(event,'system-card-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">System Agent Card</div>
+        <div class="modal-title-sub">/.well-known/agent.json</div>
+      </div>
+      <div class="modal-header-right">
+        <button class="btn btn-secondary btn-xs" onclick="copyJson('system-card-json')">Copy JSON</button>
+        <button class="modal-close" onclick="closeModal('system-card-modal')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <pre class="json-pre" id="system-card-json">Loading…</pre>
+    </div>
+  </div>
+</div>
+
+<!-- Agent Card Modal -->
+<div class="modal-overlay" id="agent-card-modal" onclick="closeModalOnOverlay(event,'agent-card-modal')">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="agent-card-modal-title">Agent Card</div>
+        <div class="modal-title-sub" id="agent-card-modal-sub"></div>
+      </div>
+      <div class="modal-header-right">
+        <button class="btn btn-secondary btn-xs" onclick="copyJson('agent-card-json')">Copy JSON</button>
+        <button class="modal-close" onclick="closeModal('agent-card-modal')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <pre class="json-pre" id="agent-card-json">Loading…</pre>
+    </div>
+  </div>
+</div>
+
+<!-- Send Task Modal -->
+<div class="modal-overlay" id="send-task-modal" onclick="closeModalOnOverlay(event,'send-task-modal')">
+  <div class="modal modal-wide">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">[>] Send Task</div>
+        <div class="modal-title-sub" id="send-task-agent-sub">Agent endpoint</div>
+      </div>
+      <div class="modal-header-right">
+        <button class="modal-close" onclick="closeModal('send-task-modal')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" style="display:flex;gap:16px;flex-direction:column">
+      <div>
+        <label class="field-label">Command / Message</label>
+        <input id="task-command" class="form-input" type="text"
+          placeholder="e.g. docker.list  or  incident.create title=Test severity=high" autocomplete="off" />
+        <div class="field-hint">
+          Direct: <code>skill.command key=value</code> &nbsp;·&nbsp;
+          Supported skills shown in the agent card above.
+        </div>
+      </div>
+      <div>
+        <label class="field-label">Extra Params (JSON, optional)</label>
+        <textarea id="task-params" class="form-input" rows="2" placeholder='{"host": "server1"}'></textarea>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary" onclick="submitTask()">▶ Send Task</button>
+        <span id="task-status-badge" class="status-badge" style="display:none"></span>
+      </div>
+      <div id="task-result-area" style="display:none">
+        <div class="agent-card-divider"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span class="field-label" style="margin:0">Result</span>
+          <span id="task-id-label" style="font-size:10px;color:var(--text2)"></span>
+        </div>
+        <pre class="json-pre" id="task-result-json" style="max-height:280px;overflow-y:auto"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Register External Agent Modal -->
+<div class="modal-overlay" id="register-external-modal" onclick="closeModalOnOverlay(event,'register-external-modal')">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">[@] Register External Agent</div>
+        <div class="modal-title-sub">Fetch A2A card from a remote system</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('register-external-modal')">✕</button>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <label class="field-label">Agent Card URL</label>
+        <input id="ext-agent-url" class="form-input" type="url"
+          placeholder="https://other-system/.well-known/agent.json" autocomplete="off" />
+        <div class="field-hint">
+          Accepts <code>/.well-known/agent.json</code> or any direct A2A agent card URL.
+          The card will be fetched, validated, and stored locally.
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-primary" onclick="submitRegisterExternal()">Fetch &amp; Register</button>
+        <span id="ext-reg-status" style="font-size:12px;color:var(--text2)"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Theme ────────────────────────────────────────────────────────────────────────────────
+()();
+
+// ── Auth ────────────────────────────────────────────────────────────────────────────────
+const API = '';
+let token = sessionStorage.getItem('itops_token');
+if (!token) location.href = '/incidents.html';
+
+fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } })
+  .then(r => r.json()).then(u => {
+    document.getElementById('user-name').textContent = u.username;
+    document.getElementById('user-role').textContent = u.role;
+    document.getElementById('user-avatar').textContent = u.username[0].toUpperCase();
+    if (u.role === 'admin') document.getElementById('nav-users').style.display = 'flex';
+    sessionStorage.setItem('itops_username', u.username);
+    sessionStorage.setItem('itops_role', u.role || 'viewer');
+  }).catch(() => { location.href = '/incidents.html'; });
+
+function doLogout() { sessionStorage.clear(); location.href = '/incidents.html'; }
+
+// ── Toast ────────────────────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  t.style.borderColor = type === 'error' ? 'var(--danger)' : type === 'success' ? 'var(--success)' : 'var(--border2)';
+  clearTimeout(t._to);
+  t._to = setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+
+// ── State ────────────────────────────────────────────────────────────────────────────────
+let agents = [];
+let systemCard = null;
+let wsConn = null;
+
+// ── API helper ────────────────────────────────────────────────────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const r = await fetch(API + path, {
+    ...opts,
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  });
+  if (r.status === 401 || r.status === 403) { sessionStorage.clear(); location.href = '/incidents.html'; return null; }
+  return r.json();
+}
+
+// ── Load agents ────────────────────────────────────────────────────────────────────────────────
+async function loadAgents() {
+  const data = await apiFetch('/a2a/agents');
+  if (!data) return;
+  agents = data.agents || [];
+  updateStats();
+  renderGrid();
+}
+
+async function loadSystemCard() {
+  try { const r = await fetch('/.well-known/agent.json'); systemCard = await r.json(); }
+  catch { systemCard = null; }
+}
+
+function getTotalSkills() {
+  const ids = new Set();
+  agents.forEach(a => (a.skills || []).forEach(s => ids.add(s.id || s.name)));
+  return ids.size;
+}
+
+function updateStats() {
+  document.getElementById('stat-agents').textContent = agents.length;
+  document.getElementById('stat-skills').textContent = getTotalSkills();
+  const cnt = document.getElementById('grid-count');
+  if (cnt) cnt.textContent = agents.length + ' agent' + (agents.length !== 1 ? 's' : '');
+}
+
+// ── Render grid ────────────────────────────────────────────────────────────────────────────────
+function renderGrid() {
+  const container = document.getElementById('agent-grid-container');
+  if (!agents.length) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">[$]</div><div class="empty-title">No agents found</div><div class="empty-desc">Agents will appear here once they are registered in the organization.</div></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="agent-grid">${agents.map((a, idx) => renderAgentCard(a, idx)).join('')}</div>`;
+}
+
+function roleBadgeClass(role) {
+  if (!role) return 'role-default';
+  const r = role.toLowerCase();
+  if (r === 'director')   return 'role-director';
+  if (r === 'sysadmin')   return 'role-sysadmin';
+  if (r === 'specialist') return 'role-specialist';
+  return 'role-default';
+}
+
+function renderAgentCard(agent, idx) {
+  const name        = esc(agent.name || agent.agentId || 'Unknown Agent');
+  const role        = agent.role || agent.metadata?.role || '';
+  const desc        = esc(agent.description || '');
+  const skills      = agent.skills || [];
+  const endpoint    = agent.url || agent.endpoint || '';
+  const agentId     = agent.metadata?.agentId || extractAgentIdFromUrl(endpoint) || idx;
+  const shortUrl    = endpoint ? shortenUrl(endpoint) : '—';
+  const skillCount  = skills.length;
+  const maxShown    = 8;
+  const shownSkills = skills.slice(0, maxShown);
+  const moreCount   = skillCount - maxShown;
+  const skillsHtml  = shownSkills.map(s => `
+    <div class="skill-item">
+      <span class="skill-name">• ${esc(s.name || s.id || '')}</span>
+      ${s.category ? `<span class="skill-category">${esc(s.category)}</span>` : ''}
+    </div>`).join('') + (moreCount > 0 ? `<div class="skills-more">+ ${moreCount} more</div>` : '');
+
+  return `
+  <div class="agent-card" id="agent-card-${idx}">
+    <div class="agent-card-header">
+      <div class="agent-card-title-row">
+        <div class="agent-name">[$] ${name}</div>
+        ${role ? `<span class="role-badge ${roleBadgeClass(role)}">${esc(role)}</span>` : ''}
+      </div>
+      ${desc ? `<div class="agent-description">${desc}</div>` : ''}
+    </div>
+    ${skillCount > 0 ? `
+    <div class="agent-card-divider"></div>
+    <div class="agent-skills">
+      <div class="skills-toggle" onclick="toggleSkills(${idx})">
+        <span class="skills-toggle-label">Skills (${skillCount})</span>
+        <span class="skills-toggle-arrow" id="arrow-${idx}">▼</span>
+      </div>
+      <div class="skills-list" id="skills-${idx}">${skillsHtml}</div>
+    </div>` : ''}
+    <div class="agent-card-divider"></div>
+    <div class="agent-card-footer">
+      ${endpoint ? `
+      <div class="agent-endpoint-row">
+        <span class="endpoint-icon">[&amp;]</span>
+        <span class="endpoint-url" title="${esc(endpoint)}">${esc(shortUrl)}</span>
+        <button class="copy-btn" title="Copy endpoint" onclick="copyEndpoint('${esc(endpoint)}', this)">⎘</button>
+      </div>` : ''}
+      <div class="agent-card-actions">
+        <button class="btn btn-secondary btn-xs" onclick="openAgentCardModal('${esc(String(agentId))}', '${esc(name)}', '${esc(endpoint)}')">View Card JSON</button>
+        <button class="btn btn-primary btn-xs" onclick="openSendTaskModal('${esc(String(agentId))}', '${esc(name)}', '${esc(endpoint)}')">[>] Send Task</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function extractAgentIdFromUrl(url) {
+  if (!url) return null;
+  const m = url.match(/\/agents\/([^/?#]+)/);
+  return m ? m[1] : null;
+}
+
+function shortenUrl(url) {
+  try { const u = new URL(url); return u.pathname + (u.search || ''); }
+  catch { return url.length > 48 ? '…' + url.slice(-45) : url; }
+}
+
+function toggleSkills(idx) {
+  const list  = document.getElementById('skills-' + idx);
+  const arrow = document.getElementById('arrow-' + idx);
+  if (!list) return;
+  const open = list.classList.toggle('open');
+  if (arrow) arrow.classList.toggle('open', open);
+}
+
+function copyEndpoint(url, btn) {
+  if (!url) return;
+  navigator.clipboard.writeText(url).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = 'OK'; btn.style.color = 'var(--success)';
+    setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500);
+    showToast('Endpoint copied!', 'success');
+  }).catch(() => showToast('Copy failed', 'error'));
+}
+
+// ── System card modal ────────────────────────────────────────────────────────────────────────────────
+function openSystemCardModal() {
+  const pre = document.getElementById('system-card-json');
+  pre.textContent = systemCard ? JSON.stringify(systemCard, null, 2) : '// /.well-known/agent.json not available';
+  openModal('system-card-modal');
+}
+
+async function openAgentCardModal(agentId, agentName, endpoint) {
+  document.getElementById('agent-card-modal-title').textContent = '[$] ' + agentName;
+  document.getElementById('agent-card-modal-sub').textContent = endpoint ? '/a2a/agents/' + agentId : '';
+  document.getElementById('agent-card-json').textContent = 'Loading…';
+  openModal('agent-card-modal');
+  try {
+    const url = agentId ? '/a2a/agents/' + agentId : null;
+    if (!url) { document.getElementById('agent-card-json').textContent = '// Agent ID not available'; return; }
+    const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    document.getElementById('agent-card-json').textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    const agent = agents.find(a => {
+      const id = a.metadata?.agentId || extractAgentIdFromUrl(a.url || a.endpoint || '');
+      return String(id) === String(agentId);
+    });
+    document.getElementById('agent-card-json').textContent = agent
+      ? JSON.stringify(agent, null, 2)
+      : '// Could not load agent card: ' + e.message;
+  }
+}
+
+// ── Send Task ────────────────────────────────────────────────────────────────────────────────
+let _sendTaskAgentId = null;
+
+function openSendTaskModal(agentId, agentName, endpoint) {
+  _sendTaskAgentId = agentId;
+  document.getElementById('send-task-agent-sub').textContent =
+    (endpoint ? endpoint : '/a2a/agents/' + agentId) + ' · ' + agentName;
+  document.getElementById('task-command').value = '';
+  document.getElementById('task-params').value = '';
+  document.getElementById('task-result-area').style.display = 'none';
+  document.getElementById('task-status-badge').style.display = 'none';
+  openModal('send-task-modal');
+  setTimeout(() => document.getElementById('task-command').focus(), 80);
+}
+
+async function submitTask() {
+  if (!_sendTaskAgentId) return;
+  const commandText = (document.getElementById('task-command').value || '').trim();
+  const paramsText  = (document.getElementById('task-params').value || '').trim();
+  if (!commandText) { showToast('Enter a command', 'error'); return; }
+
+  let extraParams = {};
+  if (paramsText) {
+    try { extraParams = JSON.parse(paramsText); }
+    catch { showToast('Invalid JSON in params field', 'error'); return; }
+  }
+
+  const badge = document.getElementById('task-status-badge');
+  badge.textContent = '⟳ Sending…'; badge.className = 'status-badge badge-working'; badge.style.display = 'inline-flex';
+  const resultArea = document.getElementById('task-result-area');
+  const resultPre  = document.getElementById('task-result-json');
+  resultArea.style.display = 'none';
+
+  const rpc = {
+    jsonrpc: '2.0', id: Date.now(), method: 'tasks/send',
+    params: {
+      id: crypto.randomUUID(),
+      message: {
+        role: 'user',
+        parts: [{ type: 'text', text: commandText + (paramsText && !commandText.includes('=') && !commandText.includes('{') ? ' ' + paramsText : '') }],
+      },
+      metadata: extraParams,
+    },
+  };
+
+  try {
+    const r = await fetch('/a2a/agents/' + _sendTaskAgentId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify(rpc),
+    });
+    const data = await r.json();
+    if (data.error) {
+      badge.textContent = 'FAIL Error'; badge.className = 'status-badge badge-failed';
+      resultPre.textContent = JSON.stringify(data.error, null, 2);
+      resultArea.style.display = 'block'; return;
+    }
+    const task = data.result;
+    document.getElementById('task-id-label').textContent = 'Task: ' + task.id;
+    resultPre.textContent = JSON.stringify(task, null, 2);
+    resultArea.style.display = 'block';
+    badge.textContent = '⟳ ' + (task.status?.state || 'submitted');
+    badge.className = 'status-badge badge-working';
+    pollTask(task.id, badge, resultPre).finally(() => refreshTaskFeed());
+  } catch (e) {
+    badge.textContent = 'FAIL Failed'; badge.className = 'status-badge badge-failed';
+    showToast('Send failed: ' + e.message, 'error');
+  }
+}
+
+async function pollTask(taskId, badge, pre) {
+  const TERMINAL = ['completed', 'failed', 'canceled'];
+  let tries = 0;
+  while (tries++ < 30) {
+    await new Promise(r => setTimeout(r, 1200));
+    try {
+      const r = await fetch('/a2a/tasks/' + taskId, { headers: { 'Authorization': 'Bearer ' + token } });
+      if (!r.ok) break;
+      const task = await r.json();
+      pre.textContent = JSON.stringify(task, null, 2);
+      const state = task.status?.state || 'working';
+      badge.textContent = stateLabel(state); badge.className = 'status-badge ' + stateBadgeClass(state);
+      if (TERMINAL.includes(state)) return;
+    } catch { break; }
+  }
+}
+
+function stateLabel(s) {
+  if (s === 'submitted')  return '[=] Submitted';
+  if (s === 'working')    return '⟳ Working…';
+  if (s === 'completed')  return 'OK Completed';
+  if (s === 'failed')     return 'FAIL Failed';
+  if (s === 'canceled')   return '⊘ Canceled';
+  return s;
+}
+function stateBadgeClass(s) {
+  if (s === 'completed') return 'badge-completed';
+  if (s === 'failed')    return 'badge-failed';
+  if (s === 'canceled')  return 'badge-canceled';
+  return 'badge-working';
+}
+
+function copyJson(preId) {
+  const text = document.getElementById(preId)?.textContent || '';
+  navigator.clipboard.writeText(text).then(() => showToast('JSON copied!', 'success')).catch(() => showToast('Copy failed', 'error'));
+}
+
+// ── Modal helpers ────────────────────────────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); document.body.style.overflow = 'hidden'; }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); document.body.style.overflow = ''; }
+function closeModalOnOverlay(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+
+// ── Refresh ────────────────────────────────────────────────────────────────────────────────
+async function doRefresh() {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true; btn.textContent = '↻ Refreshing…';
+  document.getElementById('agent-grid-container').innerHTML = `<div class="loading-state"><div class="spinner"></div><span>Loading agents…</span></div>`;
+  await Promise.all([loadAgents(), loadSystemCard(), refreshTaskFeed(), loadExternalAgents()]);
+  btn.disabled = false; btn.textContent = '↻ Refresh';
+  showToast('Agent mesh refreshed', 'success');
+}
+
+// ── Task Feed ────────────────────────────────────────────────────────────────────────────────
+async function refreshTaskFeed() {
+  const container = document.getElementById('task-feed-container');
+  try {
+    const r = await fetch('/a2a/tasks', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!r.ok) return;
+    const data = await r.json();
+    const tasks = data.tasks || [];
+    document.getElementById('task-feed-count').textContent = tasks.length + ' task' + (tasks.length !== 1 ? 's' : '');
+    if (!tasks.length) {
+      container.innerHTML = '<div class="empty-state" style="padding:24px 0;text-align:center;color:var(--text2);font-size:13px">No tasks yet — use [>] Send Task on any agent card above.</div>';
+      return;
+    }
+    container.innerHTML = '<div class="task-feed-list">' + tasks.map(renderTaskFeedItem).join('') + '</div>';
+  } catch { /* non-fatal */ }
+}
+
+function renderTaskFeedItem(task) {
+  const state   = task.status?.state || 'unknown';
+  const agentId = task.agentId || '';
+  const agent   = agents.find(a => {
+    const id = a.metadata?.agentId || extractAgentIdFromUrl(a.url || a.endpoint || '');
+    return String(id) === String(agentId);
+  });
+  const agentName   = agent?.name || agentId.slice(0, 8) + '…';
+  const commandText = task.history?.[0]?.parts?.[0]?.text || '—';
+  const when        = task.createdAt ? new Date(task.createdAt).toLocaleTimeString() : '';
+  const isDelegated = task.artifacts?.some(a => a.metadata?.delegatedTo);
+  const parentId    = task.metadata?.parentTaskId;
+  const resultText  = (() => {
+    const art = task.artifacts?.[0];
+    if (!art) return task.status?.message?.parts?.[0]?.text || '—';
+    return art.parts?.find(p => p.type === 'text')?.text || JSON.stringify(art.parts?.[0]?.data ?? '—');
+  })();
+  return `<div class="task-feed-item" id="tfi-${task.id}" onclick="toggleTaskItem('${task.id}')">
+    <div class="task-feed-row">
+      <span class="task-agent-label">[$] ${esc(agentName)}</span>
+      <span class="task-command-label">${esc(commandText)}</span>
+      ${isDelegated ? '<span class="task-delegation-badge">⇒ delegated</span>' : ''}
+      ${parentId ? '<span class="task-delegation-badge" style="color:#94a3b8">sub-task</span>' : ''}
+      <span class="status-badge ${stateBadgeClass(state)}">${stateLabel(state)}</span>
+      <span class="task-time-label">${esc(when)}</span>
+    </div>
+    <div class="task-detail">
+      <pre class="json-pre" style="font-size:11px;max-height:200px;overflow-y:auto;margin-top:8px">${esc(resultText.length > 1200 ? resultText.slice(0, 1200) + '…' : resultText)}</pre>
+      <div style="font-size:10px;color:var(--text2);margin-top:4px">Task ID: ${esc(task.id)}</div>
+    </div>
+  </div>`;
+}
+
+function toggleTaskItem(taskId) {
+  const el = document.getElementById('tfi-' + taskId);
+  if (el) el.classList.toggle('expanded');
+}
+
+// ── External Agents ────────────────────────────────────────────────────────────────────────────────
+async function loadExternalAgents() {
+  const container = document.getElementById('external-agents-container');
+  try {
+    const r = await fetch('/a2a/external', { headers: { 'Authorization': 'Bearer ' + token } });
+    if (!r.ok) return;
+    const data = await r.json();
+    const ext = data.agents || [];
+    document.getElementById('external-count').textContent = ext.length + ' agent' + (ext.length !== 1 ? 's' : '');
+    if (!ext.length) {
+      container.innerHTML = '<div class="empty-state" style="padding:24px 0;text-align:center;color:var(--text2);font-size:13px">No external agents registered yet.<br>Register any A2A-compatible system to include it in peer routing.</div>';
+      return;
+    }
+    container.innerHTML = '<div class="task-feed-list">' + ext.map(renderExternalAgent).join('') + '</div>';
+  } catch { /* non-fatal */ }
+}
+
+function renderExternalAgent(record) {
+  const card   = record.card || {};
+  const skills = (card.skills || []).slice(0, 6);
+  const name   = esc(card.name || record.id);
+  const org    = esc(card.provider?.organization || '');
+  const url    = esc(card.url || record.registrationUrl || '');
+  const since  = record.registeredAt ? new Date(record.registeredAt).toLocaleDateString() : '';
+  return `<div class="task-feed-item" style="border-color:rgba(139,92,246,.3)">
+    <div class="task-feed-row">
+      <span class="task-agent-label" style="color:#a78bfa">[@] ${name}</span>
+      ${org ? `<span style="font-size:11px;color:var(--text2)">${org}</span>` : ''}
+      <span class="task-delegation-badge" style="color:#a78bfa;border-color:rgba(139,92,246,.3);background:rgba(139,92,246,.08)">${skills.length} skills</span>
+      <span class="task-time-label">${esc(since)}</span>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn btn-secondary btn-xs" onclick="refreshExternalAgent('${esc(record.id)}')">↺</button>
+        <button class="btn btn-danger btn-xs" onclick="unregisterExternal('${esc(record.id)}', '${name}')">✕</button>
+      </div>
+    </div>
+    ${url ? `<div style="font-size:10px;color:var(--text2);margin-top:4px;font-family:monospace">${url}</div>` : ''}
+    ${skills.length ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${skills.map(s => `<span class="skill-category">${esc(s.name || s.id)}</span>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+function openRegisterExternalModal() {
+  document.getElementById('ext-agent-url').value = '';
+  document.getElementById('ext-reg-status').textContent = '';
+  openModal('register-external-modal');
+  setTimeout(() => document.getElementById('ext-agent-url').focus(), 80);
+}
+
+async function submitRegisterExternal() {
+  const url = (document.getElementById('ext-agent-url').value || '').trim();
+  if (!url) { showToast('Enter a URL', 'error'); return; }
+  const status = document.getElementById('ext-reg-status');
+  status.textContent = '⟳ Fetching card…';
+  try {
+    const r = await fetch('/a2a/external', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ url }),
+    });
+    const data = await r.json();
+    if (!r.ok) { status.textContent = 'FAIL' + (data.error || 'Failed'); return; }
+    status.textContent = 'OK Registered: ' + (data.agent?.card?.name || url);
+    await loadExternalAgents();
+    setTimeout(() => closeModal('register-external-modal'), 1200);
+    showToast('External agent registered!', 'success');
+  } catch (e) { status.textContent = 'FAIL' + e.message; }
+}
+
+async function refreshExternalAgent(id) {
+  try {
+    const r = await fetch('/a2a/external/' + id + '/refresh', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+    if (r.ok) { await loadExternalAgents(); showToast('Card refreshed', 'success'); }
+    else showToast('Refresh failed', 'error');
+  } catch { showToast('Refresh failed', 'error'); }
+}
+
+async function unregisterExternal(id, name) {
+  if (!confirm('Unregister ' + name + '?')) return;
+  const r = await fetch('/a2a/external/' + id, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token } });
+  if (r.ok) { await loadExternalAgents(); showToast('Unregistered', 'success'); }
+  else showToast('Failed to unregister', 'error');
+}
+
+// ── Escape helper ────────────────────────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+// ── WebSocket ────────────────────────────────────────────────────────────────────────────────
+function connectWS() {
+  try {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    wsConn = new WebSocket(`${proto}//${location.host}/ws?token=${encodeURIComponent(token)}`);
+    wsConn.addEventListener('open', () => {
+      document.getElementById('ws-dot').className = 'ws-dot connected';
+      document.getElementById('ws-label').textContent = 'live';
+    });
+    wsConn.addEventListener('close', () => {
+      document.getElementById('ws-dot').className = 'ws-dot disconnected';
+      document.getElementById('ws-label').textContent = 'disconnected';
+      setTimeout(connectWS, 5000);
+    });
+    wsConn.addEventListener('error', () => { document.getElementById('ws-dot').className = 'ws-dot disconnected'; });
+    wsConn.addEventListener('message', (e) => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'connected') return;
+        if (msg.type === 'agent_registered' || msg.type === 'agent_updated') loadAgents();
+      } catch {}
+    });
+  } catch {
+    document.getElementById('ws-dot').className = 'ws-dot disconnected';
+    document.getElementById('ws-label').textContent = 'no ws';
+  }
+}
+
+// ── Bootstrap ────────────────────────────────────────────────────────────────────────────────
+(async function init() {
+  await Promise.all([loadAgents(), loadSystemCard(), refreshTaskFeed(), loadExternalAgents()]);
+  connectWS();
+})();
+</script>
+</body>
+</html>

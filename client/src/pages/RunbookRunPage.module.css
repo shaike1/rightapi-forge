@@ -1,0 +1,187 @@
+.actionsRow { display: flex; gap: 8px; align-items: center; }
+.ghostLink {
+  font-size: .85rem;
+  color: var(--text2);
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+}
+.ghostLink:hover { color: var(--accent); background: var(--bg3); }
+
+.empty { padding: 40px; text-align: center; color: var(--text3); font-size: .9rem; }
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.headerMeta {
+  font-size: .8rem;
+  color: var(--text3);
+}
+.headerMeta strong { color: var(--text); font-weight: 600; }
+
+.ctxLink {
+  margin-left: 10px;
+  color: var(--accent);
+  font-size: .8rem;
+  text-decoration: none;
+}
+.ctxLink:hover { text-decoration: underline; }
+
+.errorBanner {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  color: var(--danger);
+  font-size: .85rem;
+}
+
+.approvalTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.approvalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: .85rem;
+  color: var(--text2);
+}
+.approvalBody strong { color: var(--text); }
+
+.approvalControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.approvalNote {
+  font-size: .8rem;
+  color: var(--text3);
+  margin-top: 6px;
+}
+
+.input {
+  flex: 1;
+  min-width: 200px;
+  padding: 7px 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: .85rem;
+}
+.input:focus { outline: none; border-color: var(--accent); }
+
+.stepList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stepRow {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.stepStatus { padding-top: 2px; }
+.stepBody { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.stepTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: .85rem;
+  flex-wrap: wrap;
+}
+.stepNum { color: var(--text3); font-family: var(--font-mono, monospace); font-size: .75rem; }
+.stepType {
+  padding: 1px 8px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  font-size: .7rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.stepDesc { color: var(--text); font-weight: 500; }
+.stepDuration { margin-left: auto; color: var(--text3); font-size: .75rem; font-variant-numeric: tabular-nums; }
+
+.stepOutput, .stepError {
+  margin: 6px 0 0 0;
+  padding: 8px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono, monospace);
+  font-size: .75rem;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.stepError {
+  background: var(--danger-bg);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.stepMeta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: .72rem;
+  color: var(--text3);
+  margin-top: 4px;
+}
+
+.iconOk   { color: var(--success); }
+.iconBad  { color: var(--danger); }
+.iconWarn { color: var(--warning); }
+.iconDim  { color: var(--text3); }
+.spin {
+  color: var(--accent);
+  animation: rbrun-spin 1s linear infinite;
+}
+@keyframes rbrun-spin { to { transform: rotate(360deg); } }
+
+.approvalHistory {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.approvalHistoryRow {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.approvalMeta { color: var(--text3); font-size: .75rem; margin-top: 2px; }

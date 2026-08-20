@@ -1,0 +1,330 @@
+.container {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Cards ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 8px);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.card:last-child {
+  margin-bottom: 0;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.cardBody {
+  padding: 18px;
+}
+
+/* ── Form elements ── */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.input {
+  background: var(--bg3, var(--bg));
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 6px);
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 0.875rem;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.input:disabled {
+  opacity: 0.5;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--text2);
+  font-style: italic;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 10px;
+}
+
+/* ── Radio ── */
+.radioGroup {
+  display: flex;
+  gap: 18px;
+}
+.radioLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  color: var(--text);
+  cursor: pointer;
+}
+.radioLabel input {
+  accent-color: var(--accent);
+}
+
+/* ── Status badge ── */
+.statusBadge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.untested {
+  color: var(--text2);
+  border-color: var(--border);
+  background: transparent;
+}
+.connected {
+  color: var(--success);
+  border-color: var(--success);
+  background: var(--success-bg);
+}
+.failed {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: var(--danger-bg);
+}
+
+/* ── Active host ── */
+.activeHost {
+  color: var(--accent);
+  font-weight: 400;
+  font-size: 0.82rem;
+}
+
+/* ── Buttons ── */
+.btnPrimary {
+  width: 100%;
+  padding: 9px 16px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius, 6px);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: opacity 0.15s;
+}
+.btnPrimary:hover:not(:disabled) {
+  opacity: 0.85;
+}
+.btnPrimary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btnGhost {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 6px);
+  color: var(--text2);
+  font-size: 0.8rem;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btnGhost:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btnRun {
+  padding: 0 20px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius, 6px);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.btnRun:hover:not(:disabled) {
+  opacity: 0.85;
+}
+.btnRun:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Command row ── */
+.cmdRow {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+
+.cmdInput {
+  flex: 1;
+  background: var(--bg3, var(--bg));
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 6px);
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-family: 'Courier New', 'Consolas', monospace;
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.cmdInput:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.cmdInput:disabled {
+  opacity: 0.5;
+}
+
+/* ── Terminal ── */
+.terminal {
+  background: #0a0c14;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 8px);
+  padding: 16px;
+  font-family: 'Courier New', 'Consolas', monospace;
+  font-size: 0.85rem;
+  min-height: 300px;
+  max-height: 500px;
+  overflow-y: auto;
+  color: var(--text);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.terminal::-webkit-scrollbar {
+  width: 6px;
+}
+.terminal::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.termLine {
+  margin: 2px 0;
+  line-height: 1.6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  word-break: break-all;
+}
+
+.termTimestamp {
+  color: #555;
+  font-size: 0.73rem;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.termPrompt {
+  color: var(--accent-light);
+  font-weight: 600;
+}
+
+.termOutput {
+  color: #b0ffb0;
+  white-space: pre-wrap;
+}
+
+.termError {
+  color: #f87171;
+  white-space: pre-wrap;
+}
+
+.termInfo {
+  color: #888;
+  font-style: italic;
+}
+
+/* ── Quick Commands ── */
+.quickList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quickBtn {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--bg3, var(--bg));
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 6px);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  color: var(--text);
+}
+.quickBtn:hover {
+  border-color: var(--accent);
+  background: var(--bg2);
+}
+
+.quickLabel {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.quickCmd {
+  font-size: 0.75rem;
+  color: var(--text2);
+  font-family: 'Courier New', monospace;
+}
+
+/* ── Column layout helpers ── */
+.leftCol {
+  display: flex;
+  flex-direction: column;
+}
+
+.rightCol {
+  display: flex;
+  flex-direction: column;
+}

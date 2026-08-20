@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Alerting — RightAPI Forge</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#f5f5f5; }
+    .nav { background:#1a1a2e; color:white; padding:12px 24px; display:flex; align-items:center; gap:16px; }
+    .nav h1 { font-size:18px; }
+    .nav-tabs { display:flex; gap:8px; margin-left:auto; }
+    .nav-tab { padding:6px 14px; border-radius:4px; cursor:pointer; font-size:13px; color:#ccc; border:none; background:transparent; }
+    .nav-tab.active { background:#007bff; color:white; }
+    .main { padding:24px; max-width:1400px; margin:0 auto; }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:24px; }
+    .stat { background:white; padding:16px; border-radius:8px; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+    .stat-val { font-size:28px; font-weight:700; }
+    .stat-lbl { font-size:12px; color:#666; margin-top:4px; }
+    .stat.critical .stat-val { color:#dc3545; }
+    .stat.warning .stat-val { color:#ffc107; }
+    .stat.ok .stat-val { color:#28a745; }
+    .section { display:none; }
+    .section.active { display:block; }
+    .toolbar { display:flex; gap:10px; margin-bottom:16px; align-items:center; flex-wrap:wrap; }
+    button { padding:8px 16px; border:none; border-radius:4px; cursor:pointer; font-size:13px; }
+    .btn-primary { background:#007bff; color:white; }
+    .btn-success { background:#28a745; color:white; }
+    .btn-danger { background:#dc3545; color:white; }
+    .btn-secondary { background:#6c757d; color:white; }
+    .btn-sm { padding:4px 10px; font-size:12px; }
+    select, input { padding:7px 10px; border:1px solid #ddd; border-radius:4px; font-size:13px; }
+    table { width:100%; border-collapse:collapse; background:white; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+    th { background:#f8f9fa; padding:10px 14px; text-align:left; font-size:13px; font-weight:600; border-bottom:1px solid #eee; }
+    td { padding:10px 14px; font-size:13px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    .badge { display:inline-block; padding:3px 8px; border-radius:10px; font-size:11px; font-weight:600; }
+    .badge-critical { background:#f8d7da; color:#721c24; }
+    .badge-warning { background:#fff3cd; color:#856404; }
+    .badge-info { background:#d1ecf1; color:#0c5460; }
+    .badge-firing { background:#f8d7da; color:#721c24; }
+    .badge-acknowledged { background:#fff3cd; color:#856404; }
+    .badge-resolved { background:#d4edda; color:#155724; }
+    .empty { text-align:center; padding:48px; color:#999; }
+    .empty-icon { font-size:48px; margin-bottom:12px; }
+    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center; }
+    .modal.open { display:flex; }
+    .modal-box { background:white; border-radius:8px; padding:24px; width:90%; max-width:480px; }
+    .modal-title { font-size:18px; font-weight:600; margin-bottom:16px; }
+    .form-row { margin-bottom:12px; }
+    .form-row label { display:block; font-size:13px; font-weight:500; margin-bottom:4px; }
+    .form-row input, .form-row select, .form-row textarea { width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; font-size:13px; }
+    .form-row textarea { resize:vertical; }
+    .form-actions { display:flex; gap:8px; margin-top:16px; }
+    .card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
+    .card { background:white; border-radius:8px; padding:18px; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+    .card-title { font-size:15px; font-weight:600; margin-bottom:6px; }
+    .card-meta { font-size:12px; color:#666; line-height:1.6; }
+    .card-actions { margin-top:12px; display:flex; gap:8px; }
+  </style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>🔔 Alerting</h1>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showTab('alerts')">Alerts</button>
+    <button class="nav-tab" onclick="showTab('channels')">Channels</button>
+    <button class="nav-tab" onclick="showTab('routes')">Routes</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat critical"><div class="stat-val" id="sCritical">0</div><div class="stat-lbl">🔴 Critical</div></div>
+    <div class="stat warning"><div class="stat-val" id="sWarning">0</div><div class="stat-lbl">🟡 Warning</div></div>
+    <div class="stat ok"><div class="stat-val" id="sInfo">0</div><div class="stat-lbl">🔵 Info</div></div>
+    <div class="stat"><div class="stat-val" id="sFiring">0</div><div class="stat-lbl">Firing</div></div>
+    <div class="stat"><div class="stat-val" id="sAcked">0</div><div class="stat-lbl">Acknowledged</div></div>
+    <div class="stat ok"><div class="stat-val" id="sResolved">0</div><div class="stat-lbl">Resolved</div></div>
+  </div>
+
+  <!-- Alerts Tab -->
+  <div id="tab-alerts" class="section active">
+    <div class="toolbar">
+      <button class="btn-primary" onclick="openFireModal()">➕ Fire Alert</button>
+      <button class="btn-secondary" onclick="testAlert('warning')">🧪 Test Warning</button>
+      <button class="btn-danger" onclick="testAlert('critical')">🧪 Test Critical</button>
+      <button class="btn-secondary" onclick="loadAll()">🔄 Refresh</button>
+      <select id="filterStatus" onchange="loadAlerts()">
+        <option value="">All Status</option>
+        <option value="firing">Firing</option>
+        <option value="acknowledged">Acknowledged</option>
+        <option value="resolved">Resolved</option>
+      </select>
+      <select id="filterSeverity" onchange="loadAlerts()">
+        <option value="">All Severity</option>
+        <option value="critical">Critical</option>
+        <option value="warning">Warning</option>
+        <option value="info">Info</option>
+      </select>
+    </div>
+    <table>
+      <thead><tr><th>Severity</th><th>Title</th><th>Source</th><th>Status</th><th>Count</th><th>Fired</th><th>Actions</th></tr></thead>
+      <tbody id="alertsBody"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Channels Tab -->
+  <div id="tab-channels" class="section">
+    <div class="toolbar">
+      <button class="btn-primary" onclick="openChannelModal()">➕ Add Channel</button>
+      <button class="btn-secondary" onclick="loadChannels()">🔄 Refresh</button>
+    </div>
+    <div id="channelsGrid" class="card-grid"></div>
+  </div>
+
+  <!-- Routes Tab -->
+  <div id="tab-routes" class="section">
+    <div class="toolbar">
+      <button class="btn-primary" onclick="openRouteModal()">➕ Add Route</button>
+      <button class="btn-secondary" onclick="loadRoutes()">🔄 Refresh</button>
+    </div>
+    <div id="routesGrid" class="card-grid"></div>
+  </div>
+</div>
+
+<!-- Fire Alert Modal -->
+<div id="fireModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-title">🔔 Fire Alert</div>
+    <div class="form-row"><label>Title *</label><input id="fTitle" placeholder="Alert title"></div>
+    <div class="form-row"><label>Message *</label><textarea id="fMsg" rows="3" placeholder="Alert details"></textarea></div>
+    <div class="form-row"><label>Severity</label>
+      <select id="fSev"><option value="info">Info</option><option value="warning" selected>Warning</option><option value="critical">Critical</option></select>
+    </div>
+    <div class="form-row"><label>Source</label>
+      <select id="fSrc"><option value="manual">Manual</option><option value="rule-engine">Rule Engine</option><option value="task">Task</option></select>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="fireAlert()">Fire</button>
+      <button class="btn-secondary" onclick="closeModal('fireModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Channel Modal -->
+<div id="channelModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-title">📡 Add Channel</div>
+    <div class="form-row"><label>Name *</label><input id="chName" placeholder="e.g. ops-slack"></div>
+    <div class="form-row"><label>Type</label>
+      <select id="chType" onchange="updateChannelForm()">
+        <option value="slack">Slack</option>
+        <option value="webhook">Webhook</option>
+      </select>
+    </div>
+    <div class="form-row"><label>Min Severity</label>
+      <select id="chMin"><option value="info">Info+</option><option value="warning" selected>Warning+</option><option value="critical">Critical only</option></select>
+    </div>
+    <div id="chSlackFields">
+      <div class="form-row"><label>Slack Webhook URL *</label><input id="chSlackUrl" placeholder="https://hooks.slack.com/..."></div>
+    </div>
+    <div id="chWebhookFields" style="display:none">
+      <div class="form-row"><label>Webhook URL *</label><input id="chWebhookUrl" placeholder="https://example.com/webhook"></div>
+      <div class="form-row"><label>Secret (optional)</label><input id="chWebhookSecret" placeholder="Shared secret for X-Alert-Secret header"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="addChannel()">Add</button>
+      <button class="btn-secondary" onclick="closeModal('channelModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Route Modal -->
+<div id="routeModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-title">🗺️ Add Route</div>
+    <div class="form-row"><label>Name *</label><input id="rtName" placeholder="e.g. critical-to-slack"></div>
+    <div class="form-row"><label>Match Severity</label>
+      <select id="rtSev"><option value="">Any</option><option value="critical">Critical</option><option value="warning">Warning</option><option value="info">Info</option></select>
+    </div>
+    <div class="form-row"><label>Cooldown (minutes)</label><input id="rtCooldown" type="number" value="30"></div>
+    <div class="form-row"><label>Channels (IDs, comma-separated)</label><input id="rtChannels" placeholder="channel-id-1, channel-id-2"></div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="addRoute()">Add</button>
+      <button class="btn-secondary" onclick="closeModal('routeModal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let channels = [];
+
+function showTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+  if (tab === 'channels') loadChannels();
+  if (tab === 'routes') loadRoutes();
+}
+
+async function loadAll() { await loadStats(); await loadAlerts(); }
+
+async function loadStats() {
+  try {
+    const s = await fetch('/api/alerting/stats').then(r => r.json());
+    document.getElementById('sCritical').textContent = s.critical;
+    document.getElementById('sWarning').textContent = s.warning;
+    document.getElementById('sInfo').textContent = s.info;
+    document.getElementById('sFiring').textContent = s.firing;
+    document.getElementById('sAcked').textContent = s.acknowledged;
+    document.getElementById('sResolved').textContent = s.resolved;
+  } catch(e) { console.error(e); }
+}
+
+async function loadAlerts() {
+  const status = document.getElementById('filterStatus').value;
+  const severity = document.getElementById('filterSeverity').value;
+  let url = '/api/alerting/alerts?limit=100';
+  if (status) url += '&status=' + status;
+  if (severity) url += '&severity=' + severity;
+  try {
+    const data = await fetch(url).then(r => r.json());
+    const tbody = document.getElementById('alertsBody');
+    if (!data.alerts.length) {
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty"><div class="empty-icon">✅</div><div>No alerts</div></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.alerts.map(a => {
+      const age = timeAgo(a.firedAt);
+      return '<tr>' +
+        '<td><span class="badge badge-' + a.severity + '">' + a.severity.toUpperCase() + '</span></td>' +
+        '<td><strong>' + esc(a.title) + '</strong><br><small style="color:#666">' + esc(a.message.slice(0,80)) + '</small></td>' +
+        '<td>' + esc(a.source) + '</td>' +
+        '<td><span class="badge badge-' + a.status + '">' + a.status + '</span></td>' +
+        '<td>' + a.count + '</td>' +
+        '<td style="white-space:nowrap">' + age + '</td>' +
+        '<td style="white-space:nowrap">' +
+          (a.status === 'firing' ? '<button class="btn-secondary btn-sm" onclick="ack(\'' + a.id + '\')">Ack</button> ' : '') +
+          (a.status !== 'resolved' ? '<button class="btn-success btn-sm" onclick="resolve(\'' + a.id + '\')">Resolve</button>' : '') +
+        '</td></tr>';
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function loadChannels() {
+  try {
+    const data = await fetch('/api/alerting/channels').then(r => r.json());
+    channels = data.channels || [];
+    const grid = document.getElementById('channelsGrid');
+    if (!channels.length) {
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📡</div><div>No channels configured</div></div>';
+      return;
+    }
+    grid.innerHTML = channels.map(ch => {
+      const icon = ch.type === 'slack' ? '💬' : '🌐';
+      return '<div class="card">' +
+        '<div class="card-title">' + icon + ' ' + esc(ch.name) + '</div>' +
+        '<div class="card-meta">Type: ' + ch.type + '<br>Min Severity: ' + ch.minSeverity + '<br>Status: ' + (ch.enabled ? '✅ Enabled' : '⏸ Disabled') + '</div>' +
+        '<div class="card-actions">' +
+          '<button class="btn-secondary btn-sm" onclick="toggleChannel(\'' + ch.id + '\',' + !ch.enabled + ')">' + (ch.enabled ? 'Disable' : 'Enable') + '</button>' +
+          '<button class="btn-danger btn-sm" onclick="deleteChannel(\'' + ch.id + '\')">Delete</button>' +
+        '</div></div>';
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+async function loadRoutes() {
+  try {
+    const data = await fetch('/api/alerting/routes').then(r => r.json());
+    const grid = document.getElementById('routesGrid');
+    if (!data.routes.length) {
+      grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🗺️</div><div>No routes configured</div></div>';
+      return;
+    }
+    grid.innerHTML = data.routes.map(r => {
+      const chNames = r.channels.map(id => { const c = channels.find(x => x.id === id); return c ? c.name : id.slice(0,8); }).join(', ');
+      return '<div class="card">' +
+        '<div class="card-title">🗺️ ' + esc(r.name) + '</div>' +
+        '<div class="card-meta">Channels: ' + esc(chNames || 'none') + '<br>Matchers: ' + (r.matchers.length ? r.matchers.map(m => m.label+'='+m.value).join(', ') : 'any') + '<br>Cooldown: ' + r.cooldownMinutes + 'min</div>' +
+        '<div class="card-actions">' +
+          '<button class="btn-danger btn-sm" onclick="deleteRoute(\'' + r.id + '\')">Delete</button>' +
+        '</div></div>';
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+function openFireModal() { document.getElementById('fireModal').classList.add('open'); }
+function openChannelModal() { document.getElementById('channelModal').classList.add('open'); }
+function openRouteModal() { document.getElementById('routeModal').classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function updateChannelForm() {
+  const type = document.getElementById('chType').value;
+  document.getElementById('chSlackFields').style.display = type === 'slack' ? '' : 'none';
+  document.getElementById('chWebhookFields').style.display = type === 'webhook' ? '' : 'none';
+}
+
+async function fireAlert() {
+  const title = document.getElementById('fTitle').value;
+  const message = document.getElementById('fMsg').value;
+  if (!title || !message) { alert('Title and message required'); return; }
+  await fetch('/api/alerting/alerts', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ title, message, severity: document.getElementById('fSev').value, source: document.getElementById('fSrc').value }) });
+  closeModal('fireModal');
+  loadAll();
+}
+
+async function testAlert(severity) {
+  await fetch('/api/alerting/test', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ severity }) });
+  loadAll();
+}
+
+async function ack(id) {
+  await fetch('/api/alerting/alerts/' + id + '/acknowledge', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+  loadAll();
+}
+
+async function resolve(id) {
+  await fetch('/api/alerting/alerts/' + id + '/resolve', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+  loadAll();
+}
+
+async function addChannel() {
+  const type = document.getElementById('chType').value;
+  const config = type === 'slack'
+    ? { webhookUrl: document.getElementById('chSlackUrl').value }
+    : { url: document.getElementById('chWebhookUrl').value, secret: document.getElementById('chWebhookSecret').value };
+  await fetch('/api/alerting/channels', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ name: document.getElementById('chName').value, type, minSeverity: document.getElementById('chMin').value, config }) });
+  closeModal('channelModal');
+  loadChannels();
+}
+
+async function toggleChannel(id, enabled) {
+  await fetch('/api/alerting/channels/' + id, { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ enabled }) });
+  loadChannels();
+}
+
+async function deleteChannel(id) {
+  if (!confirm('Delete this channel?')) return;
+  await fetch('/api/alerting/channels/' + id, { method:'DELETE' });
+  loadChannels();
+}
+
+async function addRoute() {
+  const sev = document.getElementById('rtSev').value;
+  const matchers = sev ? [{ label: 'severity', value: sev }] : [];
+  const chIds = document.getElementById('rtChannels').value.split(',').map(s => s.trim()).filter(Boolean);
+  await fetch('/api/alerting/routes', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ name: document.getElementById('rtName').value, matchers, channels: chIds, cooldownMinutes: parseInt(document.getElementById('rtCooldown').value) || 30 }) });
+  closeModal('routeModal');
+  loadRoutes();
+}
+
+async function deleteRoute(id) {
+  if (!confirm('Delete this route?')) return;
+  await fetch('/api/alerting/routes/' + id, { method:'DELETE' });
+  loadRoutes();
+}
+
+function timeAgo(d) {
+  const diff = (Date.now() - new Date(d).getTime()) / 1000;
+  if (diff < 60) return Math.floor(diff) + 's ago';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+function esc(s) {
+  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+}
+
+loadAll();
+setInterval(loadAll, 15000);
+</script>
+<script src="/sidebar.js"></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+# package-lock.json is committed for reproducible builds (regenerate via
+# `npm install` whenever package.json changes).
+
+# Build output
+dist/
+*.tsbuildinfo
+*.log
+
+# Environment
+.env
+.env.*
+!.env.example
+.env.backup
+.env.backup.*
+.env.local
+
+# Docker volumes
+data/
+
+# Backups
+*.bak
+*.bak.*
+*.local.bak.*
+Dockerfile.backup
+
+# Temporary files
+*.tmp
+release-evidence*.json
+.claude/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude AI files
+*.txt
+docker-compose.local.yml
+
+# Local Claude MCP config
+.mcp.json
+.mcp.json.bak*
+CLAUDE.md
+.current-spec
+
+# Local OMX runtime state
+.omx/

@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "id": "library.log-error-scan",
+  "name": "Log Error Scan",
+  "description": "Scans the host journal AND every running container's stdout/stderr for error / critical / fatal / panic patterns over a configurable window, then reports the top noisy services with concrete counts. When the top container's error count exceeds containerErrorTruncateThreshold, truncates that container's log file (Docker recreates the file on next write — safe & idempotent). Creates a low-severity audit incident when truncation actually ran.",
+  "version": "1.1.0",
+  "tags": ["library", "logs", "diagnostics", "monitoring", "remediation"],
+  "inputs": [
+    {
+      "name": "host",
+      "type": "string",
+      "default": "host.docker.internal",
+      "description": "Host to inspect via SSH (uses mounted /root/.ssh)"
+    },
+    {
+      "name": "windowMinutes",
+      "type": "number",
+      "default": 30,
+      "description": "Look at the last N minutes of logs"
+    },
+    {
+      "name": "errorThreshold",
+      "type": "number",
+      "default": 50,
+      "description": "Fail when total error matches across all sources exceeds this"
+    },
+    {
+      "name": "containerErrorTruncateThreshold",
+      "type": "number",
+      "default": 1000,
+      "description": "Truncate the top offending container's log file when its error count in window exceeds this"
+    }
+  ],
+  "onError": "continue",
+  "steps": [
+    {
+      "id": "journal_errors",
+      "type": "bash",
+      "description": "Host journal: count priority<=err entries in window. Returns 'count=N' on stdout.",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'journalctl --since \"${inputs.windowMinutes} min ago\" -p err --no-pager 2>/dev/null | grep -vE \"^(-- |No entries)\" | wc -l' | awk '{ print \"journal_errors=\"$1 }'",
+      "timeoutMs": 30000
+    },
+    {
+      "id": "journal_top_units",
+      "type": "bash",
+      "description": "Top 5 systemd units by error count in window — actionable list of offenders",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'journalctl --since \"${inputs.windowMinutes} min ago\" -p err -o json --no-pager 2>/dev/null | jq -r \".SYSLOG_IDENTIFIER // .UNIT // \\\"unknown\\\"\" 2>/dev/null | sort | uniq -c | sort -rn | head -5' || echo 'no error units in window'",
+      "timeoutMs": 30000
+    },
+    {
+      "id": "container_errors",
+      "type": "bash",
+      "description": "Scan logs of every running container for error/fatal/panic/exception patterns in window. Reports per-container counts, sorted desc.",
+      "command": "WIN='${inputs.windowMinutes}m'; OUT=''; for c in $(docker ps --format '{{.Names}}'); do N=$(docker logs --since \"$WIN\" \"$c\" 2>&1 | grep -ciE 'error|fatal|panic|exception|traceback' || true); [ -z \"$N\" ] && N=0; if [ \"$N\" -gt 0 ]; then OUT=\"$OUT$N $c\\n\"; fi; done; printf \"$OUT\" | sort -rn | head -10 | awk '{ printf \"%s=%d \", $2, $1 } END { print \"\" }'",
+      "timeoutMs": 60000
+    },
+    {
+      "id": "total_errors",
+      "type": "bash",
+      "description": "Aggregate journal + container errors. Fails (exit 2) when above the threshold so the run is flagged.",
+      "command": "WIN='${inputs.windowMinutes}m'; J=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'journalctl --since \"${inputs.windowMinutes} min ago\" -p err --no-pager 2>/dev/null | grep -vE \"^(-- |No entries)\" | wc -l' || echo 0); [ -z \"$J\" ] && J=0; C=0; for ct in $(docker ps --format '{{.Names}}'); do N=$(docker logs --since \"$WIN\" \"$ct\" 2>&1 | grep -ciE 'error|fatal|panic|exception|traceback' || true); [ -z \"$N\" ] && N=0; C=$((C + N)); done; T=$((J + C)); echo \"journal=$J containers=$C total=$T threshold=${inputs.errorThreshold}\"; [ \"$T\" -le \"${inputs.errorThreshold}\" ]",
+      "timeoutMs": 90000,
+      "onError": "continue"
+    },
+    {
+      "id": "find_and_maybe_truncate",
+      "type": "bash",
+      "description": "REMEDIATION: identify the single noisiest container in window; truncate its log file when its error count >= containerErrorTruncateThreshold. Truncation is safe — Docker recreates the file on the next log write. Idempotent (re-running on a quiet log is a no-op). Exits 0 ONLY when truncation actually ran (so ${steps.find_and_maybe_truncate.ok} flips to true), exits 1 for any no-op.",
+      "command": "WIN='${inputs.windowMinutes}m'; THRESH='${inputs.containerErrorTruncateThreshold}'; TOP_NAME=''; TOP_N=0; for c in $(docker ps --format '{{.Names}}'); do N=$(docker logs --since \"$WIN\" \"$c\" 2>&1 | grep -ciE 'error|fatal|panic|exception|traceback'); if [ -z \"$N\" ]; then N=0; fi; if [ \"$N\" -gt \"$TOP_N\" ]; then TOP_N=$N; TOP_NAME=$c; fi; done; if [ -z \"$TOP_NAME\" ]; then echo \"no_container_errors threshold=$THRESH\"; exit 1; fi; if [ \"$TOP_N\" -lt \"$THRESH\" ]; then echo \"no_truncation_needed top=$TOP_NAME errors=$TOP_N threshold=$THRESH\"; exit 1; fi; LOG_PATH=$(docker inspect --format '{{.LogPath}}' \"$TOP_NAME\" 2>/dev/null); if [ -z \"$LOG_PATH\" ] || [ ! -f \"$LOG_PATH\" ]; then echo \"SKIPPED top=$TOP_NAME errors=$TOP_N log_path=$LOG_PATH not_accessible\"; exit 1; fi; BEFORE=$(stat -c%s \"$LOG_PATH\" 2>/dev/null); if [ -z \"$BEFORE\" ]; then BEFORE=0; fi; truncate -s 0 \"$LOG_PATH\" 2>/dev/null; AFTER=$(stat -c%s \"$LOG_PATH\" 2>/dev/null); if [ -z \"$AFTER\" ]; then AFTER=0; fi; FREED=$((BEFORE - AFTER)); echo \"REMEDIATION truncate container=$TOP_NAME log_path=$LOG_PATH errors=$TOP_N before_bytes=$BEFORE after_bytes=$AFTER freed_bytes=$FREED\"; exit 0",
+      "timeoutMs": 90000,
+      "onError": "continue"
+    },
+    {
+      "id": "branch_audit_incident",
+      "type": "conditional",
+      "description": "Create audit incident only when the top-offender log was actually truncated (find_and_maybe_truncate exited 0).",
+      "when": "${steps.find_and_maybe_truncate.ok}",
+      "equals": "true",
+      "then": "create_audit_incident"
+    },
+    {
+      "id": "create_audit_incident",
+      "type": "skill",
+      "description": "AUDIT TRAIL: low-severity incident records that a noisy container's log was truncated.",
+      "skill": "incident.create",
+      "params": {
+        "title": "Container log truncated by log-error-scan auto-remediation",
+        "severity": "low",
+        "description": "log-error-scan workflow truncated the top offender's log file. Window=${inputs.windowMinutes}m threshold=${inputs.containerErrorTruncateThreshold}. Detection: total_within_threshold=${steps.total_errors.ok}. See workflow run record (steps.find_and_maybe_truncate.data.stdout) for container name and bytes freed.",
+        "assignedTo": "system"
+      }
+    },
+    {
+      "id": "summary",
+      "type": "bash",
+      "description": "Operator rollup. When total_errors.ok=false the threshold was breached — review steps.journal_top_units and steps.container_errors. Truncation_ran=true means the top offender's log was reset.",
+      "command": "echo \"LogErrorScan window=${inputs.windowMinutes}m: total_within_threshold=${steps.total_errors.ok} | remediation: log_truncated=${steps.find_and_maybe_truncate.ok} truncation_audit_created=${steps.create_audit_incident.ok}. Threshold=${inputs.errorThreshold} (total) / ${inputs.containerErrorTruncateThreshold} (per-container).\"",
+      "timeoutMs": 5000,
+      "onError": "fail"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  itops-agents:
+    build: .
+    container_name: itops-agents
+    ports:
+      - "19123:19123"
+      - "19124:19124"
+    environment:
+      - NODE_ENV=production
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      - OPERATOR_USERNAME=${OPERATOR_USERNAME-}
+      - OPERATOR_PASSWORD=${OPERATOR_PASSWORD-}
+      - VIEWER_USERNAME=${VIEWER_USERNAME-}
+      - VIEWER_PASSWORD=${VIEWER_PASSWORD-}
+      - CREDENTIAL_MASTER_KEY=${CREDENTIAL_MASTER_KEY:?Set CREDENTIAL_MASTER_KEY in .env}
+      - APPROVAL_TOKEN_SECRET=${APPROVAL_TOKEN_SECRET:?Set APPROVAL_TOKEN_SECRET in .env}
+      - AUTH_TOKEN_SECRET=${AUTH_TOKEN_SECRET:?Set AUTH_TOKEN_SECRET in .env}
+      - REQUIRE_STRONG_SECRETS=${REQUIRE_STRONG_SECRETS:-true}
+      - PORT=19123
+      - HOST=0.0.0.0
+      - FACTORY_DASHBOARD_PORT=19124
+      - FACTORY_DASHBOARD_HOST=0.0.0.0
+      - ANTHROPIC_API_KEY=
+      - OPENAI_API_KEY=
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - DEFAULT_AI_PLATFORM=claude
+      - LOG_LEVEL=info
+    volumes:
+      - itops-data:/data/itops-agents
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - itops-network
+    restart: unless-stopped
+    command: sh -c 'node dist/web/server.js & node dist/factory-dashboard/server.js'
+
+networks:
+  itops-network:
+    driver: bridge
+
+volumes:
+  itops-data:

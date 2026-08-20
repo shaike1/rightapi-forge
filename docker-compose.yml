@@ -1,0 +1,392 @@
+version: '3.8'
+
+services:
+  itops-agents:
+    # The deploy workflow pushes a tagged image to GHCR and sets ITOPS_IMAGE
+    # to that exact tag before running `docker compose up`. With both
+    # `image:` and `build:` declared, compose uses the pre-built image when
+    # it's available locally and only falls back to building when it isn't.
+    #
+    # Local dev: run `docker compose build itops-agents` once to populate
+    # the local :latest tag, or set ITOPS_IMAGE to a custom tag before `up`.
+    image: ${ITOPS_IMAGE:-itops-agents:local}
+    build: .
+    container_name: itops-agents
+    ports:
+      - "19123:19123"
+    environment:
+      - NODE_ENV=production
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      - OPERATOR_USERNAME=${OPERATOR_USERNAME-}
+      - OPERATOR_PASSWORD=${OPERATOR_PASSWORD-}
+      - VIEWER_USERNAME=${VIEWER_USERNAME-}
+      - VIEWER_PASSWORD=${VIEWER_PASSWORD-}
+      - CREDENTIAL_MASTER_KEY=${CREDENTIAL_MASTER_KEY:?Set CREDENTIAL_MASTER_KEY in .env}
+      - APPROVAL_TOKEN_SECRET=${APPROVAL_TOKEN_SECRET:?Set APPROVAL_TOKEN_SECRET in .env}
+      - AUTH_TOKEN_SECRET=${AUTH_TOKEN_SECRET:?Set AUTH_TOKEN_SECRET in .env}
+      - REQUIRE_STRONG_SECRETS=${REQUIRE_STRONG_SECRETS:-true}
+      - PORT=19123
+      - HOST=0.0.0.0
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-5}
+      - OPENAI_EXPECTED_MODEL=${OPENAI_EXPECTED_MODEL:-gpt-5}
+      - OPENAI_FALLBACK_BASE_URL=${OPENAI_FALLBACK_BASE_URL:-}
+      - OPENAI_FALLBACK_MODEL=${OPENAI_FALLBACK_MODEL:-}
+      - OPENAI_FALLBACK_EXPECTED_MODEL=${OPENAI_FALLBACK_EXPECTED_MODEL:-}
+      - OPENAI_BREAKER_FAILURE_THRESHOLD=${OPENAI_BREAKER_FAILURE_THRESHOLD:-3}
+      - OPENAI_BREAKER_OPEN_MS=${OPENAI_BREAKER_OPEN_MS:-60000}
+      - OPENAI_LATENCY_BUDGET_MS=${OPENAI_LATENCY_BUDGET_MS:-30000}
+      - OPENAI_ERROR_RATE_BUDGET=${OPENAI_ERROR_RATE_BUDGET:-0.20}
+      - PROVIDER_HEALTH_PROBE_INTERVAL_MS=${PROVIDER_HEALTH_PROBE_INTERVAL_MS:-300000}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
+      - DEFAULT_AI_PLATFORM=${DEFAULT_AI_PLATFORM:-openai}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - BACKUP_AUTOMATION_ENABLED=${BACKUP_AUTOMATION_ENABLED:-true}
+      - BACKUP_AUTOMATION_INTERVAL_MINUTES=${BACKUP_AUTOMATION_INTERVAL_MINUTES:-60}
+      - BACKUP_AUTOMATION_RUN_ON_STARTUP=${BACKUP_AUTOMATION_RUN_ON_STARTUP:-true}
+      - RETENTION_KEEP_LATEST=${RETENTION_KEEP_LATEST:-30}
+      - RETENTION_MAX_AGE_DAYS=${RETENTION_MAX_AGE_DAYS:-14}
+      - EVENTS_RETENTION_DAYS=${EVENTS_RETENTION_DAYS:-90}
+      - AI_DECISIONS_RETENTION_DAYS=${AI_DECISIONS_RETENTION_DAYS:-90}
+      - NOTIFICATION_RETENTION_DAYS=${NOTIFICATION_RETENTION_DAYS:-90}
+      - LIFECYCLE_ARCHIVE_DIR=${LIFECYCLE_ARCHIVE_DIR:-/data/itops-agents/backups/lifecycle}
+      - LIFECYCLE_STATE_PATH=${LIFECYCLE_STATE_PATH:-/data/itops-agents/lifecycle-last-run.json}
+      - BACKUP_HEALTH_MAX_AGE_HOURS=${BACKUP_HEALTH_MAX_AGE_HOURS:-24}
+      - BACKUP_ENCRYPTION_KEY=${BACKUP_ENCRYPTION_KEY:-}
+      - BACKUP_ENCRYPTION_KEY_FILE=${BACKUP_ENCRYPTION_KEY_FILE:-}
+      - BACKUP_ENCRYPTION_KEY_CMD=${BACKUP_ENCRYPTION_KEY_CMD:-}
+      - BACKUP_KEY_CUSTODY_EXTERNAL=${BACKUP_KEY_CUSTODY_EXTERNAL:-false}
+      - BACKUP_ENCRYPTION_REQUIRED=${BACKUP_ENCRYPTION_REQUIRED:-false}
+      - RECOVERY_SET_ENABLED=${RECOVERY_SET_ENABLED:-false}
+      - RECOVERY_SET_CRON=${RECOVERY_SET_CRON:-15 3 * * *}
+      - RECOVERY_SET_RETAIN=${RECOVERY_SET_RETAIN:-7}
+      - RECOVERY_SET_MAX_AGE_DAYS=${RECOVERY_SET_MAX_AGE_DAYS:-14}
+      - RECOVERY_RESTORE_ROOT=${RECOVERY_RESTORE_ROOT:-/data/itops-agents/backups/restore-drills}
+      - RECOVERY_STATUS_PATH=${RECOVERY_STATUS_PATH:-/data/itops-agents/backups/recovery-status.json}
+      - BACKUP_S3_ENDPOINT=${BACKUP_S3_ENDPOINT:-}
+      - BACKUP_S3_BUCKET=${BACKUP_S3_BUCKET:-}
+      - BACKUP_S3_ACCESS_KEY=${BACKUP_S3_ACCESS_KEY:-}
+      - BACKUP_S3_SECRET_KEY=${BACKUP_S3_SECRET_KEY:-}
+      - BACKUP_S3_REGION=${BACKUP_S3_REGION:-auto}
+      - BACKUP_S3_RETAIN=${BACKUP_S3_RETAIN:-30}
+      - AUTO_REMEDIATION_SERVICE_ALLOWLIST=${AUTO_REMEDIATION_SERVICE_ALLOWLIST:-}
+      - SQLITE_BACKUP_DIR=${SQLITE_BACKUP_DIR:-/data/itops-agents/backups/sqlite}
+      - SQLITE_BACKUP_RETENTION_DAYS=${SQLITE_BACKUP_RETENTION_DAYS:-14}
+      - SQLITE_BACKUP_CRON=${SQLITE_BACKUP_CRON:-30 3 * * *}
+      - WORKFLOW_DRIFT_THRESHOLD_MINUTES=${WORKFLOW_DRIFT_THRESHOLD_MINUTES:-30}
+      - WORKFLOW_RECOVERY_ENABLED=${WORKFLOW_RECOVERY_ENABLED:-true}
+      - WORKFLOW_ORPHAN_GRACE_MINUTES=${WORKFLOW_ORPHAN_GRACE_MINUTES:-60}
+      - WORKFLOW_STALE_FAIL_MINUTES=${WORKFLOW_STALE_FAIL_MINUTES:-120}
+      - WORKFLOW_RECOVERY_INTERVAL_MINUTES=${WORKFLOW_RECOVERY_INTERVAL_MINUTES:-5}
+      - AUTONOMY_ATTEMPT_DB_PATH=${AUTONOMY_ATTEMPT_DB_PATH:-/data/itops-agents/autonomy-attempts.db}
+      - AUTONOMY_ATTEMPT_EXPIRY_HOURS=${AUTONOMY_ATTEMPT_EXPIRY_HOURS:-48}
+      - ORCHESTRATOR_SWEEP_INTERVAL_MS=${ORCHESTRATOR_SWEEP_INTERVAL_MS:-60000}
+      - AGENT_STUCK_THRESHOLD_MINUTES=${AGENT_STUCK_THRESHOLD_MINUTES:-30}
+      - IRC_SUPERVISOR_CHECK_INTERVAL_MS=${IRC_SUPERVISOR_CHECK_INTERVAL_MS:-300000}
+      - IRC_SUPERVISOR_HEALTH_INTERVAL_MS=${IRC_SUPERVISOR_HEALTH_INTERVAL_MS:-3600000}
+      - IRC_SUPERVISOR_STUCK_THRESHOLD_MS=${IRC_SUPERVISOR_STUCK_THRESHOLD_MS:-900000}
+      - MONITORED_SERVERS=${MONITORED_SERVERS:-}
+      - OLLAMA_DEFAULT_MODEL=${OLLAMA_DEFAULT_MODEL:-llama3}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_ALERT_CHAT_ID=${TELEGRAM_ALERT_CHAT_ID:-}
+      - IRC_BRIDGE_ENABLED=${IRC_BRIDGE_ENABLED:-false}
+      - IRC_HOST=${IRC_HOST:-irc-server}
+      - IRC_PORT=${IRC_PORT:-6667}
+      - IRC_NICK=${IRC_NICK:-itops-bridge}
+      - PROXMOX_HOST=${PROXMOX_HOST:-}
+      - PROXMOX_TOKEN_ID=${PROXMOX_TOKEN_ID:-}
+      - PROXMOX_TOKEN_SECRET=${PROXMOX_TOKEN_SECRET:-}
+      - PROXMOX_NODE=${PROXMOX_NODE:-pve}
+      - JIRA_BASE_URL=${JIRA_BASE_URL:-}
+      - JIRA_EMAIL=${JIRA_EMAIL:-}
+      - JIRA_API_TOKEN=${JIRA_API_TOKEN:-}
+      - JIRA_DEFAULT_PROJECT=${JIRA_DEFAULT_PROJECT:-OPS}
+      - JIRA_INCIDENT_ISSUE_TYPE=${JIRA_INCIDENT_ISSUE_TYPE:-Incident}
+      - JIRA_POLL_INTERVAL_MINUTES=${JIRA_POLL_INTERVAL_MINUTES:-15}
+      - JIRA_AUTO_IMPORT=${JIRA_AUTO_IMPORT:-true}
+      - JIRA_SYNC_JQL=${JIRA_SYNC_JQL:-}
+      - GITHUB_ISSUES_ENABLED=${GITHUB_ISSUES_ENABLED:-false}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GITHUB_OWNER=${GITHUB_OWNER:-}
+      - GITHUB_REPO=${GITHUB_REPO:-}
+      - PUBLIC_URL=${PUBLIC_URL:-http://localhost:19123}
+      - PREVIEW_MAX_PER_TENANT=${PREVIEW_MAX_PER_TENANT:-3}
+      - PREVIEW_MAX_GLOBAL=${PREVIEW_MAX_GLOBAL:-10}
+      - PREVIEW_TTL_MINUTES=${PREVIEW_TTL_MINUTES:-30}
+      - PREVIEW_MAX_TTL_MINUTES=${PREVIEW_MAX_TTL_MINUTES:-60}
+      - BUILDER_GATE_SIGNING_KEY=${BUILDER_GATE_SIGNING_KEY:-}
+      - BUILDER_GATE_MAX_CONCURRENT=${BUILDER_GATE_MAX_CONCURRENT:-2}
+      - CHROMIUM_PATH=${CHROMIUM_PATH:-/usr/bin/chromium-browser}
+      - BUILDER_RELEASE_SIGNING_KEY=${BUILDER_RELEASE_SIGNING_KEY:-}
+      - BUILDER_RELEASE_REPO=${BUILDER_RELEASE_REPO:-/data/itops-agents/builder-releases}
+      - BUILDER_INTEGRATION_SIGNING_KEY=${BUILDER_INTEGRATION_SIGNING_KEY:-}
+      - BUILDER_LAUNCH_TTL_MINUTES=${BUILDER_LAUNCH_TTL_MINUTES:-480}
+      - ALERT_RULES_PATH=${ALERT_RULES_PATH:-}
+      - TASK_DB_PATH=${TASK_DB_PATH:-/data/itops-agents/tasks.db}
+      - INCIDENT_DB_PATH=${INCIDENT_DB_PATH:-/data/itops-agents/incidents.db}
+      - AGENT_MEMORY_DB_PATH=${AGENT_MEMORY_DB_PATH:-/data/itops-agents/agent-memory.db}
+      - INCIDENT_SLA_CRITICAL_MIN=${INCIDENT_SLA_CRITICAL_MIN:-60}
+      - INCIDENT_SLA_HIGH_MIN=${INCIDENT_SLA_HIGH_MIN:-240}
+      - INCIDENT_SLA_MEDIUM_MIN=${INCIDENT_SLA_MEDIUM_MIN:-1440}
+      - INCIDENT_SLA_LOW_MIN=${INCIDENT_SLA_LOW_MIN:-4320}
+      # OpenTelemetry — opt-in. Set OTEL_ENABLED=true to start exporting
+      # traces + metrics over OTLP/HTTP. The default endpoint targets the
+      # Jaeger profile below ("docker compose --profile with-tracing up").
+      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-itops-agents}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4318}
+      # Storage backend. Default sqlite keeps existing single-node deployments
+      # untouched; set DB_PROVIDER=postgres to use the postgres service below
+      # ("docker compose --profile with-postgres up" or override the default).
+      - DB_PROVIDER=${DB_PROVIDER:-sqlite}
+      - POSTGRES_URL=${POSTGRES_URL:-postgresql://beacon:beacon_dev@postgres:5432/beacon}
+      - POSTGRES_POOL_MAX=${POSTGRES_POOL_MAX:-10}
+      # Message bus backend. Default memory keeps the in-process bus untouched;
+      # set MESSAGE_BUS=redis to use the redis service below
+      # ("docker compose --profile with-redis up" or override the default).
+      # If MESSAGE_BUS=redis but Redis is unreachable, the factory falls back
+      # to the in-memory bus and logs a warning — never crashes the process.
+      - MESSAGE_BUS=${MESSAGE_BUS:-memory}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      # External chat-bot API (OpenClaw / Telegram / etc.). When the token
+      # is unset the /api/external/* surface is not mounted at all.
+      - EXTERNAL_API_TOKEN=${EXTERNAL_API_TOKEN:-}
+      - EXTERNAL_API_RESTART_ALLOWLIST=${EXTERNAL_API_RESTART_ALLOWLIST:-}
+      # SMTP email notifications (EmailService). When SMTP_HOST is unset
+      # the service stays disabled — invite emails are skipped (the token
+      # is still returned to the admin for out-of-band delivery) and
+      # incident/alert emails are no-ops.
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+    volumes:
+      - itops-data:/data/itops-agents
+      - /var/run/docker.sock:/var/run/docker.sock  # For Docker management
+      - /root/.ssh:/root/.ssh:ro                   # SSH keys for remote server access
+    networks:
+      - itops-network
+    restart: unless-stopped
+    # Host-namespace access for the auto-remediator. With pid=host the
+    # container can see the host's PID 1, and CAP_SYS_ADMIN lets nsenter
+    # cross into the host's mount/uts/ipc/net namespaces. Used by
+    # IncidentAutoRemediator to run `journalctl --vacuum`, `find /var/log`,
+    # etc. on the host instead of inside the container (where systemd and
+    # the host log tree don't exist). The Docker socket already grants
+    # equivalent privilege, so this isn't a meaningful step up in blast
+    # radius — it just lets us avoid spawning shell-out-to-docker for
+    # every host command.
+    pid: host
+    cap_add:
+      - SYS_ADMIN
+      - SYS_PTRACE
+    security_opt:
+      - apparmor=unconfined
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:19123/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  irc-server:
+    image: ghcr.io/ergochat/ergo:stable
+    container_name: itops-irc-server
+    ports:
+      - "6667:6667"
+    volumes:
+      - ./docker/ergo/ircd.yaml:/ircd/ircd.yaml:ro
+      - irc-data:/data
+    networks:
+      - itops-network
+    restart: unless-stopped
+    profiles:
+      - with-irc
+
+  agentirc:
+    build:
+      context: ./docker/agentirc
+      dockerfile: Dockerfile
+    container_name: itops-agentirc
+    environment:
+      - IRC_HOST=irc-server
+      - IRC_PORT=6667
+      - IRC_NICK=${IRC_AGENT_NICK:-itops-ai}
+      - IRC_CHANNELS=${IRC_CHANNELS:-#ops,#incidents,#alerts}
+      - IRC_REALNAME=ITOps AI Agent
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    networks:
+      - itops-network
+    restart: unless-stopped
+    depends_on:
+      - irc-server
+    profiles:
+      - with-irc
+
+  factory-dashboard:
+    build: .
+    container_name: itops-factory-dashboard
+    command: npm run start:factory-dashboard
+    ports:
+      - "19124:19124"
+    environment:
+      - NODE_ENV=production
+      - FACTORY_DASHBOARD_PORT=19124
+      - FACTORY_DASHBOARD_HOST=0.0.0.0
+      - CONTROL_API_BASE=http://itops-agents:19123
+    networks:
+      - itops-network
+    restart: unless-stopped
+    depends_on:
+      - itops-agents
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:19124/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Optional: Ollama for local AI models
+  ollama:
+    image: ollama/ollama:latest
+    container_name: itops-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - itops-network
+    restart: unless-stopped
+    profiles:
+      - with-ollama
+
+  # Optional: Prometheus for monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: itops-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - itops-network
+    restart: unless-stopped
+    profiles:
+      - with-monitoring
+
+  # Optional: PostgreSQL for production-grade persistence.
+  # Run with: `docker compose --profile with-postgres up`, then
+  #          `DB_PROVIDER=postgres docker compose up itops-agents`.
+  # The itops-agents service already has POSTGRES_URL pointing here.
+  postgres:
+    image: postgres:16-alpine
+    container_name: itops-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-beacon}
+      POSTGRES_USER: ${POSTGRES_USER:-beacon}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-beacon_dev}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - itops-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-beacon} -d ${POSTGRES_DB:-beacon}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    profiles:
+      - with-postgres
+
+  # Optional: Redis for the cross-process message bus.
+  # Run with: `docker compose --profile with-redis up`, then
+  #          `MESSAGE_BUS=redis docker compose up itops-agents`.
+  # The itops-agents service already has REDIS_URL pointing here.
+  # `appendonly yes` keeps in-flight messages durable across restarts so a
+  # crashed container doesn't drop the audit trail.
+  redis:
+    image: redis:7-alpine
+    container_name: itops-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - itops-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 3s
+    profiles:
+      - with-redis
+
+  # Optional: Jaeger all-in-one for distributed tracing.
+  # Run with: `docker compose --profile with-tracing up`
+  # UI:        http://localhost:16686
+  # OTLP HTTP: http://localhost:4318  (set as OTEL_EXPORTER_OTLP_ENDPOINT
+  #            on the itops-agents service, default already points here).
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: itops-jaeger
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4318:4318"     # OTLP HTTP receiver
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - itops-network
+    restart: unless-stopped
+    profiles:
+      - with-tracing
+
+  # Optional: Grafana for dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: itops-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - itops-network
+    restart: unless-stopped
+    profiles:
+      - with-monitoring
+
+volumes:
+  itops-data:
+    driver: local
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  irc-data:
+    driver: local
+  ollama-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+
+networks:
+  itops-network:
+    driver: bridge

@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "id": "library.disk-space-audit",
+  "name": "Disk Space Audit",
+  "description": "Real disk-space report + safe auto-remediation: per-mount usage, top 10 largest files in noisy paths, total reclaimable bytes from old logs, and Docker overlay2 footprint. When any mount exceeds usePercentWarn or reclaimable old-log bytes exceed reclaimWarnGb, runs `journalctl --vacuum-time` and removes /tmp files older than logRetentionDays. Reports total bytes freed and creates a low-severity audit incident when cleanup actually ran.",
+  "version": "1.1.0",
+  "tags": ["library", "disk", "monitoring", "cleanup", "remediation"],
+  "inputs": [
+    {
+      "name": "host",
+      "type": "string",
+      "default": "host.docker.internal"
+    },
+    {
+      "name": "usePercentWarn",
+      "type": "number",
+      "default": 85,
+      "description": "Fail when any tracked mount exceeds this %use"
+    },
+    {
+      "name": "reclaimWarnGb",
+      "type": "number",
+      "default": 1,
+      "description": "Fail when reclaimable old logs exceed this many GB"
+    },
+    {
+      "name": "logRetentionDays",
+      "type": "number",
+      "default": 7
+    }
+  ],
+  "onError": "continue",
+  "steps": [
+    {
+      "id": "filesystem_usage",
+      "type": "bash",
+      "description": "Per-mount %use, sorted desc. Filters pseudo filesystems so the output is meaningful.",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} \"df -hPl -x tmpfs -x devtmpfs -x squashfs -x overlay -x fuse.gvfsd-fuse 2>/dev/null | tail -n +2 | awk '{ printf \\\"%s=%s/%s(%s) \\\", \\$6, \\$3, \\$2, \\$5 } END { print \\\"\\\" }'\"",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "usage_check",
+      "type": "bash",
+      "description": "Fail (exit 2) when any tracked mount exceeds the warn threshold. Lists offending mounts.",
+      "command": "OFF=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} \"df -hPl -x tmpfs -x devtmpfs -x squashfs -x overlay -x fuse.gvfsd-fuse 2>/dev/null | awk -v t=${inputs.usePercentWarn} 'NR>1 { gsub(\\\"%\\\",\\\"\\\",\\$5); if (\\$5+0 > t) printf \\\"%s(%s%%) \\\", \\$6, \\$5 }'\"); if [ -n \"$OFF\" ]; then echo \"OVER_THRESHOLD: $OFF\"; exit 2; else echo 'all mounts within threshold'; fi",
+      "timeoutMs": 15000,
+      "onError": "continue"
+    },
+    {
+      "id": "top_largest_files",
+      "type": "bash",
+      "description": "Top 10 largest files under noisy paths — the operator pastes this into the cleanup ticket. Uses -maxdepth 4 to keep the walk bounded on hosts with deep trees.",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} 'find /var/log /tmp /var/cache -maxdepth 4 -type f -size +50M -printf \"%s\\t%p\\n\" 2>/dev/null | sort -rn | head -10 | awk \"{ printf \\\"%.0fMB\\\\t%s\\\\n\\\", \\$1/1024/1024, \\$2 }\" || true'",
+      "timeoutMs": 90000,
+      "timeout": 60000,
+      "onError": "continue"
+    },
+    {
+      "id": "old_logs_reclaim",
+      "type": "bash",
+      "description": "Total bytes reclaimable from logs older than logRetentionDays. Fails when over threshold.",
+      "command": "BYTES=$(ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} \"find /var/log -type f \\( -name '*.log*' -o -name '*.gz' \\) -mtime +${inputs.logRetentionDays} -printf '%s\\n' 2>/dev/null | awk '{ s+=\\$1 } END { print s+0 }'\"); [ -z \"$BYTES\" ] && BYTES=0; GB=$(awk -v b=\"$BYTES\" 'BEGIN { printf \"%.2f\", b/1024/1024/1024 }'); echo \"reclaimable_old_logs_gb=$GB threshold_gb=${inputs.reclaimWarnGb} retention_days=${inputs.logRetentionDays}\"; awk -v g=\"$GB\" -v t=\"${inputs.reclaimWarnGb}\" 'BEGIN { exit !(g > t) }' && { echo 'RECLAIM_EXCEEDED'; exit 3; } || true",
+      "timeoutMs": 30000,
+      "onError": "continue"
+    },
+    {
+      "id": "docker_overlay_size",
+      "type": "bash",
+      "description": "Docker storage footprint via df on the daemon's data root — fast (no tree walk) and aligned with how Docker itself sizes things",
+      "command": "DR=$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || echo /var/lib/docker); ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${inputs.host} \"df -h '$DR' 2>/dev/null | tail -1 | awk '{ printf \\\"docker_root=%s used=%s/%s(%s)\\\\n\\\", \\$6, \\$3, \\$2, \\$5 }'\" || echo 'docker root not accessible'",
+      "timeoutMs": 15000,
+      "onError": "continue"
+    },
+    {
+      "id": "needs_cleanup",
+      "type": "bash",
+      "description": "Decide whether remediation should run: ok=true (exit 0) when ANY of (mount over %, reclaimable over GB) breached.",
+      "command": "USAGE_OK='${steps.usage_check.ok}'; LOGS_OK='${steps.old_logs_reclaim.ok}'; echo \"usage_ok=$USAGE_OK logs_ok=$LOGS_OK\"; if [ \"$USAGE_OK\" = \"false\" ] || [ \"$LOGS_OK\" = \"false\" ]; then echo 'cleanup=needed'; exit 0; else echo 'cleanup=skip'; exit 1; fi",
+      "timeoutMs": 5000,
+      "onError": "continue"
+    },
+    {
+      "id": "branch_cleanup",
+      "type": "conditional",
+      "description": "Run cleanup only when needs_cleanup decided remediation is warranted.",
+      "when": "${steps.needs_cleanup.ok}",
+      "equals": "true",
+      "then": "cleanup"
+    },
+    {
+      "id": "cleanup",
+      "type": "bash",
+      "description": "REMEDIATION on ${inputs.host}: vacuum old journal logs to ${inputs.logRetentionDays}d and delete /tmp files older than ${inputs.logRetentionDays} days. Captures before/after disk usage on /. Idempotent (no-op when already clean).",
+      "command": "ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${inputs.host} \"BEFORE=\\$(df -B1 / 2>/dev/null | awk 'NR==2 {print \\$3}'); [ -z \\\"\\$BEFORE\\\" ] && BEFORE=0; JOUT=\\$(journalctl --vacuum-time=${inputs.logRetentionDays}d 2>&1 | tail -5); TOUT=\\$(find /tmp -type f -mtime +${inputs.logRetentionDays} -delete 2>/dev/null && echo tmp_cleaned || echo tmp_partial); AFTER=\\$(df -B1 / 2>/dev/null | awk 'NR==2 {print \\$3}'); [ -z \\\"\\$AFTER\\\" ] && AFTER=0; FREED=\\$((BEFORE - AFTER)); FREED_MB=\\$((FREED / 1024 / 1024)); echo \\\"REMEDIATION cleanup host=${inputs.host} retention_days=${inputs.logRetentionDays} root_used_before=\\$BEFORE root_used_after=\\$AFTER freed_bytes=\\$FREED freed_mb=\\$FREED_MB tmp=\\$TOUT journal_vacuum=[\\$JOUT]\\\"\"",
+      "timeoutMs": 120000,
+      "onError": "continue"
+    },
+    {
+      "id": "remediation_audit_check",
+      "type": "bash",
+      "description": "Decide whether to create an audit incident — only when cleanup actually ran successfully.",
+      "command": "CLEAN_OK='${steps.cleanup.ok}'; echo \"cleanup.ok=$CLEAN_OK\"; if [ \"$CLEAN_OK\" = \"true\" ]; then echo 'audit=needed'; exit 0; else echo 'audit=skip'; exit 1; fi",
+      "timeoutMs": 5000,
+      "onError": "continue"
+    },
+    {
+      "id": "branch_audit_incident",
+      "type": "conditional",
+      "description": "Create audit incident only when cleanup ran.",
+      "when": "${steps.remediation_audit_check.ok}",
+      "equals": "true",
+      "then": "create_audit_incident"
+    },
+    {
+      "id": "create_audit_incident",
+      "type": "skill",
+      "description": "AUDIT TRAIL: low-severity incident records that disk cleanup ran on the host.",
+      "skill": "incident.create",
+      "params": {
+        "title": "Disk-space auto-remediation performed on ${inputs.host}",
+        "severity": "low",
+        "description": "Disk-space-audit workflow auto-cleaned ${inputs.host}. Detection: usage_within_threshold=${steps.usage_check.ok} reclaim_within_threshold=${steps.old_logs_reclaim.ok}. Cleanup ok=${steps.cleanup.ok}. journalctl vacuum=${inputs.logRetentionDays}d, /tmp -mtime +${inputs.logRetentionDays} -delete. See workflow run record for freed bytes.",
+        "assignedTo": "system"
+      }
+    },
+    {
+      "id": "summary",
+      "type": "bash",
+      "description": "Operator rollup. False ${steps.usage_check.ok} = mount over threshold; false ${steps.old_logs_reclaim.ok} = reclaimable exceeded. cleanup_ran=true means we acted on it.",
+      "command": "echo \"DiskSpaceAudit on ${inputs.host}: usage_within_threshold=${steps.usage_check.ok} reclaim_within_threshold=${steps.old_logs_reclaim.ok} | remediation: cleanup_ran=${steps.cleanup.ok} audit_incident_created=${steps.create_audit_incident.ok}. If still over threshold, review steps.top_largest_files manually.\"",
+      "timeoutMs": 5000,
+      "onError": "fail"
+    }
+  ]
+}

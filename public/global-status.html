@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — System Status</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    body {
+      background:
+        radial-gradient(circle at 12% -10%, rgba(57, 197, 187, 0.22), transparent 44%),
+        radial-gradient(circle at 90% 0%, rgba(61, 135, 197, 0.18), transparent 45%),
+        linear-gradient(150deg, var(--bg2) 0%, var(--bg3) 45%, var(--bg) 100%);
+    }
+    .gs-shell {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .gs-card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: linear-gradient(160deg, var(--bg3), var(--bg2));
+      box-shadow: inset 0 0 28px rgba(111, 178, 255, 0.06);
+      padding: 16px;
+    }
+    h2 {
+      margin: 0 0 10px;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+    }
+    .header {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr;
+      gap: 10px;
+    }
+    .title h1 {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .auth {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-content: start;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    .auth > * {
+      min-width: 120px;
+    }
+    .auth input, .auth select {
+      border-radius: var(--radius-sm, 10px);
+      border: 1px solid var(--border);
+      background: var(--bg2);
+      color: var(--text);
+      min-height: 40px;
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+    .auth button {
+      cursor: pointer;
+      border-radius: var(--radius-sm, 10px);
+      border: 1px solid var(--accent);
+      background: linear-gradient(130deg, var(--accent), var(--accent));
+      color: var(--text);
+      min-height: 40px;
+      padding: 8px 12px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .auth button.secondary {
+      background: var(--bg3);
+      border-color: var(--border);
+    }
+    .status-line {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 20px;
+    }
+    .status-line.error { color: var(--danger); }
+    .quick-links {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+    .quick-links a {
+      text-decoration: none;
+      color: var(--accent-light);
+      border: 1px solid var(--accent);
+      background: var(--bg2);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+    }
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg3);
+      padding: 10px;
+      min-height: 86px;
+    }
+    .metric .k {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .metric .v {
+      margin-top: 6px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .gs-grid {
+      display: grid;
+      grid-template-columns: 2.1fr 1fr;
+      gap: 12px;
+    }
+    .kanban {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(220px, 1fr));
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 3px;
+    }
+    .col {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg3);
+      min-height: 320px;
+      padding: 8px;
+    }
+    .col h3 {
+      margin: 0;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent-light);
+    }
+    .col-body {
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .item {
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 7px;
+      background: var(--bg2);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .item strong {
+      font-size: 12px;
+      color: var(--text);
+      display: block;
+      margin-bottom: 4px;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 640px;
+      overflow: auto;
+    }
+    .tag {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 2px 7px;
+      font-size: 11px;
+      border: 1px solid var(--border);
+      color: var(--accent-light);
+    }
+    .tag.ok { color: var(--success); border-color: var(--success); }
+    .tag.warn { color: var(--warning); border-color: var(--warning); }
+    .tag.danger { color: var(--danger); border-color: var(--danger); }
+    .servers-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .servers-table th {
+      text-align: left;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .servers-table td {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .servers-table tr:last-child td { border-bottom: none; }
+    .badge {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge.online  { background: var(--bg3); color: var(--success); border: 1px solid var(--success); }
+    .badge.offline { background: var(--bg3); color: var(--danger); border: 1px solid var(--danger); }
+    .badge.checking { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+    .servers-refresh {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    @media (max-width: 1150px) {
+      .header { grid-template-columns: 1fr; }
+      .auth { justify-content: flex-start; }
+      .gs-grid { grid-template-columns: 1fr; }
+      .kanban { grid-template-columns: repeat(2, minmax(240px, 1fr)); }
+    }
+    @media (max-width: 680px) {
+      .auth > * { flex: 1 1 100%; }
+      .kanban { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo"><span>[=] IT OPS</span></div>
+  <nav class="sidebar-nav">
+    <span class="sidebar-section">Operations</span>
+    <a href="/incidents" class="nav-item"><span class="nav-icon">!</span>Incidents</a>
+    <a href="/workflows" class="nav-item"><span class="nav-icon">></span>Workflows</a>
+    <a href="/runbooks" class="nav-item"><span class="nav-icon">#</span>Runbooks</a>
+    <a href="/servers" class="nav-item"><span class="nav-icon">@</span>Servers</a>
+    <a href="/monitoring.html" class="nav-item"><span class="nav-icon">%</span>Monitoring</a>
+    <span class="sidebar-section">Integrations</span>
+    <a href="/jira.html" class="nav-item"><span class="nav-icon">*</span>Jira</a>
+    <a href="/a2a.html" class="nav-item"><span class="nav-icon">&amp;</span>A2A Mesh</a>
+    <span class="sidebar-section">System</span>
+    <a href="/agent-details.html" class="nav-item"><span class="nav-icon">$</span>Agents</a>
+    <a href="/scheduler" class="nav-item"><span class="nav-icon">~</span>Scheduler</a>
+    <a href="/security.html" class="nav-item"><span class="nav-icon">^</span>Security</a>
+    <a href="/users.html" class="nav-item" id="nav-users" style="display:none"><span class="nav-icon">+</span>Users</a>
+    <span class="sidebar-section">Communication</span>
+    <a href="/agent-chat.html" class="nav-item"><span class="nav-icon">&lt;</span>Agent Chat</a>
+    <a href="/agent-bridge" class="nav-item"><span class="nav-icon">&lt;&gt;</span>Agent Bridge</a>
+    <span class="sidebar-section">Tools</span>
+    <a href="/dashboard" class="nav-item"><span class="nav-icon">=</span>Dashboard</a>
+    <a href="/cicd" class="nav-item"><span class="nav-icon">|</span>CI/CD</a>
+    <a href="/audit" class="nav-item"><span class="nav-icon">.</span>Audit</a>
+    <a href="/rbac" class="nav-item"><span class="nav-icon">:</span>RBAC</a>
+    <a href="/plugin-manager" class="nav-item"><span class="nav-icon">,</span>Plugins</a>
+    <a href="/agent-runtime" class="nav-item"><span class="nav-icon">&gt;&gt;</span>Agent Runtime</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="user-avatar">?</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-username" id="user-name">---</div>
+        <div class="sidebar-role" id="user-role"></div>
+      </div>
+    </div>
+    <div class="sidebar-actions">
+      <button class="btn-icon" onclick="doLogout()" title="Logout">[X]</button>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">System Status</h1>
+      <p class="page-subtitle">Live operational health across all services</p>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-secondary" id="refreshBtn">↻ Refresh</button>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="gs-shell">
+
+      <section class="gs-card header">
+        <div class="title">
+          <h1>Global Project View</h1>
+          <p>Unified live status, kanban columns, workflows, and active operational signals.</p>
+          <div class="quick-links">
+            <a href="/dashboard">Dashboard</a>
+            <a href="/workflows">Workflows</a>
+            <a href="/task-assignment">Task Assignment</a>
+            <a href="/scheduler">Scheduler</a>
+            <a href="http://127.0.0.1:19124/" target="_blank" rel="noreferrer">Factory Dashboard</a>
+          </div>
+          <div id="statusLine" class="status-line">Login to load secure project state.</div>
+        </div>
+        <div class="auth">
+          <input id="username" placeholder="username" value="admin" />
+          <input id="password" type="password" placeholder="password" />
+          <button id="loginBtn">Login</button>
+          <button id="inlineRefreshBtn" class="secondary">Refresh</button>
+          <button id="logoutBtn" class="secondary">Logout</button>
+        </div>
+      </section>
+
+      <section class="gs-card">
+        <div class="metrics" id="metrics"></div>
+      </section>
+
+      <section class="gs-grid">
+        <section class="gs-card">
+          <h2>Kanban</h2>
+          <div class="sub" id="kanbanMeta">Awaiting data...</div>
+          <div class="kanban" id="kanban"></div>
+        </section>
+        <section class="gs-card">
+          <h2>Workflows</h2>
+          <div class="sub" id="workflowsMeta">Awaiting data...</div>
+          <div class="list" id="workflowsList"></div>
+        </section>
+      </section>
+
+      <section class="gs-grid">
+        <section class="gs-card">
+          <h2>Alerts</h2>
+          <div class="list" id="alertsList"></div>
+        </section>
+        <section class="gs-card">
+          <h2>Operations</h2>
+          <div class="list" id="opsList"></div>
+        </section>
+      </section>
+
+      <section class="gs-card">
+        <h2>Servers</h2>
+        <div class="servers-refresh" id="serversRefreshLine">Loading…</div>
+        <table class="servers-table" id="serversTable">
+          <thead>
+            <tr><th>IP</th><th>Name</th><th>Status</th><th>Agents</th><th>Tasks</th><th>Uptime</th></tr>
+          </thead>
+          <tbody id="serversTbody"><tr><td colspan="6" class="sub" style="padding:10px">Loading servers…</td></tr></tbody>
+        </table>
+      </section>
+
+    </div>
+  </div>
+</main>
+<script src="/auth-guard.js"></script>
+
+<div id="toast"></div>
+<script>
+function toggleTheme(){const t=document.documentElement.classList.toggle('light');localStorage.setItem('theme',t?'light':'dark');}
+function initTheme(){if(localStorage.getItem('theme')=='light')document.documentElement.classList.add('light');}
+initTheme();
+const token=sessionStorage.getItem('itops_token')||localStorage.getItem('itops_token');
+if(!token){window.location.href='/';}
+function doLogout(){sessionStorage.removeItem('itops_token');localStorage.removeItem('itops_token');window.location.href='/';}
+fetch('/api/auth/me',{headers:{'Authorization':'Bearer '+token}}).then(r=>r.json()).then(u=>{
+  document.getElementById('user-name').textContent=u.username;
+  document.getElementById('user-role').textContent=u.role;
+  document.getElementById('user-avatar').textContent=u.username[0].toUpperCase();
+  if(u.role==='admin')document.getElementById('nav-users').style.display='flex';
+}).catch(()=>{window.location.href='/';});
+function showToast(msg,type='info'){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';t.style.borderColor=type==='error'?'var(--danger)':type==='success'?'var(--success)':'var(--border2)';clearTimeout(t._to);t._to=setTimeout(()=>{t.style.display='none';},3500);}
+</script>
+<script>
+  // Page-level token management (reads from multiple keys for compatibility)
+  const tokenKeys = ["itops_global_token", "dashboard.ops.token", "itops_token"];
+  function readStoredToken() {
+    try {
+      for (const key of tokenKeys) {
+        const found = localStorage.getItem(key);
+        if (found) return found;
+      }
+    } catch (_error) {}
+    return "";
+  }
+  function persistToken(value) {
+    gsToken = value || "";
+    try {
+      for (const key of tokenKeys) {
+        if (gsToken) localStorage.setItem(key, gsToken);
+        else localStorage.removeItem(key);
+      }
+    } catch (_error) {}
+  }
+  let gsToken = readStoredToken();
+  let poll = null;
+
+  const el = {
+    username: document.getElementById("username"),
+    password: document.getElementById("password"),
+    loginBtn: document.getElementById("loginBtn"),
+    refreshBtn: document.getElementById("refreshBtn"),
+    inlineRefreshBtn: document.getElementById("inlineRefreshBtn"),
+    logoutBtn: document.getElementById("logoutBtn"),
+    statusLine: document.getElementById("statusLine"),
+    metrics: document.getElementById("metrics"),
+    kanban: document.getElementById("kanban"),
+    kanbanMeta: document.getElementById("kanbanMeta"),
+    workflowsList: document.getElementById("workflowsList"),
+    workflowsMeta: document.getElementById("workflowsMeta"),
+    alertsList: document.getElementById("alertsList"),
+    opsList: document.getElementById("opsList")
+  };
+
+  function setStatus(msg, isError) {
+    el.statusLine.textContent = msg;
+    el.statusLine.className = isError ? "status-line error" : "status-line";
+  }
+
+  function headers() {
+    if (!gsToken) gsToken = readStoredToken();
+    return gsToken ? { authorization: `Bearer ${gsToken}` } : {};
+  }
+
+  async function api(path) {
+    const res = await fetch(path, { headers: headers() });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) { throw new Error(body.error || `${path} failed (${res.status})`); }
+    return body;
+  }
+
+  function statusTag(text) {
+    const val = String(text || "unknown").toLowerCase();
+    const cls = val.includes("fail") || val.includes("error") || val.includes("down") ? "danger"
+      : val.includes("active") || val.includes("healthy") || val.includes("working") || val.includes("ok") ? "ok"
+      : "warn";
+    return `<span class="tag ${cls}">${text || "n/a"}</span>`;
+  }
+
+  function metricCard(key, value, sub) {
+    return `<div class="metric"><div class="k">${key}</div><div class="v">${value}</div>${sub ? `<div class="sub">${sub}</div>` : ""}</div>`;
+  }
+
+  function renderMetrics(data) {
+    el.metrics.innerHTML = [
+      metricCard("Active Phase", data.status.activePhase || "n/a", data.status.activeTrack || ""),
+      metricCard("Platform", statusTag(data.status.platformStatus || "unknown"), "From PROJECT_KANBAN"),
+      metricCard("Kanban Queue", `${data.status.queue.done}/${data.status.queue.inProgress}/${data.status.queue.next}/${data.status.queue.backlog}`, "Done / In Progress / Next / Backlog"),
+      metricCard("Working Features", String(data.status.workingFeatureCount || 0), "Operator visible"),
+      metricCard("Workflows", `${data.workflow.active} active / ${data.workflow.total} total`, "Live workflow runs"),
+      metricCard("Alerts", String(data.alerts.total), `${data.alerts.critical} critical`),
+      metricCard("Ops", `${data.ops.activeTasks} tasks`, `${data.ops.activeDelegations} delegations`),
+      metricCard("Updated", new Date(data.generatedAt).toLocaleTimeString(), new Date(data.generatedAt).toLocaleDateString())
+    ].join("");
+  }
+
+  function renderKanban(board) {
+    const columns = [
+      { key: "done", title: `Done (${board.columns.done.length})` },
+      { key: "inProgress", title: `In Progress (${board.columns.inProgress.length})` },
+      { key: "next", title: `Next (${board.columns.next.length})` },
+      { key: "backlog", title: `Backlog (${board.columns.backlog.length})` }
+    ];
+    el.kanban.innerHTML = columns.map((col) => {
+      const items = board.columns[col.key] || [];
+      const body = items.length
+        ? items.slice(0, 20).map((it) => `<div class="item"><strong>${it.title}</strong>${(it.details || []).slice(0, 2).map((d) => `<div>${d}</div>`).join("")}</div>`).join("")
+        : `<div class="sub">No items.</div>`;
+      return `<div class="col"><h3>${col.title}</h3><div class="col-body">${body}</div></div>`;
+    }).join("");
+    el.kanbanMeta.textContent = `Board source: ${board.sourcePath || "n/a"} | Last updated: ${board.boardLastUpdated || "n/a"}`;
+  }
+
+  function renderWorkflows(runs) {
+    const list = Array.isArray(runs) ? runs : [];
+    el.workflowsMeta.textContent = `${list.length} runs loaded`;
+    if (!list.length) { el.workflowsList.innerHTML = `<div class="sub">No workflow runs yet.</div>`; return; }
+    el.workflowsList.innerHTML = list.slice(0, 40).map((run) => {
+      const current = (run.stages || []).find((s) => s.status === "in_progress") || run.stages?.[run.currentStageIndex] || run.stages?.[0];
+      const badge = run.taskId?.startsWith('inc-') ? '[!] '
+        : run.title?.startsWith('[Scheduled]') ? '[~] '
+        : run.title?.startsWith('[Triggered]') ? '[>] '
+        : '';
+      return `<div class="item"><strong>${run.id} ${statusTag(run.status)}</strong><div>${badge}${run.title}</div><div class="sub">Task: ${run.taskId} | Template: ${run.templateId}</div><div class="sub">Stage: ${current?.name || "n/a"}</div></div>`;
+    }).join("");
+  }
+
+  function renderAlerts(alerts) {
+    const list = Array.isArray(alerts) ? alerts : [];
+    if (!list.length) { el.alertsList.innerHTML = `<div class="sub">No active alerts.</div>`; return; }
+    el.alertsList.innerHTML = list.slice(0, 40).map((a) => `<div class="item"><strong>${a.kind || "alert"} ${statusTag(a.severity || "info")}</strong><div>${a.message || ""}</div><div class="sub">${a.createdAt || ""}</div></div>`).join("");
+  }
+
+  function renderOps(ops) {
+    const slots = Array.isArray(ops.executionSlots) ? ops.executionSlots : [];
+    const tasks = Array.isArray(ops.activeTasks) ? ops.activeTasks : [];
+    const delegations = Array.isArray(ops.activeDelegations) ? ops.activeDelegations : [];
+    const parts = [];
+    parts.push(`<div class="item"><strong>Summary</strong><div>Active tasks: ${tasks.length}</div><div>Active delegations: ${delegations.length}</div><div>Execution slots: ${slots.length}</div></div>`);
+    for (const task of tasks.slice(0, 10)) {
+      parts.push(`<div class="item"><strong>${task.id || "task"}</strong><div>${task.title || ""}</div><div class="sub">${task.status || ""} | ${task.priority || ""}</div></div>`);
+    }
+    el.opsList.innerHTML = parts.join("");
+  }
+
+  async function refresh() {
+    if (!gsToken) { setStatus("Login required.", false); return; }
+    try {
+      const [status, boardRes, runsRes, alertsRes, opsRes] = await Promise.all([
+        api("/api/factory/status"),
+        api("/api/factory/board"),
+        api("/api/workflows/runs"),
+        api("/api/alerts"),
+        api("/api/operations/running?limit=20")
+      ]);
+      const runs = runsRes.runs || [];
+      const active = runs.filter((r) => r.status === "active").length;
+      const alerts = alertsRes.alerts || [];
+      const critical = alerts.filter((a) => String(a.severity || "").toLowerCase() === "critical").length;
+      const ops = opsRes || {};
+      renderMetrics({
+        generatedAt: new Date().toISOString(),
+        status,
+        workflow: { total: runs.length, active },
+        alerts: { total: alerts.length, critical },
+        ops: {
+          activeTasks: Array.isArray(ops.activeTasks) ? ops.activeTasks.length : 0,
+          activeDelegations: Array.isArray(ops.activeDelegations) ? ops.activeDelegations.length : 0
+        }
+      });
+      renderKanban(boardRes.board || { columns: { done: [], inProgress: [], next: [], backlog: [] } });
+      renderWorkflows(runs);
+      renderAlerts(alerts);
+      renderOps(ops);
+      setStatus(`Synced at ${new Date().toLocaleTimeString()}`, false);
+    } catch (error) {
+      setStatus(error.message || "Failed to refresh global state", true);
+    }
+  }
+
+  async function login() {
+    try {
+      const username = el.username.value.trim();
+      const password = el.password.value;
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ username, password })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body?.session?.token) { throw new Error(body.error || "Login failed"); }
+      persistToken(body.session.token);
+      setStatus(`Logged in as ${body.user?.username || username}`, false);
+      if (body.user?.role === 'admin') {
+        const ul = document.getElementById('nav-users');
+        if (ul) ul.style.display = 'flex';
+      }
+      await refresh();
+    } catch (error) {
+      setStatus(error.message || "Login failed", true);
+    }
+  }
+
+  function logout() {
+    persistToken("");
+    el.metrics.innerHTML = "";
+    el.kanban.innerHTML = "";
+    el.workflowsList.innerHTML = "";
+    el.alertsList.innerHTML = "";
+    el.opsList.innerHTML = "";
+    setStatus("Logged out.", false);
+  }
+
+  el.loginBtn.addEventListener("click", login);
+  el.refreshBtn.addEventListener("click", refresh);
+  el.inlineRefreshBtn.addEventListener("click", refresh);
+  el.logoutBtn.addEventListener("click", logout);
+
+  if (poll) clearInterval(poll);
+  poll = setInterval(() => { if (gsToken) refresh(); }, 15000);
+
+  if (gsToken) {
+    refresh();
+  }
+
+  // Servers panel
+  const PORT = location.port || '19123';
+  let serversTimer = null;
+
+  function fmtUptime(secs) {
+    if (secs == null) return '—';
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
+
+  async function probeServer(ip) {
+    const url = `http://${ip}:${PORT}/api/status`;
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 5000);
+      const r = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(tid);
+      const d = await r.json().catch(() => ({}));
+      return { online: true, agentCount: d.agentCount ?? '?', taskCount: d.taskCount ?? '?', uptime: d.uptime };
+    } catch (_) {
+      return { online: false, agentCount: '—', taskCount: '—', uptime: null };
+    }
+  }
+
+  async function refreshServers() {
+    const tbody = document.getElementById('serversTbody');
+    const line  = document.getElementById('serversRefreshLine');
+    let servers;
+    try {
+      const r = await fetch('/api/servers');
+      servers = await r.json();
+    } catch (e) {
+      tbody.innerHTML = `<tr><td colspan="6" style="color:var(--danger);padding:10px">Failed to load servers: ${e.message}</td></tr>`;
+      return;
+    }
+    if (!servers.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="sub" style="padding:10px">No servers configured (set MONITORED_SERVERS env var).</td></tr>`;
+      line.textContent = `No servers — refreshes every 30s`;
+      return;
+    }
+    tbody.innerHTML = servers.map(s =>
+      `<tr id="srv-${s.ip.replace(/\./g,'-')}">
+        <td>${s.ip}</td><td>${s.name || s.ip}</td>
+        <td><span class="badge checking">checking…</span></td>
+        <td>—</td><td>—</td><td>—</td>
+      </tr>`
+    ).join('');
+    const results = await Promise.all(servers.map(async s => ({ ...s, ...(await probeServer(s.ip)) })));
+    results.forEach(s => {
+      const row = document.getElementById(`srv-${s.ip.replace(/\./g,'-')}`);
+      if (!row) return;
+      const badge = s.online
+        ? `<span class="badge online">● Online</span>`
+        : `<span class="badge offline">✕ Offline</span>`;
+      row.innerHTML = `<td>${s.ip}</td><td>${s.name || s.ip}</td><td>${badge}</td><td>${s.agentCount}</td><td>${s.taskCount}</td><td>${fmtUptime(s.uptime)}</td>`;
+    });
+    line.textContent = `Last checked: ${new Date().toLocaleTimeString()} — auto-refresh every 30s`;
+  }
+
+  refreshServers();
+  if (serversTimer) clearInterval(serversTimer);
+  serversTimer = setInterval(refreshServers, 30000);
+</script>
+<script src="/sidebar.js"></script>
+</body>
+</html>

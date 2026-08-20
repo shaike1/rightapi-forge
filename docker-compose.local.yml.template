@@ -1,0 +1,59 @@
+# HOST-SPECIFIC overrides — copy to docker-compose.local.yml and fill in values.
+# NEVER commit docker-compose.local.yml itself (it's in .gitignore).
+version: "3.8"
+services:
+  itops-agents:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # AI proxy — point at your local cliproxy or OpenAI endpoint
+      OPENAI_BASE_URL: http://<HOST_BRIDGE_IP>:8317/v1   # e.g. 172.17.0.1 (default docker bridge)
+      OPENAI_MODEL: claude-sonnet-4-6
+      DEFAULT_AI_PLATFORM: openai
+      AUTO_INIT_AGENTS: "true"
+      PUBLIC_URL: http://<THIS_HOST_IP>:19123
+      # Optional integrations
+      MONITORED_SERVERS: "<HOST1>,<HOST2>"
+      OLLAMA_BASE_URL: http://<OLLAMA_HOST>:11434
+      HA_HOST: <HOME_ASSISTANT_HOST>
+      IRC_BRIDGE_ENABLED: "true"
+      IRC_HOST: irc-server
+      IRC_PORT: "6667"
+      IRC_NICK: itops-bridge
+      BACKUP_AUTOMATION_ENABLED: "true"
+      BACKUP_AUTOMATION_RUN_ON_STARTUP: "true"
+      # Cloudflare DNS provisioning — when set, RegistrationService creates
+      # a proxied CNAME `{slug}-itops.example.com → <tunnel>.cfargotunnel.com`
+      # for every new tenant. Leave unset to disable DNS automation.
+      # The token needs Zone:DNS:Edit permission on the zone below.
+      CLOUDFLARE_API_TOKEN: "<CF_API_TOKEN>"
+      CLOUDFLARE_ZONE_ID: "<CF_ZONE_ID>"
+      CLOUDFLARE_TUNNEL_ID: "6d7fa5f2-2169-4147-8e34-613f69106ade"
+      # Optional overrides (defaults shown):
+      # CLOUDFLARE_DNS_ZONE_NAME: "example.com"
+      # CLOUDFLARE_DNS_SUBDOMAIN_SUFFIX: "-itops"
+      # CLOUDFLARE_TUNNEL_CNAME: "6d7fa5f2-2169-4147-8e34-613f69106ade.cfargotunnel.com"
+      # OpenClaw chat gateway — relays incident alerts to Telegram/WhatsApp/Slack/etc.
+      # Leave OPENCLAW_ENABLED=false until URL + token are filled in.
+      # OPENCLAW_MIN_SEVERITY: floor for notifications (info|low|medium|high|critical).
+      # OPENCLAW_URL: http://openclaw.internal:18789
+      # OPENCLAW_GATEWAY_TOKEN: ""
+      # OPENCLAW_ENABLED: "false"
+      # OPENCLAW_MIN_SEVERITY: "medium"
+      # SMTP email notifications — sends invites, incident open/resolve,
+      # and critical alert emails. Leave SMTP_HOST unset to disable
+      # entirely (invite tokens are still returned to the admin for
+      # out-of-band delivery; incident/alert emails are silently
+      # skipped). SMTP_PORT defaults to 587 (STARTTLS); use 465 for
+      # implicit TLS.
+      # SMTP_HOST: "smtp.gmail.com"
+      # SMTP_PORT: "587"
+      # SMTP_USER: "alerts@example.com"
+      # SMTP_PASS: "<APP_PASSWORD_OR_API_KEY>"
+      # SMTP_FROM: "RightAPI Forge <alerts@example.com>"
+  agentirc:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      OPENAI_BASE_URL: http://<HOST_BRIDGE_IP>:8317/v1
+      OPENAI_MODEL: claude-sonnet-4-6

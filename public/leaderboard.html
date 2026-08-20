@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — Agent Leaderboard</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .lb-table { width:100%; border-collapse:collapse; }
+    .lb-table th { text-align:left; padding:8px 12px; font-size:.72rem; text-transform:uppercase; letter-spacing:.07em; color:var(--text2); border-bottom:1px solid var(--border); }
+    .lb-table td { padding:10px 12px; border-bottom:1px solid var(--border); font-size:.875rem; }
+    .lb-table tr:hover td { background:var(--bg3); }
+    .rank-badge { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; border-radius:50%; font-weight:700; font-size:.8rem; }
+    .rank-1 { background:#FFD700; color:#000; }
+    .rank-2 { background:#C0C0C0; color:#000; }
+    .rank-3 { background:#CD7F32; color:#fff; }
+    .rank-n { background:var(--bg3); color:var(--text2); }
+    .score-bar-wrap { width:100px; height:8px; background:var(--bg3); border-radius:4px; display:inline-block; vertical-align:middle; }
+    .score-bar { height:100%; border-radius:4px; background:var(--accent); transition:width .4s; }
+    .score-val { display:inline-block; width:34px; text-align:right; font-weight:600; font-size:.82rem; }
+    .status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:5px; }
+    .status-online { background:var(--success); }
+    .status-offline { background:var(--danger); }
+    .status-idle { background:var(--warning); }
+    .tag { display:inline-block; padding:2px 7px; border-radius:3px; font-size:.7rem; background:var(--bg3); color:var(--text2); border:1px solid var(--border); }
+    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100; align-items:center; justify-content:center; }
+    .modal.open { display:flex; }
+    .modal-box { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius); padding:24px; max-width:560px; width:100%; max-height:80vh; overflow-y:auto; }
+    .modal-box h2 { margin-bottom:16px; }
+    .close-btn { float:right; cursor:pointer; color:var(--text2); font-size:1.2rem; }
+    .mini-chart { display:flex; align-items:flex-end; gap:2px; height:50px; margin-top:8px; }
+    .mini-bar { flex:1; border-radius:2px 2px 0 0; min-height:2px; cursor:default; position:relative; }
+    .mini-bar.comp { background:var(--accent); opacity:.8; }
+    .mini-bar.fail { background:var(--danger,#ef4444); opacity:.7; }
+    .mini-bar:hover::after { content:attr(data-tip); position:absolute; bottom:110%; left:50%; transform:translateX(-50%); background:#111; color:#fff; padding:2px 6px; border-radius:3px; font-size:.68rem; white-space:nowrap; z-index:10; }
+    .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:16px; }
+    .stat-card { background:var(--bg3); border:1px solid var(--border); border-radius:var(--radius); padding:12px; text-align:center; }
+    .stat-val { font-size:1.4rem; font-weight:700; color:var(--accent-light); }
+    .stat-lbl { font-size:.68rem; color:var(--text2); text-transform:uppercase; letter-spacing:.06em; margin-top:3px; }
+  </style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><span>[=] IT OPS</span></div>
+  <nav class="sidebar-nav">
+    <span class="sidebar-section">Operations</span>
+    <a href="/incidents" class="nav-item"><span class="nav-icon">!</span>Incidents</a>
+    <a href="/workflows" class="nav-item"><span class="nav-icon">></span>Workflows</a>
+    <a href="/runbooks" class="nav-item"><span class="nav-icon">#</span>Runbooks</a>
+    <a href="/servers" class="nav-item"><span class="nav-icon">@</span>Servers</a>
+    <a href="/monitoring.html" class="nav-item"><span class="nav-icon">%</span>Monitoring</a>
+    <span class="sidebar-section">Integrations</span>
+    <a href="/jira.html" class="nav-item"><span class="nav-icon">*</span>Jira</a>
+    <a href="/a2a.html" class="nav-item"><span class="nav-icon">&amp;</span>A2A Mesh</a>
+    <span class="sidebar-section">System</span>
+    <a href="/agent-details.html" class="nav-item"><span class="nav-icon">$</span>Agents</a>
+    <a href="/scheduler" class="nav-item"><span class="nav-icon">~</span>Scheduler</a>
+    <a href="/security.html" class="nav-item"><span class="nav-icon">^</span>Security</a>
+    <a href="/users.html" class="nav-item" id="nav-users" style="display:none"><span class="nav-icon">+</span>Users</a>
+    <span class="sidebar-section">Communication</span>
+    <a href="/agent-chat.html" class="nav-item"><span class="nav-icon">&lt;</span>Agent Chat</a>
+    <a href="/agent-bridge" class="nav-item"><span class="nav-icon">&lt;&gt;</span>Agent Bridge</a>
+    <span class="sidebar-section">Tools</span>
+    <a href="/dashboard" class="nav-item"><span class="nav-icon">=</span>Dashboard</a>
+    <a href="/cicd" class="nav-item"><span class="nav-icon">|</span>CI/CD</a>
+    <a href="/audit" class="nav-item"><span class="nav-icon">.</span>Audit</a>
+    <a href="/rbac" class="nav-item"><span class="nav-icon">:</span>RBAC</a>
+    <a href="/plugin-manager" class="nav-item"><span class="nav-icon">,</span>Plugins</a>
+    <a href="/agent-runtime" class="nav-item"><span class="nav-icon">&gt;&gt;</span>Agent Runtime</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="user-avatar">?</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-username" id="user-name">---</div>
+        <div class="sidebar-role" id="user-role"></div>
+      </div>
+    </div>
+    <div class="sidebar-actions">
+      <button class="btn-icon" onclick="doLogout()" title="Logout">[X]</button>
+    </div>
+  </div>
+</aside>
+<main class="main">
+  <div class="page-header">
+    <div><h1 class="page-title">Agent Leaderboard</h1><p class="page-subtitle">Performance rankings and agent stats</p></div>
+    <button onclick="loadLeaderboard()" style="font-size:.8rem;padding:6px 14px;">Refresh</button>
+  </div>
+  <div class="page-content">
+  <div id="subtitle" style="font-size:.8rem;color:var(--text2);margin-bottom:12px;">Loading...</div>
+  <div id="content"><div style="color:var(--text2);padding:32px 0;text-align:center;">Loading leaderboard...</div></div>
+  </div>
+</main>
+<script src="/auth-guard.js"></script>
+
+<!-- Agent Detail Modal -->
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <span class="close-btn" onclick="closeModal()">✕</span>
+    <h2 id="modal-title">Agent Details</h2>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+let lb = [];
+
+async function loadLeaderboard() {
+  const r = await fetch('/api/leaderboard');
+  const d = await r.json();
+  lb = d.leaderboard ?? [];
+  const sub = document.getElementById('subtitle');
+  sub.textContent = `${lb.length} agents ranked · updated ${new Date(d.generatedAt).toLocaleTimeString()}`;
+  render(lb);
+}
+
+function render(data) {
+  const el = document.getElementById('content');
+  if (!data.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2);">No agents found.</div>'; return; }
+  let html = `<table class="lb-table"><thead><tr>
+    <th>Rank</th><th>Agent</th><th>Role</th><th>Status</th>
+    <th>Tasks</th><th>Success</th><th>Avg Time</th><th>Score</th>
+  </tr></thead><tbody>`;
+  data.forEach(a => {
+    const rankClass = a.rank <= 3 ? `rank-${a.rank}` : 'rank-n';
+    const rankLabel = a.rank <= 3 ? ['🥇','🥈','🥉'][a.rank-1] : a.rank;
+    const statusDot = `<span class="status-dot status-${a.status === 'active' ? 'online' : a.status === 'idle' ? 'idle' : 'offline'}"></span>`;
+    const avgT = a.stats.avgCompletionMinutes !== null ? `${a.stats.avgCompletionMinutes}m` : '—';
+    const barW = Math.min(100, a.score);
+    html += `<tr style="cursor:pointer" onclick="showDetail('${a.agentId}')">
+      <td><span class="rank-badge ${rankClass}">${rankLabel}</span></td>
+      <td><strong>${a.name}</strong></td>
+      <td><span class="tag">${a.role}</span></td>
+      <td>${statusDot}${a.status}</td>
+      <td>${a.stats.completed}/${a.stats.total}</td>
+      <td>${a.stats.successRate}%</td>
+      <td>${avgT}</td>
+      <td>
+        <span class="score-val">${a.score}</span>
+        <span class="score-bar-wrap"><span class="score-bar" style="width:${barW}%"></span></span>
+      </td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+async function showDetail(agentId) {
+  const r = await fetch(`/api/leaderboard/agent/${agentId}`);
+  const d = await r.json();
+  const agent = d.agent ?? {};
+  const stats = (lb.find(a => a.agentId === agentId) ?? {}).stats ?? {};
+  const timeline = d.timeline ?? [];
+
+  const maxVal = Math.max(1, ...timeline.map(t => t.completed + t.failed));
+
+  let bars = timeline.map(t => {
+    const compH = Math.round((t.completed / maxVal) * 50);
+    const failH = Math.round((t.failed / maxVal) * 50);
+    const day = t.date.slice(5); // MM-DD
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:1px">
+      <div class="mini-bar comp" style="height:${compH}px" data-tip="${day}: ${t.completed} done"></div>
+      <div class="mini-bar fail" style="height:${failH}px" data-tip="${day}: ${t.failed} failed"></div>
+      <div style="font-size:.6rem;color:var(--text2);margin-top:2px">${day}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('modal-title').textContent = `${agent.name} — ${agent.role ?? ''}`;
+  document.getElementById('modal-body').innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val">${stats.completed ?? 0}</div><div class="stat-lbl">Completed</div></div>
+      <div class="stat-card"><div class="stat-val">${stats.successRate ?? 0}%</div><div class="stat-lbl">Success</div></div>
+      <div class="stat-card"><div class="stat-val">${stats.criticalCompleted ?? 0}</div><div class="stat-lbl">Critical Done</div></div>
+    </div>
+    <div style="font-size:.75rem;color:var(--text2);margin-bottom:4px;">7-day activity <span style="color:var(--accent)">■</span> done <span style="color:#ef4444">■</span> failed</div>
+    <div class="mini-chart">${bars}</div>
+  `;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+loadLeaderboard();
+setInterval(loadLeaderboard, 60000);
+</script>
+<script src="/sidebar.js"></script>
+</body>
+</html>

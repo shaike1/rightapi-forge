@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Extended Skills - RightAPI Forge</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background:#f5f5f5; padding:20px; }
+    .container { max-width:1400px; margin:0 auto; }
+    h1 { margin-bottom:20px; color:#333; }
+    .skills-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(400px,1fr)); gap:20px; margin-bottom:30px; }
+    .skill-card { background:white; border-radius:8px; padding:20px; box-shadow:0 2px 4px rgba(0,0,0,.1); }
+    .skill-header { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+    .skill-icon { font-size:32px; }
+    .skill-title { font-size:18px; font-weight:600; color:#333; }
+    .skill-desc { font-size:13px; color:#666; margin-top:4px; }
+    .action-grid { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+    .action-btn { padding:6px 12px; border:1px solid #ddd; border-radius:4px; background:white; cursor:pointer; font-size:13px; transition:all .2s; }
+    .action-btn:hover { background:#007bff; color:white; border-color:#007bff; }
+    .action-btn.active { background:#007bff; color:white; border-color:#007bff; }
+    .run-section { border-top:1px solid #eee; padding-top:16px; }
+    label { font-size:13px; font-weight:500; display:block; margin-bottom:4px; }
+    textarea { width:100%; padding:8px; border:1px solid #ddd; border-radius:4px; font-size:13px; font-family:monospace; resize:vertical; }
+    .run-btn { margin-top:8px; padding:8px 20px; background:#28a745; color:white; border:none; border-radius:4px; cursor:pointer; font-size:14px; }
+    .output-box { margin-top:12px; background:#1e1e1e; color:#d4d4d4; padding:12px; border-radius:4px; font-family:monospace; font-size:12px; white-space:pre-wrap; max-height:200px; overflow-y:auto; display:none; }
+    .output-box.visible { display:block; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; background:#e2e3e5; color:#383d41; margin-left:8px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>🔧 Extended Skills</h1>
+  <p style="color:#666;margin-bottom:24px;">Execute Kubernetes, Database, and Docker operations directly from the dashboard.</p>
+
+  <div id="skillsGrid" class="skills-grid"></div>
+</div>
+
+<script>
+const SKILLS = [
+  {
+    id: 'k8s',
+    icon: '☸️',
+    title: 'Kubernetes',
+    desc: 'Manage clusters, pods, deployments, services',
+    endpoint: '/api/x/k8s',
+    actions: [
+      { id:'get-pods',      label:'Get Pods',        params: {namespace:'default'} },
+      { id:'get-deployments',label:'Deployments',    params: {namespace:'default'} },
+      { id:'get-services',  label:'Services',        params: {namespace:'default'} },
+      { id:'get-nodes',     label:'Get Nodes',       params: {} },
+      { id:'logs',          label:'Pod Logs',        params: {namespace:'default', pod:'<pod-name>', tail:50} },
+      { id:'describe-pod',  label:'Describe Pod',    params: {namespace:'default', pod:'<pod-name>'} },
+      { id:'scale',         label:'Scale',           params: {namespace:'default', deployment:'<name>', replicas:2} },
+      { id:'restart',       label:'Restart',         params: {namespace:'default', deployment:'<name>'} },
+      { id:'top-pods',      label:'Top Pods',        params: {namespace:'default'} },
+      { id:'top-nodes',     label:'Top Nodes',       params: {} },
+    ]
+  },
+  {
+    id: 'db',
+    icon: '🗄️',
+    title: 'Database',
+    desc: 'PostgreSQL and MySQL operations',
+    endpoint: '/api/x/db',
+    actions: [
+      { id:'pg-query',       label:'PG Query',       params: {host:'localhost', port:5432, user:'postgres', database:'mydb', query:'SELECT version()'} },
+      { id:'pg-list-dbs',    label:'PG Databases',   params: {host:'localhost', user:'postgres'} },
+      { id:'pg-list-tables', label:'PG Tables',      params: {host:'localhost', user:'postgres', database:'mydb'} },
+      { id:'pg-backup',      label:'PG Backup',      params: {host:'localhost', user:'postgres', database:'mydb', output:'/tmp/backup.sql'} },
+      { id:'mysql-query',    label:'MySQL Query',    params: {host:'localhost', user:'root', database:'mydb', query:'SELECT version()'} },
+      { id:'mysql-list-dbs', label:'MySQL Databases',params: {host:'localhost', user:'root'} },
+      { id:'mysql-list-tables',label:'MySQL Tables', params: {host:'localhost', user:'root', database:'mydb'} },
+    ]
+  },
+  {
+    id: 'docker',
+    icon: '🐳',
+    title: 'Docker',
+    desc: 'Containers, images, and system management',
+    endpoint: '/api/x/docker',
+    actions: [
+      { id:'list-containers', label:'Containers',    params: {all:true} },
+      { id:'list-images',     label:'Images',        params: {} },
+      { id:'stats',           label:'Stats',         params: {} },
+      { id:'logs',            label:'Logs',          params: {container:'<name>', tail:100} },
+      { id:'inspect',         label:'Inspect',       params: {container:'<name>'} },
+      { id:'restart',         label:'Restart',       params: {container:'<name>'} },
+      { id:'stop',            label:'Stop',          params: {container:'<name>'} },
+      { id:'start',           label:'Start',         params: {container:'<name>'} },
+      { id:'exec',            label:'Exec',          params: {container:'<name>', cmd:'ls -la'} },
+      { id:'prune',           label:'System Prune',  params: {} },
+    ]
+  }
+];
+
+function renderSkills() {
+  const grid = document.getElementById('skillsGrid');
+  grid.innerHTML = SKILLS.map(skill => {
+    const actions = skill.actions.map(a =>
+      '<button class="action-btn" onclick="selectAction(\'' + skill.id + '\',\'' + a.id + '\')">' + a.label + '</button>'
+    ).join('');
+
+    return '<div class="skill-card" id="card-' + skill.id + '">' +
+      '<div class="skill-header">' +
+        '<div class="skill-icon">' + skill.icon + '</div>' +
+        '<div><div class="skill-title">' + skill.title + ' <span class="badge">' + skill.actions.length + ' actions</span></div>' +
+        '<div class="skill-desc">' + skill.desc + '</div></div>' +
+      '</div>' +
+      '<div class="action-grid">' + actions + '</div>' +
+      '<div class="run-section">' +
+        '<label>Parameters (JSON):</label>' +
+        '<textarea id="params-' + skill.id + '" rows="4">{}</textarea>' +
+        '<button class="run-btn" onclick="runSkill(\'' + skill.id + '\')">▶ Run</button>' +
+        '<div class="output-box" id="output-' + skill.id + '"></div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function selectAction(skillId, actionId) {
+  const skill = SKILLS.find(s => s.id === skillId);
+  const action = skill.actions.find(a => a.id === actionId);
+
+  // Highlight button
+  document.querySelectorAll('#card-' + skillId + ' .action-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+
+  // Set params
+  document.getElementById('params-' + skillId).value = JSON.stringify(action.params, null, 2);
+
+  // Store selected action
+  document.getElementById('card-' + skillId).dataset.action = actionId;
+}
+
+async function runSkill(skillId) {
+  const skill = SKILLS.find(s => s.id === skillId);
+  const card = document.getElementById('card-' + skillId);
+  const action = card.dataset.action;
+  const output = document.getElementById('output-' + skillId);
+
+  if (!action) {
+    output.textContent = 'Please select an action first.';
+    output.classList.add('visible');
+    return;
+  }
+
+  let params = {};
+  try {
+    params = JSON.parse(document.getElementById('params-' + skillId).value || '{}');
+  } catch (e) {
+    output.textContent = 'Invalid JSON params';
+    output.classList.add('visible');
+    return;
+  }
+
+  output.textContent = 'Running...';
+  output.classList.add('visible');
+
+  try {
+    const res = await fetch(skill.endpoint + '/' + action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      output.style.color = '#d4d4d4';
+      output.textContent = data.output || '(empty output)';
+    } else {
+      output.style.color = '#f48771';
+      output.textContent = 'Error: ' + (data.error || data.output || 'Unknown error');
+    }
+  } catch (err) {
+    output.style.color = '#f48771';
+    output.textContent = 'Request failed: ' + err.message;
+  }
+}
+
+renderSkills();
+</script>
+<script src="/sidebar.js"></script>
+</body>
+</html>

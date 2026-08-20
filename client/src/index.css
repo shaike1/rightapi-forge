@@ -1,0 +1,175 @@
+/* ============================================================
+   RightAPI Forge — Global Styles
+   Clean, light, content-first design language.
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Surfaces */
+  --bg:            #FFFFFF;
+  --bg2:           #FFFFFF;          /* card surface */
+  --bg3:           #F7F7F7;          /* page section / soft */
+  --bg4:           #F3F4F6;          /* hover / table header */
+  --bg5:           #E5E7EB;          /* heavy hover / scrollbar */
+
+  /* Borders */
+  --border:        #E5E7EB;
+  --border2:       #D1D5DB;
+
+  /* Text */
+  --text:          #363737;          /* primary charcoal */
+  --text2:         #6B7280;          /* secondary muted */
+  --text3:         #9CA3AF;          /* tertiary / labels */
+
+  /* Accent — primary blue */
+  --accent:        #306EF0;
+  --accent-light:  #4A82F4;
+  --accent-dark:   #1E55D0;
+  --accent-bg:     rgba(48, 110, 240, .10);
+  --accent-border: rgba(48, 110, 240, .25);
+
+  /* Warm accent (badges/highlights) */
+  --warm:          #E8734A;
+  --warm-bg:       rgba(232, 115, 74, .10);
+  --warm-border:   rgba(232, 115, 74, .30);
+
+  /* Status */
+  --success:       #22C55E;
+  --success-bg:    rgba(34, 197, 94, .10);
+  --warning:       #F59E0B;
+  --warning-bg:    rgba(245, 158, 11, .12);
+  --danger:        #EF4444;
+  --danger-bg:     rgba(239, 68, 68, .10);
+  --info:          #06B6D4;
+  --info-bg:       rgba(6, 182, 212, .10);
+  --purple:        #A78BFA;
+  --purple-bg:     rgba(167, 139, 250, .12);
+
+  /* Effects */
+  --shadow:        0 1px 3px rgba(15, 23, 42, .06), 0 1px 2px rgba(15, 23, 42, .04);
+  --shadow-md:     0 4px 12px rgba(15, 23, 42, .08), 0 2px 4px rgba(15, 23, 42, .04);
+  --shadow-lg:     0 12px 32px rgba(15, 23, 42, .10), 0 4px 8px rgba(15, 23, 42, .05);
+  --ring:          0 0 0 3px rgba(48, 110, 240, .20);
+
+  /* Layout */
+  --sidebar-w:     248px;
+  --radius:        8px;
+  --radius-sm:     6px;
+  --radius-lg:     12px;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+               'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+}
+
+/* Optional dark theme — accessible via .dark class on :root */
+:root.dark {
+  --bg:            #0d0f17;
+  --bg2:           #12151f;
+  --bg3:           #1a1d2e;
+  --bg4:           #22263a;
+  --bg5:           #2a2f47;
+  --border:        #252a40;
+  --border2:       #30364e;
+  --text:          #e2e4f0;
+  --text2:         #8890b0;
+  --text3:         #555d80;
+  --accent:        #6366f1;
+  --accent-light:  #818cf8;
+  --accent-bg:     rgba(99,102,241,.12);
+  --accent-border: rgba(99,102,241,.3);
+  --warm:          #f59e0b;
+  --warm-bg:       rgba(245,158,11,.12);
+  --warm-border:   rgba(245,158,11,.3);
+  --shadow:        0 1px 3px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.25);
+  --shadow-md:     0 4px 16px rgba(0,0,0,.4);
+  --shadow-lg:     0 8px 32px rgba(0,0,0,.5);
+  --ring:          0 0 0 3px rgba(99, 102, 241, .35);
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+}
+
+#root { display: flex; min-height: 100vh; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { color: var(--accent-dark); }
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+button {
+  font-family: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+  color: var(--text);
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-color: var(--accent) !important;
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--bg5);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--border2); }
+
+/* ── Utility: Loading spinner ─────────────────────────────────────────────── */
+.spinner {
+  width: 24px; height: 24px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Utility: Empty state ─────────────────────────────────────────────────── */
+.emptyState { text-align: center; padding: 48px 24px; color: var(--text3); }
+.emptyState .emptyIcon { font-size: 2.5rem; margin-bottom: 12px; }
+.emptyState p { font-size: 0.9rem; }
+
+/* ── Utility: Live indicator dot ──────────────────────────────────────────── */
+.liveDot {
+  display: inline-block; width: 8px; height: 8px;
+  background: var(--success); border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ── Utility: Horizontal scroll wrapper for tables ───────────────────────── */
+.tableWrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}

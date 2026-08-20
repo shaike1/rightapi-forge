@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "id": "library.incident-response",
+  "name": "Incident Response",
+  "description": "First-pass triage runbook: snapshot system, capture recent changes, scrape error patterns from logs, then call into the agent-memory recall to suggest a starting hypothesis. Designed to run from a Telegram-bound or web-pinned alert.",
+  "version": "1.0.0",
+  "tags": ["library", "incident", "triage", "diagnostics"],
+  "inputs": [
+    { "name": "host",          "type": "string", "required": true },
+    { "name": "incidentTitle", "type": "string", "required": true },
+    { "name": "severity",      "type": "string", "default": "high" }
+  ],
+  "onError": "continue",
+  "steps": [
+    {
+      "id": "system_snapshot",
+      "type": "bash",
+      "description": "Compact host snapshot — uptime, load, memory, disk",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'uptime && free -h && df -h | head -10'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "recent_changes",
+      "type": "bash",
+      "description": "Anything modified in /etc within the last 24h, plus the last few package operations",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'find /etc -type f -mmin -1440 2>/dev/null | head -30; tail -n 30 /var/log/dpkg.log /var/log/apt/history.log 2>/dev/null'",
+      "timeoutMs": 30000
+    },
+    {
+      "id": "error_scan",
+      "type": "bash",
+      "description": "Last hour of journal errors + a coarse keyword scan across /var/log",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'journalctl --since \"1 hour ago\" -p err -n 200 --no-pager; grep -RinE \"error|critical|fail|panic\" /var/log --include=*.log 2>/dev/null | tail -50'",
+      "timeoutMs": 60000
+    },
+    {
+      "id": "pattern_recall",
+      "type": "skill",
+      "description": "Ask the agent-memory store for similar prior resolutions",
+      "skill": "agent.memory.recall",
+      "params": {
+        "incidentTitle": "${inputs.incidentTitle}",
+        "severity": "${inputs.severity}",
+        "limit": 3
+      },
+      "onError": "continue"
+    },
+    {
+      "id": "summary",
+      "type": "bash",
+      "description": "One-screen rollup the operator pastes into the incident channel",
+      "command": "echo 'Triage on ${inputs.host}: snapshot=${steps.system_snapshot.ok}, recent_changes=${steps.recent_changes.ok}, error_scan=${steps.error_scan.ok}, pattern_recall=${steps.pattern_recall.ok}. Title: ${inputs.incidentTitle} sev=${inputs.severity}.'",
+      "timeoutMs": 5000
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "id": "library.certificate-expiry-scan",
+  "name": "Certificate Expiry Scan",
+  "description": "Walks the configured cert paths, checks expiry against the warn threshold, and (when warnDays is reached) calls the credential rotator. Defaults to /etc/ssl/certs but accepts a comma list.",
+  "version": "1.0.0",
+  "tags": ["library", "certificates", "tls", "rotation", "security"],
+  "inputs": [
+    { "name": "host", "type": "string", "required": true },
+    { "name": "certPaths", "type": "string", "default": "/etc/ssl/certs/*.pem", "description": "Glob(s) the host should scan, space-separated" },
+    { "name": "warnDays", "type": "number", "default": 30 }
+  ],
+  "onError": "continue",
+  "steps": [
+    {
+      "id": "list",
+      "type": "bash",
+      "description": "Enumerate cert files matching certPaths",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'ls -la ${inputs.certPaths} 2>/dev/null | head -50'",
+      "timeoutMs": 15000
+    },
+    {
+      "id": "check_expiry",
+      "type": "bash",
+      "description": "Print not-after for every cert; the human or downstream tooling triages",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'for f in ${inputs.certPaths}; do [ -f \"$f\" ] && echo \"$f $(openssl x509 -in $f -noout -enddate 2>/dev/null)\"; done'",
+      "timeoutMs": 30000
+    },
+    {
+      "id": "expiring_soon",
+      "type": "bash",
+      "description": "Filter to certs expiring within warnDays — exit non-zero if any are found so the conditional below routes correctly",
+      "command": "ssh -o StrictHostKeyChecking=no ${inputs.host} 'WARN=${inputs.warnDays}; FOUND=0; for f in ${inputs.certPaths}; do [ -f \"$f\" ] && openssl x509 -in $f -checkend $((WARN*86400)) -noout >/dev/null 2>&1 || { echo \"EXPIRING: $f\"; FOUND=1; }; done; exit $FOUND'",
+      "timeoutMs": 30000,
+      "onError": "continue"
+    },
+    {
+      "id": "branch",
+      "type": "conditional",
+      "description": "If anything is expiring, kick the rotator; otherwise summarise",
+      "when": "${steps.expiring_soon.ok}",
+      "equals": "false",
+      "then": "rotate",
+      "else": "ok_summary"
+    },
+    {
+      "id": "rotate",
+      "type": "skill",
+      "description": "Trigger credential rotation — relies on a registered cert rotator (CertificateRotator) for kind=cert",
+      "skill": "credentials.rotation.run",
+      "params": { "kind": "cert" }
+    },
+    {
+      "id": "rotation_summary",
+      "type": "bash",
+      "command": "echo 'Cert rotation kicked for ${inputs.host}; review the next health-check run.'",
+      "timeoutMs": 5000
+    },
+    {
+      "id": "ok_summary",
+      "type": "bash",
+      "command": "echo 'No certs expiring within ${inputs.warnDays} days on ${inputs.host}.'",
+      "timeoutMs": 5000
+    }
+  ]
+}

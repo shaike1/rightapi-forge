@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Ops — IRC Bridge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  :root{
+    --t-bg:#0a0a0a;
+    --t-fg:#33ff99;
+    --t-dim:#1a6644;
+    --t-cyan:#44aaaa;
+    --t-yellow:#ccaa33;
+    --t-red:#cc3333;
+    --t-blue:#4488cc;
+    --t-white:#e8e8d8;
+    --t-border:#1a3322;
+    --t-highlight:#112818;
+    --bar-bg:#001a0d;
+  }
+  html,body{height:100%;background:#000;overflow:hidden;}
+  body{
+    font-family:'JetBrains Mono',monospace;
+    color:var(--t-fg);
+    display:flex;flex-direction:column;
+  }
+  body::after{
+    content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.08) 2px,rgba(0,0,0,0.08) 4px);
+    pointer-events:none;z-index:9999;
+  }
+  body::before{
+    content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+    background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,0.4) 100%);
+    pointer-events:none;z-index:9998;
+  }
+
+  .titlebar{
+    background:#224488;
+    padding:6px 16px;display:flex;justify-content:space-between;align-items:center;
+    flex-shrink:0;font-size:13px;
+  }
+  .titlebar-left{color:#e8e8d8;font-weight:bold;letter-spacing:0.1em;}
+  .titlebar-right{color:#44aaaa;font-size:11px;}
+
+  .navbar{
+    background:var(--bar-bg);border-bottom:1px solid var(--t-border);
+    padding:0 8px;display:flex;align-items:stretch;
+    flex-shrink:0;font-size:12px;
+  }
+  .nav-link{
+    color:var(--t-cyan);text-decoration:none;
+    padding:5px 14px;border-right:1px solid var(--t-border);
+    display:flex;align-items:center;
+  }
+  .nav-link:hover{background:var(--t-highlight);color:var(--t-white);}
+  .nav-link.active{background:var(--t-cyan);color:#000;font-weight:bold;}
+  .nav-spacer{flex:1;}
+  .nav-link.right{border-right:none;border-left:1px solid var(--t-border);color:var(--t-dim);}
+  .nav-link.right:hover{color:var(--t-white);}
+
+  .stats-bar{
+    background:var(--bar-bg);border-top:1px solid var(--t-border);
+    border-bottom:1px solid var(--t-border);
+    padding:4px 12px;font-size:11px;color:var(--t-dim);
+    display:flex;gap:16px;flex-shrink:0;flex-wrap:wrap;
+  }
+  .stat-item span{color:var(--t-cyan);}
+
+  .main-area{
+    flex:1;overflow:hidden;display:flex;flex-direction:column;
+  }
+
+  .channel-tabs{
+    background:var(--bar-bg);border-bottom:1px solid var(--t-border);
+    padding:0 8px;display:flex;align-items:stretch;
+    flex-shrink:0;font-size:12px;
+  }
+  .ch-tab{
+    color:var(--t-dim);text-decoration:none;cursor:pointer;
+    padding:4px 14px;border-right:1px solid var(--t-border);
+    display:flex;align-items:center;border:none;background:none;
+    font-family:inherit;font-size:12px;
+  }
+  .ch-tab:hover{background:var(--t-highlight);color:var(--t-white);}
+  .ch-tab.active{color:var(--t-yellow);font-weight:bold;}
+
+  .log-header{
+    padding:5px 12px;font-size:12px;color:var(--t-yellow);font-weight:bold;
+    border-bottom:1px solid var(--t-border);background:var(--bar-bg);
+    display:flex;justify-content:space-between;align-items:center;
+    flex-shrink:0;
+  }
+  .log-header .refresh-info{font-size:10px;color:var(--t-dim);font-weight:normal;}
+
+  .log-content{
+    flex:1;overflow-y:auto;padding:8px 12px;
+    scrollbar-width:thin;scrollbar-color:var(--t-dim) var(--t-bg);
+  }
+  .log-content::-webkit-scrollbar{width:3px;}
+  .log-content::-webkit-scrollbar-track{background:var(--t-bg);}
+  .log-content::-webkit-scrollbar-thumb{background:var(--t-dim);}
+
+  .log-entry{
+    margin-bottom:3px;font-size:12px;line-height:1.5;
+    border-bottom:1px solid #0a1a10;padding-bottom:3px;
+  }
+  .log-entry:hover{background:var(--t-highlight);}
+  .log-line{display:flex;gap:8px;flex-wrap:nowrap;align-items:baseline;}
+  .log-ts{color:var(--t-dim);font-size:10px;flex-shrink:0;min-width:70px;}
+  .log-nick{color:var(--t-yellow);font-weight:bold;flex-shrink:0;}
+  .log-sep{color:var(--t-dim);flex-shrink:0;}
+  .log-text{color:var(--t-white);white-space:pre-wrap;word-break:break-word;}
+  .log-text.cmd{color:var(--t-cyan);}
+  .log-text.alert{color:var(--t-red);}
+
+  .empty-log{color:var(--t-dim);font-size:12px;padding:20px;text-align:center;}
+
+  .send-bar{
+    background:var(--bar-bg);border-top:1px solid var(--t-border);
+    padding:6px 12px;display:flex;gap:8px;align-items:center;
+    flex-shrink:0;
+  }
+  .send-bar select{
+    background:#000;color:var(--t-cyan);border:1px solid var(--t-border);
+    font-family:inherit;font-size:12px;padding:4px 6px;cursor:pointer;
+  }
+  .send-bar select:focus{outline:none;border-color:var(--t-cyan);}
+  .send-bar input{
+    flex:1;background:#000;color:var(--t-fg);border:1px solid var(--t-border);
+    font-family:inherit;font-size:12px;padding:4px 8px;
+  }
+  .send-bar input:focus{outline:none;border-color:var(--t-fg);}
+  .send-bar button{
+    background:var(--t-cyan);color:#000;border:none;font-family:inherit;
+    font-size:12px;font-weight:bold;padding:4px 14px;cursor:pointer;
+  }
+  .send-bar button:hover{background:var(--t-fg);}
+  .send-status{font-size:11px;flex-shrink:0;min-width:60px;}
+  .send-ok{color:#33aa55;}
+  .send-err{color:var(--t-red);}
+
+  .statusbar{
+    background:var(--bar-bg);border-top:1px solid var(--t-border);
+    padding:3px 16px;font-size:11px;color:var(--t-dim);
+    display:flex;justify-content:space-between;flex-shrink:0;
+  }
+
+  .badge-ok{color:#33aa55;}
+  .badge-err{color:var(--t-red);}
+  .badge-warn{color:var(--t-yellow);}
+
+  @media(max-width:600px){
+    .nav-link{padding:5px 8px;font-size:11px;}
+    .log-entry{font-size:11px;}
+  }
+</style>
+<script src="/auth-guard.js"></script>
+</head>
+<body>
+<div class="titlebar">
+  <span class="titlebar-left">[=] IT OPS</span>
+  <span class="titlebar-right" id="clock">--:--:--</span>
+</div>
+<div class="navbar">
+  <a href="/tui" class="nav-link">TERMINAL</a>
+  <a href="/tui-incidents" class="nav-link">INCIDENTS</a>
+  <a href="/tui-servers" class="nav-link">SERVERS</a>
+  <a href="/tui-chat" class="nav-link">CHAT</a>
+  <a href="/tui-bridge" class="nav-link">BRIDGE</a>
+  <a href="/tui-workflows" class="nav-link">WORKFLOWS</a>
+  <a href="/tui-monitoring" class="nav-link">MONITORING</a>
+  <a href="/tui-audit" class="nav-link">AUDIT</a>
+  <a href="/tui-agents" class="nav-link">AGENTS</a>
+  <a href="/tui-irc" class="nav-link active">IRC</a>
+  <span class="nav-spacer"></span>
+  <a href="/dashboard" class="nav-link right">GUI</a>
+  <a href="/login.html" class="nav-link right">LOGIN</a>
+</div>
+<div class="stats-bar">
+  <span class="stat-item">Bridge: <span id="stat-status">checking...</span></span>
+  <span class="stat-item">Nick: <span id="stat-nick">-</span></span>
+  <span class="stat-item">Host: <span id="stat-host">-</span></span>
+  <span class="stat-item">Port: <span id="stat-port">-</span></span>
+  <span class="stat-item">Messages: <span id="stat-msgs">-</span></span>
+</div>
+<div class="main-area">
+  <div class="channel-tabs" id="channel-tabs">
+    <button class="ch-tab active" data-channel="#ops">#ops</button>
+    <button class="ch-tab" data-channel="#incidents">#incidents</button>
+    <button class="ch-tab" data-channel="#alerts">#alerts</button>
+    <button class="ch-tab" data-channel="#tasks">#tasks</button>
+  </div>
+  <div class="log-header">
+    <span id="log-title">IRC #ops</span>
+    <span class="refresh-info" id="refresh-info">auto-refresh 5s</span>
+  </div>
+  <div class="log-content" id="log-content">
+    <div class="empty-log" id="empty">Loading IRC messages...</div>
+  </div>
+  <div class="send-bar">
+    <select id="send-channel">
+      <option value="#ops">#ops</option>
+      <option value="#incidents">#incidents</option>
+      <option value="#alerts">#alerts</option>
+      <option value="#tasks">#tasks</option>
+    </select>
+    <input type="text" id="send-input" placeholder="Type a message... (Enter to send)" maxlength="500">
+    <button id="send-btn">SEND</button>
+    <span class="send-status" id="send-status"></span>
+  </div>
+</div>
+<div class="statusbar">
+  <span id="sb">READY</span>
+  <span>AUTO-REFRESH=5s</span>
+</div>
+
+<script>
+var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token') || '';
+var currentChannel = '#ops';
+var pollInterval = null;
+
+const hdr = () => ({ Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' });
+
+setInterval(() => { document.getElementById('clock').textContent = new Date().toTimeString().slice(0,8); }, 1000);
+
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+function fmtTime(ts) {
+  if (!ts) return '--:--:--';
+  try { return new Date(ts).toLocaleTimeString(); } catch(e) { return ts; }
+}
+
+function textClass(text) {
+  if (!text) return '';
+  if (text.startsWith('!') || text.startsWith('[status]') || text.startsWith('[help]') || text.startsWith('[error]') || text.startsWith('[task]')) return 'cmd';
+  if (text.includes('[ALERT]') || text.toLowerCase().includes('critical')) return 'alert';
+  return '';
+}
+
+function renderMessages(messages) {
+  const el = document.getElementById('log-content');
+  if (!messages || !messages.length) {
+    el.innerHTML = '<div class="empty-log">No messages in ' + esc(currentChannel) + ' yet.</div>';
+    return;
+  }
+  const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 20;
+  const sorted = [...messages].reverse();
+  el.innerHTML = sorted.map(m => {
+    const cls = textClass(m.text || '');
+    return '<div class="log-entry"><div class="log-line">' +
+      '<span class="log-ts">' + esc(fmtTime(m.timestamp)) + '</span>' +
+      '<span class="log-nick">&lt;' + esc(m.nick || '-') + '&gt;</span>' +
+      '<span class="log-sep"> </span>' +
+      '<span class="log-text ' + cls + '">' + esc(m.text || '') + '</span>' +
+      '</div></div>';
+  }).join('');
+  if (atBottom) el.scrollTop = el.scrollHeight;
+}
+
+async function loadStatus() {
+  try {
+    const r = await fetch('/api/irc/status', { headers: hdr() });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const s = await r.json();
+    const enabled = s.enabled === true;
+    const connected = s.connected === true;
+    const statusEl = document.getElementById('stat-status');
+    if (!enabled) {
+      statusEl.textContent = 'DISABLED';
+      statusEl.className = 'badge-warn';
+    } else if (connected) {
+      statusEl.textContent = 'CONNECTED';
+      statusEl.className = 'badge-ok';
+    } else {
+      statusEl.textContent = 'DISCONNECTED';
+      statusEl.className = 'badge-err';
+    }
+    document.getElementById('stat-nick').textContent = s.nick || '-';
+    document.getElementById('stat-host').textContent = s.host || '-';
+    document.getElementById('stat-port').textContent = s.port || '-';
+    document.getElementById('stat-msgs').textContent = s.messageCount != null ? s.messageCount : '-';
+  } catch(e) {
+    const el = document.getElementById('stat-status');
+    el.textContent = 'ERROR';
+    el.className = 'badge-err';
+  }
+}
+
+async function loadMessages() {
+  document.getElementById('sb').textContent = 'Fetching...';
+  try {
+    const url = '/api/irc/messages?channel=' + encodeURIComponent(currentChannel) + '&limit=100';
+    const r = await fetch(url, { headers: hdr() });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    renderMessages(data.messages || []);
+  } catch(e) {
+    document.getElementById('log-content').innerHTML =
+      '<div class="empty-log">Error: ' + esc(e.message) + '</div>';
+  }
+  document.getElementById('sb').textContent = 'READY';
+  document.getElementById('refresh-info').textContent = 'updated ' + new Date().toLocaleTimeString();
+}
+
+function switchChannel(channel) {
+  currentChannel = channel;
+  document.getElementById('log-title').textContent = 'IRC ' + channel;
+  document.querySelectorAll('.ch-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.channel === channel);
+  });
+  loadMessages();
+}
+
+document.querySelectorAll('.ch-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    switchChannel(btn.dataset.channel);
+    document.getElementById('send-channel').value = btn.dataset.channel;
+  });
+});
+
+async function sendMessage() {
+  const channel = document.getElementById('send-channel').value;
+  const input = document.getElementById('send-input');
+  const statusEl = document.getElementById('send-status');
+  const message = input.value.trim();
+  if (!message) return;
+  statusEl.textContent = '...';
+  statusEl.className = 'send-status';
+  try {
+    const r = await fetch('/api/irc/send', {
+      method: 'POST',
+      headers: { ...hdr(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel, message })
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      statusEl.textContent = err.error || ('ERR ' + r.status);
+      statusEl.className = 'send-status send-err';
+      return;
+    }
+    input.value = '';
+    statusEl.textContent = 'SENT';
+    statusEl.className = 'send-status send-ok';
+    setTimeout(() => { statusEl.textContent = ''; }, 2000);
+    if (channel !== currentChannel) switchChannel(channel);
+    else loadMessages();
+  } catch (e) {
+    statusEl.textContent = 'ERR';
+    statusEl.className = 'send-status send-err';
+  }
+}
+
+document.getElementById('send-btn').addEventListener('click', sendMessage);
+document.getElementById('send-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendMessage();
+});
+
+async function refresh() {
+  await Promise.all([loadStatus(), loadMessages()]);
+}
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

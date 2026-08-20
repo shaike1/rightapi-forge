@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — Workflow Chains</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .wf-container { max-width: 1100px; margin: 0 auto; }
+    .wf-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+
+    .wf-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .2s; }
+    .wf-card:hover { border-color: var(--accent); }
+    .wf-card-header { padding: 12px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--bg3); }
+    .wf-card-header .wf-name { font-size: .85rem; font-weight: 600; color: var(--text); flex: 1; }
+    .wf-card-header .wf-badge { padding: 2px 8px; border-radius: 10px; font-size: .6rem; font-weight: 600; text-transform: uppercase; }
+    .wf-badge.health { background: #e8f5e9; color: #2e7d32; }
+    .wf-badge.incident { background: #fce4ec; color: #c62828; }
+    .wf-badge.notification { background: #fff3e0; color: #e65100; }
+    .wf-badge.schedule { background: #e3f2fd; color: #1565c0; }
+    .wf-badge.manual { background: #f3e5f5; color: #6a1b9a; }
+    .wf-toggle { position: relative; width: 36px; height: 20px; }
+    .wf-toggle input { opacity: 0; width: 0; height: 0; }
+    .wf-toggle .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg3); border-radius: 10px; transition: .3s; }
+    .wf-toggle .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: .3s; }
+    .wf-toggle input:checked + .slider { background: var(--success); }
+    .wf-toggle input:checked + .slider:before { transform: translateX(16px); }
+
+    .wf-card-body { padding: 10px 14px; font-size: .75rem; color: var(--text2); display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .wf-field { }
+    .wf-field-label { font-size: .6rem; color: var(--text3); text-transform: uppercase; margin-bottom: 2px; }
+    .wf-field-value { font-family: monospace; font-size: .72rem; color: var(--text); }
+
+    .wf-card-actions { padding: 8px 14px; border-top: 1px solid var(--bg3); display: flex; gap: 6px; align-items: center; }
+    .wf-card-actions button { padding: 4px 10px; font-size: .7rem; border: 1px solid var(--border); border-radius: 3px; background: var(--bg); color: var(--text2); cursor: pointer; }
+    .wf-card-actions button:hover { border-color: var(--accent); color: var(--accent); }
+    .wf-card-actions button.test { border-color: var(--success); color: var(--success); }
+    .wf-card-actions button.del { border-color: var(--danger); color: var(--danger); }
+    .wf-card-actions .wf-stats { margin-left: auto; font-size: .65rem; color: var(--text3); }
+
+    .wf-create { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 24px; display: none; }
+    .wf-create.visible { display: block; }
+    .wf-create h3 { margin: 0 0 12px; font-size: .9rem; color: var(--text); }
+    .wf-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .wf-form .full { grid-column: 1 / -1; }
+    .wf-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-family: inherit; font-size: .8rem; width: 100%; box-sizing: border-box; }
+    .wf-input:focus { border-color: var(--accent); outline: none; }
+    .wf-btn { padding: 8px 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-size: .8rem; cursor: pointer; }
+    .wf-btn:hover { opacity: .9; }
+    .wf-btn.secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+
+    .toolbar { display: flex; gap: 10px; margin-bottom: 16px; }
+    .action-row { background: var(--bg3); padding: 8px; border-radius: 4px; margin-bottom: 6px; display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; }
+    .action-row select, .action-row input { padding: 4px 8px; font-size: .75rem; border: 1px solid var(--border); border-radius: 3px; background: var(--bg); color: var(--text); }
+    .action-row .remove-action { background: none; border: none; color: var(--danger); cursor: pointer; font-size: .9rem; }
+    .add-action-btn { font-size: .72rem; color: var(--accent); cursor: pointer; background: none; border: none; padding: 4px 0; }
+    .help-text { font-size: .65rem; color: var(--text3); margin-top: 4px; }
+  </style>
+</head>
+<body>
+<script src="/sidebar.js"></script>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Workflow Chains</h1>
+      <p class="page-subtitle">If-Then automation rules triggered by system events</p>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="wf-container">
+
+      <div class="toolbar">
+        <button class="wf-btn" onclick="toggleCreate()">+ New Workflow</button>
+      </div>
+
+      <div class="wf-create" id="wf-create">
+        <h3 id="form-title">Create Workflow Rule</h3>
+        <div class="wf-form">
+          <input type="text" class="wf-input" id="wf-name" placeholder="Workflow name">
+          <select class="wf-input" id="wf-trigger-type">
+            <option value="health">Health Trigger</option>
+            <option value="incident">Incident Trigger</option>
+            <option value="notification">Notification Trigger</option>
+            <option value="schedule">Schedule Trigger</option>
+            <option value="manual">Manual Trigger</option>
+          </select>
+          <input type="text" class="wf-input" id="wf-condition" placeholder="Condition (e.g. cpu > 85, severity == critical)">
+          <input type="number" class="wf-input" id="wf-cooldown" placeholder="Cooldown (seconds)" value="300">
+          <input type="text" class="wf-input full" id="wf-description" placeholder="Description">
+
+          <div class="full">
+            <div style="font-size:.75rem;font-weight:600;color:var(--text);margin-bottom:6px;">Actions</div>
+            <div id="actions-container"></div>
+            <button class="add-action-btn" onclick="addActionRow()">+ Add Action</button>
+          </div>
+
+          <div class="full help-text">
+            Conditions: field operator value. Fields for health: cpu, memory, disk, load1, load5. For incidents: severity, title, source. Operators: ==, !=, >, <, >=, <=, contains
+          </div>
+
+          <div class="full" style="display:flex;gap:8px;margin-top:8px;">
+            <button class="wf-btn" onclick="saveWorkflow()">Save Workflow</button>
+            <button class="wf-btn secondary" onclick="toggleCreate()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="wf-grid" id="wf-grid">
+        <div style="color:var(--text3);padding:20px;text-align:center;">Loading workflows...</div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="/auth-guard.js"></script>
+<script>
+(function() {
+  var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token');
+  if (!token) window.location.href = '/';
+  function hdr() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
+
+  var editingId = null;
+
+  function loadWorkflows() {
+    fetch('/api/automation-rules', { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var el = document.getElementById('wf-grid');
+        var wfs = data.workflows || [];
+        if (wfs.length === 0) {
+          el.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center;">No workflows configured. Create one to get started.</div>';
+          return;
+        }
+        el.innerHTML = wfs.map(function(wf) {
+          var triggerType = wf.trigger ? wf.trigger.type : 'manual';
+          var condition = wf.trigger ? wf.trigger.condition : '-';
+          var actionSummary = (wf.actions || []).map(function(a) { return a.type.replace(/_/g,' '); }).join(', ');
+          var lastTriggered = wf.lastTriggered ? new Date(wf.lastTriggered).toLocaleString() : 'Never';
+
+          return '<div class="wf-card">' +
+            '<div class="wf-card-header">' +
+              '<span class="wf-name">' + wf.name + '</span>' +
+              '<span class="wf-badge ' + triggerType + '">' + triggerType + '</span>' +
+              '<label class="wf-toggle"><input type="checkbox" ' + (wf.enabled ? 'checked' : '') + ' onchange="toggleEnabled(\'' + wf.id + '\', this.checked)"><span class="slider"></span></label>' +
+            '</div>' +
+            '<div class="wf-card-body">' +
+              '<div class="wf-field"><div class="wf-field-label">Condition</div><div class="wf-field-value">' + condition + '</div></div>' +
+              '<div class="wf-field"><div class="wf-field-label">Actions</div><div class="wf-field-value">' + actionSummary + '</div></div>' +
+              '<div class="wf-field"><div class="wf-field-label">Cooldown</div><div class="wf-field-value">' + wf.cooldown + 's</div></div>' +
+              '<div class="wf-field"><div class="wf-field-label">Last Triggered</div><div class="wf-field-value">' + lastTriggered + '</div></div>' +
+            '</div>' +
+            '<div class="wf-card-actions">' +
+              '<button class="test" onclick="testWorkflow(\'' + wf.id + '\')">Test</button>' +
+              '<button onclick="editWorkflow(\'' + wf.id + '\')">Edit</button>' +
+              '<button class="del" onclick="deleteWorkflow(\'' + wf.id + '\')">Delete</button>' +
+              '<span class="wf-stats">Triggered ' + (wf.triggerCount || 0) + ' time(s)</span>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      });
+  }
+
+  window.toggleCreate = function() {
+    var el = document.getElementById('wf-create');
+    el.classList.toggle('visible');
+    if (!el.classList.contains('visible')) { editingId = null; clearForm(); }
+  };
+
+  function clearForm() {
+    document.getElementById('wf-name').value = '';
+    document.getElementById('wf-trigger-type').value = 'health';
+    document.getElementById('wf-condition').value = '';
+    document.getElementById('wf-cooldown').value = '300';
+    document.getElementById('wf-description').value = '';
+    document.getElementById('actions-container').innerHTML = '';
+    document.getElementById('form-title').textContent = 'Create Workflow Rule';
+    editingId = null;
+    addActionRow();
+  }
+
+  window.addActionRow = function(type, params) {
+    var container = document.getElementById('actions-container');
+    var row = document.createElement('div');
+    row.className = 'action-row';
+    var t = type || 'run_command';
+    var p = params || '';
+    row.innerHTML = '<select onchange="updateActionParams(this)">' +
+      '<option value="run_command"' + (t==='run_command'?' selected':'') + '>Run Command</option>' +
+      '<option value="send_notification"' + (t==='send_notification'?' selected':'') + '>Send Notification</option>' +
+      '<option value="create_incident"' + (t==='create_incident'?' selected':'') + '>Create Incident</option>' +
+      '<option value="http_request"' + (t==='http_request'?' selected':'') + '>HTTP Request</option>' +
+      '</select>' +
+      '<input type="text" placeholder="' + getPlaceholder(t) + '" value="' + escapeAttr(p) + '">' +
+      '<button class="remove-action" onclick="this.parentElement.remove()">&times;</button>';
+    container.appendChild(row);
+  };
+
+  function escapeAttr(s) { return String(s).replace(/"/g, '&quot;'); }
+
+  function getPlaceholder(type) {
+    switch(type) {
+      case 'run_command': return 'Command to run';
+      case 'send_notification': return 'title|message|severity (pipe-separated)';
+      case 'create_incident': return 'title|description|severity';
+      case 'http_request': return 'URL';
+      default: return 'Parameters';
+    }
+  }
+
+  window.updateActionParams = function(sel) {
+    var input = sel.parentElement.querySelector('input');
+    input.placeholder = getPlaceholder(sel.value);
+  };
+
+  function parseActionParams(type, raw) {
+    var parts = raw.split('|').map(function(s){ return s.trim(); });
+    switch(type) {
+      case 'run_command': return { command: raw };
+      case 'send_notification': return { title: parts[0] || 'Alert', message: parts[1] || '', severity: parts[2] || 'warning' };
+      case 'create_incident': return { title: parts[0] || 'Incident', description: parts[1] || '', severity: parts[2] || 'medium' };
+      case 'http_request': return { url: raw, method: 'POST' };
+      default: return { value: raw };
+    }
+  }
+
+  function serializeActionParams(action) {
+    switch(action.type) {
+      case 'run_command': return action.params.command || '';
+      case 'send_notification': return (action.params.title||'') + '|' + (action.params.message||'') + '|' + (action.params.severity||'');
+      case 'create_incident': return (action.params.title||'') + '|' + (action.params.description||'') + '|' + (action.params.severity||'');
+      case 'http_request': return action.params.url || '';
+      default: return JSON.stringify(action.params);
+    }
+  }
+
+  window.saveWorkflow = function() {
+    var name = document.getElementById('wf-name').value.trim();
+    var triggerType = document.getElementById('wf-trigger-type').value;
+    var condition = document.getElementById('wf-condition').value.trim();
+    var cooldown = parseInt(document.getElementById('wf-cooldown').value) || 300;
+    var description = document.getElementById('wf-description').value.trim();
+
+    if (!name) { alert('Name required'); return; }
+    if (!condition) { alert('Condition required'); return; }
+
+    var actionRows = document.getElementById('actions-container').querySelectorAll('.action-row');
+    var actions = [];
+    actionRows.forEach(function(row) {
+      var type = row.querySelector('select').value;
+      var raw = row.querySelector('input').value.trim();
+      if (raw) actions.push({ type: type, params: parseActionParams(type, raw) });
+    });
+
+    if (actions.length === 0) { alert('At least one action required'); return; }
+
+    var body = { name: name, description: description, trigger: { type: triggerType, condition: condition }, actions: actions, cooldown: cooldown, enabled: true };
+
+    if (editingId) {
+      fetch('/api/automation-rules/' + editingId, { method: 'PATCH', headers: hdr(), body: JSON.stringify(body) })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { if (d.error) { alert(d.error); return; } toggleCreate(); loadWorkflows(); });
+    } else {
+      fetch('/api/automation-rules', { method: 'POST', headers: hdr(), body: JSON.stringify(body) })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { if (d.error) { alert(d.error); return; } toggleCreate(); loadWorkflows(); });
+    }
+  };
+
+  window.editWorkflow = function(id) {
+    fetch('/api/automation-rules/' + id, { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(wf) {
+        editingId = id;
+        document.getElementById('wf-name').value = wf.name || '';
+        document.getElementById('wf-trigger-type').value = wf.trigger ? wf.trigger.type : 'health';
+        document.getElementById('wf-condition').value = wf.trigger ? wf.trigger.condition : '';
+        document.getElementById('wf-cooldown').value = wf.cooldown || 300;
+        document.getElementById('wf-description').value = wf.description || '';
+        document.getElementById('form-title').textContent = 'Edit: ' + wf.name;
+
+        var container = document.getElementById('actions-container');
+        container.innerHTML = '';
+        (wf.actions || []).forEach(function(a) {
+          addActionRow(a.type, serializeActionParams(a));
+        });
+
+        document.getElementById('wf-create').classList.add('visible');
+      });
+  };
+
+  window.deleteWorkflow = function(id) {
+    if (!confirm('Delete this workflow?')) return;
+    fetch('/api/automation-rules/' + id, { method: 'DELETE', headers: hdr() })
+      .then(function() { loadWorkflows(); });
+  };
+
+  window.toggleEnabled = function(id, enabled) {
+    fetch('/api/automation-rules/' + id, { method: 'PATCH', headers: hdr(), body: JSON.stringify({ enabled: enabled }) })
+      .then(function() { loadWorkflows(); });
+  };
+
+  window.testWorkflow = function(id) {
+    var context = {};
+    var type = '';
+    var wfs = document.querySelectorAll('.wf-card');
+    // Get trigger type from the badge
+    fetch('/api/automation-rules/' + id, { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(wf) {
+        type = wf.trigger.type;
+        if (type === 'health') context = { cpu: 95, memory: 92, disk: 88, load1: 8, load5: 6, cores: 4 };
+        else if (type === 'incident') context = { severity: 'critical', title: 'Test Incident', source: 'test' };
+        else if (type === 'notification') context = { type: 'error', severity: 'error', title: 'Test', source: 'test' };
+        else context = { trigger: 'manual' };
+
+        return fetch('/api/automation-rules/' + id + '/test', { method: 'POST', headers: hdr(), body: JSON.stringify({ context: context }) });
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(result) {
+        var msg = 'Condition: ' + (result.conditionMet ? 'MET' : 'NOT MET');
+        if (result.results && result.results.length > 0) msg += '\nResults:\n' + result.results.join('\n');
+        alert(msg);
+        loadWorkflows();
+      });
+  };
+
+  // Init
+  clearForm();
+  loadWorkflows();
+})();
+</script>
+</body>
+</html>

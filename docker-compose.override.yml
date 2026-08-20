@@ -1,0 +1,23 @@
+version: "3.8"
+services:
+  itops-agents:
+    environment:
+      # Provider-backed secret resolution (do not use direct env secret values)
+      SECRET_PROVIDER: ${SECRET_PROVIDER:-file}
+      SECRET_PROVIDER_FILE_PATH: ${SECRET_PROVIDER_FILE_PATH:-/data/itops-agents/secret-provider.json}
+      CREDENTIAL_MASTER_KEY: ${CREDENTIAL_MASTER_KEY}
+      APPROVAL_TOKEN_SECRET: ${APPROVAL_TOKEN_SECRET}
+      AUTH_TOKEN_SECRET: ${AUTH_TOKEN_SECRET}
+
+      # User Accounts
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      OPERATOR_USERNAME: ${OPERATOR_USERNAME-}
+      OPERATOR_PASSWORD: ${OPERATOR_PASSWORD-}
+      VIEWER_USERNAME: ${VIEWER_USERNAME-}
+      VIEWER_PASSWORD: ${VIEWER_PASSWORD-}
+
+      REQUIRE_STRONG_SECRETS: ${REQUIRE_STRONG_SECRETS:-true}
+      OPENCLAW_BRIDGE_ENABLED: ${OPENCLAW_BRIDGE_ENABLED:-true}
+      OPENCLAW_BRIDGE_SECRET: ${OPENCLAW_BRIDGE_SECRET}
+      OPENCLAW_BRIDGE_STATE_PATH: ${OPENCLAW_BRIDGE_STATE_PATH:-/data/itops-agents/openclaw-bridge-state.json}

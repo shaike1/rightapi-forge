@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — Knowledge Base</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <script src="/marked.min.js"></script>
+  <style>
+    .kb-container { max-width: 1100px; margin: 0 auto; }
+    .kb-toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .kb-search { flex: 1; min-width: 200px; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: .85rem; }
+    .kb-search:focus { border-color: var(--accent); outline: none; }
+    .kb-btn { padding: 10px 18px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); font-size: .85rem; cursor: pointer; white-space: nowrap; }
+    .kb-btn:hover { opacity: .9; }
+    .kb-btn.secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+
+    .kb-categories { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+    .kb-cat-tag { padding: 4px 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; font-size: .7rem; color: var(--text2); cursor: pointer; }
+    .kb-cat-tag:hover, .kb-cat-tag.active { border-color: var(--accent); color: var(--accent); }
+
+    .kb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+    .kb-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: border-color .2s; }
+    .kb-card:hover { border-color: var(--accent); }
+    .kb-card-title { font-size: .9rem; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .kb-card-preview { font-size: .75rem; color: var(--text2); line-height: 1.4; max-height: 60px; overflow: hidden; }
+    .kb-card-meta { display: flex; gap: 8px; margin-top: 8px; font-size: .65rem; color: var(--text3); }
+    .kb-card-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px; }
+    .kb-card-tags span { background: var(--bg3); padding: 1px 6px; border-radius: 8px; font-size: .6rem; color: var(--text2); }
+
+    .kb-article-view { display: none; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); }
+    .kb-article-view.visible { display: block; }
+    .kb-article-header { padding: 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+    .kb-article-header h2 { flex: 1; font-size: 1rem; color: var(--text); margin: 0; }
+    .kb-article-body { padding: 20px; font-size: .85rem; line-height: 1.6; color: var(--text); }
+    .kb-article-body h1,.kb-article-body h2,.kb-article-body h3 { margin: 12px 0 6px; }
+    .kb-article-body code { background: var(--bg3); padding: 1px 4px; border-radius: 3px; font-size: .8rem; }
+    .kb-article-body pre { background: var(--bg3); padding: 12px; border-radius: var(--radius-sm); overflow-x: auto; }
+    .kb-article-body ul, .kb-article-body ol { padding-left: 20px; }
+
+    .kb-editor { display: none; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .kb-editor.visible { display: block; }
+    .kb-editor input, .kb-editor textarea { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-family: inherit; font-size: .85rem; margin-bottom: 10px; box-sizing: border-box; }
+    .kb-editor textarea { min-height: 250px; font-family: monospace; font-size: .8rem; resize: vertical; }
+
+    .empty-state { text-align: center; padding: 40px; color: var(--text3); }
+  </style>
+</head>
+<body>
+<script src="/sidebar.js"></script>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Knowledge Base</h1>
+      <p class="page-subtitle">Runbooks, documentation, and incident resolutions</p>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="kb-container">
+
+      <div class="kb-toolbar">
+        <input type="text" class="kb-search" id="kb-search" placeholder="Search articles...">
+        <button class="kb-btn" onclick="searchArticles()">Search</button>
+        <button class="kb-btn secondary" onclick="showEditor()">+ New Article</button>
+      </div>
+
+      <div class="kb-categories" id="kb-categories"></div>
+
+      <div class="kb-editor" id="kb-editor">
+        <input type="text" id="ed-title" placeholder="Article title">
+        <input type="text" id="ed-tags" placeholder="Tags (comma-separated)">
+        <input type="text" id="ed-category" placeholder="Category (e.g. runbook, troubleshooting, reference)">
+        <textarea id="ed-content" placeholder="Article content (Markdown supported)"></textarea>
+        <div style="display:flex;gap:8px;">
+          <button class="kb-btn" onclick="saveArticle()">Save</button>
+          <button class="kb-btn secondary" onclick="hideEditor()">Cancel</button>
+        </div>
+      </div>
+
+      <div class="kb-article-view" id="kb-article-view">
+        <div class="kb-article-header">
+          <h2 id="kb-article-title"></h2>
+          <button class="kb-btn secondary" onclick="hideArticle()">Back</button>
+        </div>
+        <div class="kb-article-body" id="kb-article-body"></div>
+      </div>
+
+      <div class="kb-grid" id="kb-grid">
+        <div class="empty-state">Loading...</div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="/auth-guard.js"></script>
+<script>
+(function() {
+  var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token');
+  if (!token) window.location.href = '/';
+  function hdr() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
+
+  var currentCategory = '';
+  var editingId = null;
+
+  function renderMd(text) {
+    try { if (typeof marked !== 'undefined') return marked.parse(text || '', { breaks: true, gfm: true }); } catch(e) {}
+    return (text || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+  }
+
+  function timeAgo(ts) {
+    var diff = Date.now() - new Date(ts).getTime();
+    if (diff < 3600000) return Math.round(diff/60000) + 'm ago';
+    if (diff < 86400000) return Math.round(diff/3600000) + 'h ago';
+    return Math.round(diff/86400000) + 'd ago';
+  }
+
+  function loadArticles(query) {
+    var url = '/api/kb';
+    var params = [];
+    if (query) params.push('q=' + encodeURIComponent(query));
+    if (currentCategory && !query) params.push('category=' + encodeURIComponent(currentCategory));
+    if (params.length) url += '?' + params.join('&');
+
+    fetch(url, { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var articles = data.articles || data.results || [];
+        var grid = document.getElementById('kb-grid');
+        var cats = data.categories || [];
+
+        // Render categories
+        var catEl = document.getElementById('kb-categories');
+        if (cats.length > 0) {
+          catEl.innerHTML = '<span class="kb-cat-tag ' + (!currentCategory ? 'active' : '') + '" onclick="filterCategory(\\'\\')">All</span>' +
+            cats.map(function(c) { return '<span class="kb-cat-tag ' + (currentCategory === c ? 'active' : '') + '" onclick="filterCategory(\\'' + c + '\\')">' + c + '</span>'; }).join('');
+        }
+
+        if (articles.length === 0) {
+          grid.innerHTML = '<div class="empty-state">' + (query ? 'No results for "' + query + '"' : 'No articles yet. Create your first runbook!') + '</div>';
+          return;
+        }
+
+        grid.innerHTML = articles.map(function(a) {
+          return '<div class="kb-card" onclick="viewArticle(\\'' + a.id + '\\')">' +
+            '<div class="kb-card-title">' + a.title + '</div>' +
+            '<div class="kb-card-preview">' + (a.content || '').slice(0, 150) + '</div>' +
+            '<div class="kb-card-tags">' + (a.tags || []).map(function(t) { return '<span>' + t + '</span>'; }).join('') + '</div>' +
+            '<div class="kb-card-meta"><span>' + a.category + '</span><span>' + timeAgo(a.updatedAt) + '</span><span>' + a.viewCount + ' views</span></div>' +
+          '</div>';
+        }).join('');
+      });
+  }
+
+  window.searchArticles = function() {
+    var q = document.getElementById('kb-search').value.trim();
+    loadArticles(q);
+  };
+
+  window.filterCategory = function(cat) {
+    currentCategory = cat;
+    loadArticles();
+  };
+
+  window.viewArticle = function(id) {
+    fetch('/api/kb/' + id, { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var a = data.article;
+        document.getElementById('kb-article-title').textContent = a.title;
+        document.getElementById('kb-article-body').innerHTML = renderMd(a.content);
+        document.getElementById('kb-article-view').classList.add('visible');
+        document.getElementById('kb-grid').style.display = 'none';
+      });
+  };
+
+  window.hideArticle = function() {
+    document.getElementById('kb-article-view').classList.remove('visible');
+    document.getElementById('kb-grid').style.display = 'grid';
+  };
+
+  window.showEditor = function(article) {
+    editingId = article ? article.id : null;
+    document.getElementById('ed-title').value = article ? article.title : '';
+    document.getElementById('ed-tags').value = article ? (article.tags || []).join(', ') : '';
+    document.getElementById('ed-category').value = article ? article.category : '';
+    document.getElementById('ed-content').value = article ? article.content : '';
+    document.getElementById('kb-editor').classList.add('visible');
+    document.getElementById('kb-grid').style.display = 'none';
+  };
+
+  window.hideEditor = function() {
+    document.getElementById('kb-editor').classList.remove('visible');
+    document.getElementById('kb-grid').style.display = 'grid';
+  };
+
+  window.saveArticle = function() {
+    var title = document.getElementById('ed-title').value.trim();
+    var tags = document.getElementById('ed-tags').value.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
+    var category = document.getElementById('ed-category').value.trim() || 'general';
+    var content = document.getElementById('ed-content').value;
+    if (!title || !content) { alert('Title and content required'); return; }
+
+    var url = editingId ? '/api/kb/' + editingId : '/api/kb';
+    var method = editingId ? 'PUT' : 'POST';
+
+    fetch(url, { method: method, headers: hdr(), body: JSON.stringify({ title: title, content: content, tags: tags, category: category }) })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (d.error) { alert(d.error); return; }
+        hideEditor();
+        loadArticles();
+      });
+  };
+
+  document.getElementById('kb-search').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') searchArticles();
+  });
+
+  loadArticles();
+})();
+</script>
+</body>
+</html>

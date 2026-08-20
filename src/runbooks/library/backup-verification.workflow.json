@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "id": "library.backup-verification",
+  "name": "Backup Verification",
+  "description": "Sanity-checks the most recent backup: existence, age, integrity (manifest hash), and size-trend deviation. Surfaces anomalies via SkillResult.fail so the rest of the pipeline (alerting, dashboard) reacts.",
+  "version": "1.0.0",
+  "tags": ["library", "backup", "integrity", "monitoring"],
+  "inputs": [
+    { "name": "backupDir", "type": "string", "default": "/data/backups" },
+    { "name": "maxAgeHours", "type": "number", "default": 26, "description": "Backup must be newer than this" },
+    { "name": "sizeDriftPct", "type": "number", "default": 25, "description": "Alert if last backup deviates ±this% from rolling avg" }
+  ],
+  "onError": "continue",
+  "steps": [
+    {
+      "id": "newest",
+      "type": "bash",
+      "description": "Identify the most recent backup file",
+      "command": "ls -t ${inputs.backupDir}/*.tar* 2>/dev/null | head -1",
+      "timeoutMs": 10000
+    },
+    {
+      "id": "age_check",
+      "type": "bash",
+      "description": "Fail if the newest backup is older than maxAgeHours",
+      "command": "NEWEST=$(ls -t ${inputs.backupDir}/*.tar* 2>/dev/null | head -1); [ -n \"$NEWEST\" ] || { echo 'no backup files found'; exit 2; }; AGE_HRS=$(( ($(date +%s) - $(stat -c %Y \"$NEWEST\")) / 3600 )); echo \"newest=$NEWEST age_hrs=$AGE_HRS\"; [ $AGE_HRS -lt ${inputs.maxAgeHours} ]",
+      "timeoutMs": 10000,
+      "onError": "continue"
+    },
+    {
+      "id": "integrity",
+      "type": "bash",
+      "description": "Verify manifest checksum if a .sha256 sibling exists",
+      "command": "NEWEST=$(ls -t ${inputs.backupDir}/*.tar* 2>/dev/null | head -1); if [ -f \"$NEWEST.sha256\" ]; then sha256sum -c \"$NEWEST.sha256\"; else echo 'no sha256 sidecar; skipping integrity check'; fi",
+      "timeoutMs": 60000,
+      "onError": "continue"
+    },
+    {
+      "id": "size_trend",
+      "type": "bash",
+      "description": "Check the newest backup size against the rolling average of the prior 7",
+      "command": "cd ${inputs.backupDir} 2>/dev/null && ls -t *.tar* 2>/dev/null | head -8 | xargs -I {} stat -c '%s %n' {} | awk -v drift=${inputs.sizeDriftPct} 'NR==1{newest=$1} NR>1{tot+=$1; n++} END{ if(n==0){ print \"insufficient history\"; exit 0 } avg=tot/n; pct=((newest-avg)/avg)*100; printf \"newest=%d avg=%d drift=%.1f%%\\n\", newest, avg, pct; if (pct < -drift || pct > drift) { print \"DRIFT\"; exit 3 } }'",
+      "timeoutMs": 30000,
+      "onError": "continue"
+    },
+    {
+      "id": "summary",
+      "type": "bash",
+      "description": "Roll up — failures upstream surface here as steps.<id>.ok=false",
+      "command": "echo 'Backup verification: newest=${steps.newest.ok}, age=${steps.age_check.ok}, integrity=${steps.integrity.ok}, size_trend=${steps.size_trend.ok}'",
+      "timeoutMs": 5000
+    }
+  ]
+}

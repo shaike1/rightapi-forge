@@ -1,0 +1,233 @@
+/* ── Stats row ───────────────────────────────────────────────────────────────── */
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+/* ── Two-column layout ───────────────────────────────────────────────────────── */
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 860px) {
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Loading ─────────────────────────────────────────────────────────────────── */
+.loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text2);
+}
+
+/* ── Agent grid (inside card body) ──────────────────────────────────────────── */
+.agentList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ── Agent card ──────────────────────────────────────────────────────────────── */
+.agentCard {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.agentHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.agentNameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.agentName {
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.agentBadges {
+  display: flex;
+  gap: 6px;
+}
+
+.agentEndpoint {
+  font-size: .75rem;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+
+.capTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.capTag {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: .7rem;
+  background: var(--bg3);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+
+/* ── Task list ───────────────────────────────────────────────────────────────── */
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+/* ── Task item ───────────────────────────────────────────────────────────────── */
+.taskItem {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+}
+
+.taskHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.taskContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.taskRoute {
+  font-size: .8rem;
+  color: var(--text2);
+  margin-bottom: 4px;
+}
+
+.taskRouteStrong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.taskMessage {
+  font-size: .875rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.taskMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.taskTime {
+  font-size: .75rem;
+  color: var(--text2);
+}
+
+.taskChevron {
+  font-size: .75rem;
+  color: var(--text2);
+}
+
+/* ── Task expanded panel ─────────────────────────────────────────────────────── */
+.taskExpanded {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.taskSectionLabel {
+  font-size: .75rem;
+  color: var(--text2);
+  margin-bottom: 4px;
+}
+
+.taskFullMessage {
+  font-size: .875rem;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.response {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--bg3);
+  font-size: .8rem;
+  overflow-x: auto;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+
+/* ── Modal form ──────────────────────────────────────────────────────────────── */
+.formField {
+  margin-bottom: 1rem;
+}
+
+.fieldLabel {
+  display: block;
+  margin-bottom: 4px;
+  font-size: .875rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--text);
+  font-size: .875rem;
+  box-sizing: border-box;
+  outline: none;
+  font-family: inherit;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--text2);
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--accent);
+}
+
+.textarea {
+  resize: vertical;
+}

@@ -1,0 +1,145 @@
+.shell {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.main {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg);
+  transition: margin-left .18s ease;
+}
+
+/* When sidebar is collapsed (parent body class added by Sidebar's collapsed state),
+   we still want margin to track the actual width — easier to just use a CSS var
+   on document root for the sidebar width. For now, rely on width transition only. */
+
+/* ── Breadcrumb header ─────────────────────────────────────────────────────── */
+.headerBar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 32px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: .82rem;
+  color: var(--text2);
+  flex-wrap: wrap;
+}
+
+.breadcrumbHome {
+  color: var(--text3);
+  display: inline-flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 4px;
+  transition: color .12s, background .12s;
+}
+.breadcrumbHome:hover {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.breadcrumbSegment {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.breadcrumbSep {
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.breadcrumbLink {
+  color: var(--text2);
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color .12s, background .12s;
+}
+.breadcrumbLink:hover {
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.breadcrumbCurrent {
+  color: var(--text);
+  font-weight: 600;
+  padding: 2px 6px;
+}
+
+/* ── Page header ───────────────────────────────────────────────────────────── */
+.pageHeader {
+  padding: 28px 32px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.pageHeaderText {
+  flex: 1;
+  min-width: 0;
+}
+
+.pageTitle {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -.02em;
+  line-height: 1.2;
+}
+
+.pageSubtitle {
+  font-size: .9rem;
+  color: var(--text2);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.pageActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pageContent {
+  padding: 24px 32px 40px;
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .shell { height: 100dvh; }
+  .main {
+    margin-left: 0;
+    height: calc(100dvh - 60px);
+    padding-bottom: 0;
+  }
+  .headerBar { padding: 12px 16px; }
+  .pageHeader { padding: 16px 16px 0; }
+  .pageContent { padding: 16px 16px 32px; }
+  .pageTitle { font-size: 1.25rem; }
+}

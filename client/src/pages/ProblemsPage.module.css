@@ -1,0 +1,207 @@
+.empty { padding: 40px; text-align: center; color: var(--text3); font-size: .9rem; }
+
+.filterRow { display: flex; gap: 6px; }
+.filterBtn {
+  padding: 5px 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  border-radius: var(--radius-sm);
+  font-size: .8rem;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+.filterBtn:hover { color: var(--accent); border-color: var(--accent); }
+.filterBtnActive { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.statTile {
+  padding: 12px 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-align: left;
+}
+.statTone_danger  { border-left: 3px solid var(--danger); }
+.statTone_warning { border-left: 3px solid var(--warning); }
+.statTone_success { border-left: 3px solid var(--success); }
+.statTone_neutral { border-left: 3px solid var(--border2); }
+.statNum { font-size: 1.5rem; font-weight: 700; color: var(--text); }
+.statLabel { font-size: .72rem; color: var(--text3); text-transform: uppercase; letter-spacing: .04em; }
+
+.tableWrapper { overflow-x: auto; }
+.table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+.table th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text3);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: .7rem;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+.table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  vertical-align: middle;
+}
+
+.row:hover { background: var(--bg3); }
+
+.titleLink {
+  color: var(--accent);
+  text-decoration: none;
+  font-family: var(--font-mono, monospace);
+  font-size: .8rem;
+  font-weight: 600;
+}
+.titleLink:hover { text-decoration: underline; }
+.titleText { color: var(--text); font-weight: 500; margin-top: 2px; }
+
+.scope {
+  display: inline-block;
+  background: var(--bg3);
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: .72rem;
+  color: var(--text2);
+  margin-right: 6px;
+}
+
+.detailActions { display: flex; gap: 6px; align-items: center; }
+.detailMeta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.aiTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+}
+.aiActions { display: flex; gap: 6px; align-items: center; }
+.aiNote {
+  padding: 8px 12px;
+  background: var(--bg3);
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text2);
+  font-size: .85rem;
+}
+.aiSection { margin-bottom: 12px; }
+.aiHeading {
+  font-size: .72rem;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+  font-weight: 600;
+}
+.aiBody {
+  color: var(--text);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.aiList {
+  list-style: decimal;
+  padding-left: 24px;
+  margin: 0;
+  font-size: .88rem;
+}
+.aiList li { margin-bottom: 4px; }
+.stepType {
+  display: inline-block;
+  background: var(--accent-bg);
+  color: var(--accent);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: .72rem;
+  font-family: var(--font-mono, monospace);
+  margin-right: 4px;
+}
+
+.spin {
+  display: inline-block;
+  animation: prob-spin 1s linear infinite;
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+@keyframes prob-spin { to { transform: rotate(360deg); } }
+
+.textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: inherit;
+  font-size: .875rem;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.textarea:focus { outline: none; border-color: var(--accent); }
+
+.resolvedTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--success);
+}
+
+/* ── Recurrence timeline visual ────────────────────────────────────── */
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.timelineDay {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.timelineDayLabel {
+  font-family: var(--font-mono, monospace);
+  font-size: .75rem;
+  color: var(--text3);
+}
+.timelineDots {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.timelineDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-mono, monospace);
+  font-size: .7rem;
+  text-decoration: none;
+}
+.timelineDot:hover { border-color: var(--accent); }
+.dot_critical { background: var(--danger-bg);  border-color: var(--danger);  color: var(--danger); }
+.dot_high     { background: var(--warm-bg);    border-color: var(--warm);    color: var(--warm); }
+.dot_medium   { background: var(--warning-bg); border-color: var(--warning); color: var(--warning); }
+.dot_low      { background: var(--accent-bg);  border-color: var(--accent);  color: var(--accent); }

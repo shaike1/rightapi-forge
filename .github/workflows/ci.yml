@@ -1,0 +1,98 @@
+name: CI
+
+# Triggered on every push and PR to the private repository's legacy
+# `master` branch and the sanitized public repository's `main` branch.
+# Feature branches also run CI on push.
+on:
+  push:
+    branches: [main, master, "feature/**"]
+  pull_request:
+    branches: [main, master]
+
+# Concurrency: cancel in-flight runs from older commits on the same
+# ref so a fast-follow push doesn't burn CI minutes on stale code.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build / Test / Boundaries
+    runs-on: ubuntu-latest
+
+    # Matrix: only the active LTS. Node 20 hit EOL on 2026-04-30 and
+    # surfaced ~50 test failures here that don't reproduce on 22, so
+    # there's no upside to keeping an unsupported runtime in CI.
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [22.x]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          # Cache the global npm registry directory keyed by package-lock.
+          # `setup-node`'s built-in cache is faster than third-party
+          # alternatives because it reuses the toolcache layer.
+          cache: 'npm'
+
+      - name: Install dependencies
+        # `npm ci` enforces lockfile consistency — a developer who
+        # forgot to commit package-lock.json fails fast here.
+        run: npm ci
+
+      - name: Install client dependencies
+        # The Vite client lives in its own workspace (client/) with its
+        # own package.json + lockfile. Without this step the client
+        # build below would `npm install` on the fly and miss the
+        # lockfile consistency guard.
+        run: npm ci
+        working-directory: client
+
+      - name: Build server (esbuild transpile + static asset copy)
+        run: npm run build
+
+      - name: Build client (Vite production bundle → public/app/)
+        # The Vite build emits a hashed bundle into ../public/app/. The
+        # server serves this as static at /app/* in production, so a
+        # build failure here is a deploy blocker — fail CI even though
+        # the server tests below don't depend on the client bundle.
+        run: npm run build
+        working-directory: client
+
+      - name: Audit server dependencies
+        run: npm audit --audit-level=low
+
+      - name: Audit client dependencies
+        run: npm audit --audit-level=low
+        working-directory: client
+
+      - name: Public release safety audit
+        run: npm run release:audit
+
+      - name: Third-party license inventory
+        run: npm run licenses:check
+
+      - name: Run tests
+        # Pass the dist/ directory rather than a glob: node --test
+        # recursively discovers *.test.{cjs,js,mjs} under a directory.
+        # Glob patterns aren't expanded by --test itself and quoting
+        # prevents the shell from expanding them either.
+        run: node --test dist/
+        env:
+          NODE_ENV: test
+          # Tests that touch the persistence layer write into a temp
+          # directory the test code creates with mkdtempSync — DATA_DIR
+          # is provided as a fallback for any code that reads it.
+          DATA_DIR: /tmp/itops-test-data
+
+      - name: Module boundary check
+        # Pure JS script — no compilation or build artefacts needed.
+        # Fails the job if any strict module imports across a barrier
+        # it doesn't declare in src/modules/ModuleRegistry.ts.
+        run: npm run check:boundaries

@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  itops-agents:
+    build: .
+    container_name: itops-agents
+    ports:
+      - "19123:19123"
+    environment:
+      - NODE_ENV=production
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env}
+      - PORT=19123
+      - HOST=0.0.0.0
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://ollama:11434}
+      - DEFAULT_AI_PLATFORM=${DEFAULT_AI_PLATFORM:-claude}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - CREDENTIAL_MASTER_KEY=${CREDENTIAL_MASTER_KEY:?Set CREDENTIAL_MASTER_KEY in .env}
+      - APPROVAL_TOKEN_SECRET=${APPROVAL_TOKEN_SECRET:?Set APPROVAL_TOKEN_SECRET in .env}
+      - AUTH_TOKEN_SECRET=${AUTH_TOKEN_SECRET:?Set AUTH_TOKEN_SECRET in .env}
+      - OPERATOR_USERNAME=${OPERATOR_USERNAME-}
+      - OPERATOR_PASSWORD=${OPERATOR_PASSWORD-}
+      - VIEWER_USERNAME=${VIEWER_USERNAME-}
+      - VIEWER_PASSWORD=${VIEWER_PASSWORD-}
+      - REQUIRE_STRONG_SECRETS=${REQUIRE_STRONG_SECRETS:-true}
+      - FACTORY_BOARD_PATH=${FACTORY_BOARD_PATH:-/data/itops-agents/PROJECT_KANBAN.md}
+    volumes:
+      - itops-data:/data/itops-agents
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - itops-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:19123/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  factory-dashboard:
+    build: .
+    container_name: itops-factory-dashboard
+    command: npm run start:factory-dashboard
+    ports:
+      - "19124:19124"
+    environment:
+      - NODE_ENV=production
+      - FACTORY_DASHBOARD_PORT=19124
+      - FACTORY_DASHBOARD_HOST=0.0.0.0
+      - CONTROL_API_BASE=http://itops-agents:19123
+    networks:
+      - itops-network
+    restart: unless-stopped
+    depends_on:
+      - itops-agents
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:19124/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  itops-data:
+    driver: local
+
+networks:
+  itops-network:
+    driver: bridge

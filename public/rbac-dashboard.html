@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P150 RBAC — IT Ops</title>
+<link rel="stylesheet" href="/design.css">
+<link rel="stylesheet" href="/theme.css">
+<style>
+  #status { color:var(--success); font-size:13px; margin-left:12px; }
+
+  /* --- CARDS --- */
+  .card { border:1px solid var(--border); background:var(--bg2); border-radius:var(--radius-lg); margin-bottom:10px; overflow:hidden; }
+  .card h2 { font-size:13px; margin:0; padding:6px 12px; background:var(--bg3); color:var(--accent-light);
+             text-transform:uppercase; letter-spacing:0.08em; border-bottom:1px solid var(--border); }
+
+  /* --- TABLE --- */
+  table { width:100%; border-collapse:collapse; }
+  th { background:var(--bg3); padding:6px 12px; text-align:left; font-size:11px; color:var(--accent-light);
+       text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid var(--border); }
+  td { padding:6px 12px; border-bottom:1px solid var(--border); font-size:13px; }
+  tr:hover td { background:var(--bg3); }
+
+  /* --- BADGES --- */
+  .badge { display:inline-block; padding:1px 6px; font-size:11px; font-weight:bold; border:1px solid; border-radius:var(--radius); }
+  .badge-admin { border-color:var(--purple); color:var(--purple); }
+  .badge-operator { border-color:var(--info); color:var(--info); }
+  .badge-viewer { border-color:var(--border); color:var(--text2); }
+</style>
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-logo"><span>[=] IT OPS</span></div>
+  <nav class="sidebar-nav">
+    <span class="sidebar-section">Operations</span>
+    <a href="/incidents" class="nav-item"><span class="nav-icon">!</span>Incidents</a>
+    <a href="/workflows" class="nav-item"><span class="nav-icon">></span>Workflows</a>
+    <a href="/runbooks" class="nav-item"><span class="nav-icon">#</span>Runbooks</a>
+    <a href="/servers" class="nav-item"><span class="nav-icon">@</span>Servers</a>
+    <a href="/monitoring.html" class="nav-item"><span class="nav-icon">%</span>Monitoring</a>
+    <span class="sidebar-section">Integrations</span>
+    <a href="/jira.html" class="nav-item"><span class="nav-icon">*</span>Jira</a>
+    <a href="/a2a.html" class="nav-item"><span class="nav-icon">&amp;</span>A2A Mesh</a>
+    <span class="sidebar-section">System</span>
+    <a href="/agent-details.html" class="nav-item"><span class="nav-icon">$</span>Agents</a>
+    <a href="/scheduler" class="nav-item"><span class="nav-icon">~</span>Scheduler</a>
+    <a href="/security.html" class="nav-item"><span class="nav-icon">^</span>Security</a>
+    <a href="/users.html" class="nav-item" id="nav-users" style="display:none"><span class="nav-icon">+</span>Users</a>
+    <span class="sidebar-section">Communication</span>
+    <a href="/agent-chat.html" class="nav-item"><span class="nav-icon">&lt;</span>Agent Chat</a>
+    <a href="/agent-bridge" class="nav-item"><span class="nav-icon">&lt;&gt;</span>Agent Bridge</a>
+    <span class="sidebar-section">Tools</span>
+    <a href="/dashboard" class="nav-item"><span class="nav-icon">=</span>Dashboard</a>
+    <a href="/cicd" class="nav-item"><span class="nav-icon">|</span>CI/CD</a>
+    <a href="/audit" class="nav-item"><span class="nav-icon">.</span>Audit</a>
+    <a href="/rbac" class="nav-item active"><span class="nav-icon">:</span>RBAC</a>
+    <a href="/plugin-manager" class="nav-item"><span class="nav-icon">,</span>Plugins</a>
+    <a href="/agent-runtime" class="nav-item"><span class="nav-icon">&gt;&gt;</span>Agent Runtime</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="sidebar-user">
+      <div class="sidebar-avatar" id="user-avatar">?</div>
+      <div class="sidebar-user-info">
+        <div class="sidebar-username" id="user-name">---</div>
+        <div class="sidebar-role" id="user-role"></div>
+      </div>
+    </div>
+    <div class="sidebar-actions">
+      <button class="btn-icon" onclick="doLogout()" title="Logout">[X]</button>
+    </div>
+  </div>
+</aside>
+<main class="main">
+  <div class="page-header">
+    <div><h1 class="page-title">Access Control</h1><p class="page-subtitle">Users, roles, and API keys</p></div>
+    <span id="status">Loading...</span>
+  </div>
+  <div class="page-content">
+  <div class="card">
+    <h2>Users &amp; Roles</h2>
+    <table id="users-table">
+      <thead><tr><th>Username</th><th>Role</th><th>Permissions</th></tr></thead>
+      <tbody id="users-body"><tr><td colspan="3">Loading...</td></tr></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h2>API Keys</h2>
+    <table id="keys-table">
+      <thead><tr><th>Label</th><th>Prefix</th><th>Scopes</th><th>Active</th><th>Expires</th></tr></thead>
+      <tbody id="keys-body"><tr><td colspan="5">Loading...</td></tr></tbody>
+    </table>
+  </div>
+  </div>
+</main>
+<script src="/auth-guard.js"></script>
+<script>
+const token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token') || '';
+const headers = { Authorization: 'Bearer ' + token };
+async function load() {
+  try {
+    const [usersRes, keysRes] = await Promise.all([
+      fetch('/api/rbac/users', { headers }),
+      fetch('/api/rbac/api-keys', { headers })
+    ]);
+    if (usersRes.ok) {
+      const users = await usersRes.json();
+      const tbody = document.getElementById('users-body');
+      tbody.innerHTML = users.map(u =>
+        `<tr><td>${u.username}</td><td><span class="badge badge-${u.role}">${u.role}</span></td><td>${(u.permissions||[]).join(', ')}</td></tr>`
+      ).join('') || '<tr><td colspan="3">No users</td></tr>';
+    }
+    if (keysRes.ok) {
+      const keys = await keysRes.json();
+      const tbody = document.getElementById('keys-body');
+      tbody.innerHTML = keys.map(k =>
+        `<tr><td>${k.label||k.id}</td><td>${k.prefix||'-'}</td><td>${(k.scopes||[]).join(', ')}</td><td>${k.active?'YES':'NO'}</td><td>${k.expiresAt||'NEVER'}</td></tr>`
+      ).join('') || '<tr><td colspan="5">No API keys</td></tr>';
+    }
+    document.getElementById('status').textContent = 'CONNECTED';
+  } catch (e) {
+    document.getElementById('status').textContent = 'ERROR: ' + e.message;
+    document.getElementById('status').style.color = 'var(--danger)';
+  }
+}
+load();
+setInterval(load, 15000);
+</script>
+</body>
+</html>

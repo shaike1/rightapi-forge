@@ -1,0 +1,33 @@
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  transition: box-shadow .15s, border-color .15s;
+}
+.card:hover {
+  border-color: var(--border2);
+}
+.header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.title {
+  font-size: .95rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -.005em;
+}
+.subtitle { font-size: .8rem; color: var(--text2); margin-top: 2px; }
+.actions { display: flex; gap: 8px; align-items: center; }
+.body { padding: 20px; }
+.footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--bg3);
+  border-radius: 0 0 var(--radius) var(--radius);
+}

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IT Ops — Webhooks</title>
+  <link rel="stylesheet" href="/design.css">
+  <link rel="stylesheet" href="/theme.css">
+  <style>
+    .wh-container { max-width: 1100px; margin: 0 auto; }
+    .wh-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+
+    .wh-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; transition: border-color .2s; }
+    .wh-card:hover { border-color: var(--accent); }
+    .wh-card-header { padding: 12px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--bg3); }
+    .wh-card-header .wh-name { font-size: .85rem; font-weight: 600; color: var(--text); flex: 1; }
+    .wh-badge { padding: 2px 8px; border-radius: 10px; font-size: .6rem; font-weight: 600; text-transform: uppercase; }
+    .wh-badge.notification { background: #e3f2fd; color: #1565c0; }
+    .wh-badge.incident { background: #fce4ec; color: #c62828; }
+    .wh-badge.automation { background: #e8f5e9; color: #2e7d32; }
+    .wh-badge.agent { background: #f3e5f5; color: #6a1b9a; }
+    .wh-enabled { width: 8px; height: 8px; border-radius: 50%; }
+    .wh-enabled.on { background: var(--success); }
+    .wh-enabled.off { background: var(--danger); }
+
+    .wh-card-body { padding: 10px 14px; font-size: .75rem; color: var(--text2); }
+    .wh-url { font-family: monospace; font-size: .7rem; background: var(--bg3); padding: 6px 10px; border-radius: 4px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .wh-url code { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent); }
+    .wh-url button { padding: 2px 8px; font-size: .65rem; border: 1px solid var(--border); border-radius: 3px; background: var(--bg); color: var(--text2); cursor: pointer; }
+    .wh-url button:hover { color: var(--accent); }
+    .wh-meta { display: flex; gap: 16px; font-size: .65rem; color: var(--text3); }
+
+    .wh-card-actions { padding: 8px 14px; border-top: 1px solid var(--bg3); display: flex; gap: 6px; }
+    .wh-card-actions button { padding: 4px 10px; font-size: .7rem; border: 1px solid var(--border); border-radius: 3px; background: var(--bg); color: var(--text2); cursor: pointer; }
+    .wh-card-actions button:hover { border-color: var(--accent); color: var(--accent); }
+    .wh-card-actions button.test { border-color: var(--success); color: var(--success); }
+    .wh-card-actions button.del { border-color: var(--danger); color: var(--danger); }
+
+    .wh-create { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 24px; display: none; }
+    .wh-create.visible { display: block; }
+    .wh-create h3 { margin: 0 0 12px; font-size: .9rem; color: var(--text); }
+    .wh-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .wh-form .full { grid-column: 1 / -1; }
+    .wh-input { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); color: var(--text); font-family: inherit; font-size: .8rem; width: 100%; box-sizing: border-box; }
+    .wh-input:focus { border-color: var(--accent); outline: none; }
+    .wh-btn { padding: 8px 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-size: .8rem; cursor: pointer; }
+    .wh-btn:hover { opacity: .9; }
+    .wh-btn.secondary { background: var(--bg3); color: var(--text); border: 1px solid var(--border); }
+    .toolbar { display: flex; gap: 10px; margin-bottom: 16px; }
+    .config-fields { margin-top: 8px; padding: 10px; background: var(--bg3); border-radius: 4px; }
+    .config-fields label { display: block; font-size: .7rem; color: var(--text2); margin-bottom: 4px; }
+    .config-fields input { margin-bottom: 6px; }
+  </style>
+</head>
+<body>
+<script src="/sidebar.js"></script>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Webhooks</h1>
+      <p class="page-subtitle">Inbound webhook endpoints for external service integrations</p>
+    </div>
+  </div>
+  <div class="page-content">
+    <div class="wh-container">
+
+      <div class="toolbar">
+        <button class="wh-btn" onclick="toggleCreate()">+ New Webhook</button>
+      </div>
+
+      <div class="wh-create" id="wh-create">
+        <h3 id="form-title">Create Webhook</h3>
+        <div class="wh-form">
+          <input type="text" class="wh-input" id="wh-name" placeholder="Webhook name (e.g. GitHub Push, Grafana Alert)">
+          <select class="wh-input" id="wh-action" onchange="updateConfigFields()">
+            <option value="notification">Send Notification</option>
+            <option value="incident">Create Incident</option>
+            <option value="automation">Trigger Automation</option>
+            <option value="agent">Route to Agent</option>
+          </select>
+          <input type="text" class="wh-input full" id="wh-description" placeholder="Description">
+          <div class="config-fields full" id="config-fields">
+            <label>Severity:</label>
+            <select class="wh-input" id="cfg-severity">
+              <option value="info">Info</option>
+              <option value="warning">Warning</option>
+              <option value="error">Error</option>
+            </select>
+            <label>Title template (use {{field}} for payload fields):</label>
+            <input type="text" class="wh-input" id="cfg-title" placeholder="e.g. Alert: {{alertname}}">
+            <label>Message template:</label>
+            <input type="text" class="wh-input" id="cfg-message" placeholder="e.g. {{description}}">
+          </div>
+          <div class="full" style="display:flex;gap:8px;margin-top:8px;">
+            <button class="wh-btn" onclick="saveWebhook()">Save</button>
+            <button class="wh-btn secondary" onclick="toggleCreate()">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="wh-grid" id="wh-grid">
+        <div style="color:var(--text3);padding:20px;text-align:center;">Loading webhooks...</div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script src="/auth-guard.js"></script>
+<script>
+(function() {
+  var token = sessionStorage.getItem('itops_token') || localStorage.getItem('itops_token');
+  if (!token) window.location.href = '/';
+  function hdr() { return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }; }
+
+  var editingId = null;
+  var baseUrl = window.location.origin;
+
+  function timeAgo(ts) { if (!ts) return 'Never'; var d = Date.now()-new Date(ts).getTime(); if(d<60000)return Math.round(d/1000)+'s ago'; if(d<3600000)return Math.round(d/60000)+'m ago'; return Math.round(d/3600000)+'h ago'; }
+
+  function loadWebhooks() {
+    fetch('/api/webhooks', { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var el = document.getElementById('wh-grid');
+        var whs = data.webhooks || [];
+        if (whs.length === 0) {
+          el.innerHTML = '<div style="color:var(--text3);padding:20px;text-align:center;">No webhooks configured. Create one to receive external events.</div>';
+          return;
+        }
+        el.innerHTML = whs.map(function(wh) {
+          var fullUrl = baseUrl + wh.url;
+          return '<div class="wh-card">' +
+            '<div class="wh-card-header">' +
+              '<span class="wh-enabled ' + (wh.enabled ? 'on' : 'off') + '"></span>' +
+              '<span class="wh-name">' + wh.name + '</span>' +
+              '<span class="wh-badge ' + wh.action + '">' + wh.action + '</span>' +
+            '</div>' +
+            '<div class="wh-card-body">' +
+              '<div class="wh-url"><code>' + fullUrl + '</code><button onclick="copyUrl(\'' + fullUrl + '\')">Copy</button></div>' +
+              '<div class="wh-meta">' +
+                '<span>Secret: ' + wh.secret + '</span>' +
+                '<span>Triggered: ' + (wh.triggerCount || 0) + ' times</span>' +
+                '<span>Last: ' + timeAgo(wh.lastTriggered) + '</span>' +
+              '</div>' +
+            '</div>' +
+            '<div class="wh-card-actions">' +
+              '<button class="test" onclick="testWebhook(\'' + wh.id + '\')">Test</button>' +
+              '<button onclick="editWebhook(\'' + wh.id + '\')">Edit</button>' +
+              '<button onclick="toggleWebhook(\'' + wh.id + '\',' + !wh.enabled + ')">' + (wh.enabled ? 'Disable' : 'Enable') + '</button>' +
+              '<button class="del" onclick="deleteWebhook(\'' + wh.id + '\')">Delete</button>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      });
+  }
+
+  window.copyUrl = function(url) {
+    navigator.clipboard.writeText(url).then(function() { alert('URL copied!'); });
+  };
+
+  window.toggleCreate = function() {
+    var el = document.getElementById('wh-create');
+    el.classList.toggle('visible');
+    if (!el.classList.contains('visible')) { editingId = null; clearForm(); }
+  };
+
+  function clearForm() {
+    document.getElementById('wh-name').value = '';
+    document.getElementById('wh-action').value = 'notification';
+    document.getElementById('wh-description').value = '';
+    document.getElementById('cfg-severity').value = 'info';
+    document.getElementById('cfg-title').value = '';
+    document.getElementById('cfg-message').value = '';
+    document.getElementById('form-title').textContent = 'Create Webhook';
+    editingId = null;
+    updateConfigFields();
+  }
+
+  window.updateConfigFields = function() {
+    var action = document.getElementById('wh-action').value;
+    var fields = document.getElementById('config-fields');
+    if (action === 'notification' || action === 'incident') {
+      fields.style.display = 'block';
+    } else {
+      fields.style.display = 'none';
+    }
+  };
+
+  window.saveWebhook = function() {
+    var name = document.getElementById('wh-name').value.trim();
+    var action = document.getElementById('wh-action').value;
+    var description = document.getElementById('wh-description').value.trim();
+    var severity = document.getElementById('cfg-severity').value;
+    var titleTemplate = document.getElementById('cfg-title').value.trim();
+    var messageTemplate = document.getElementById('cfg-message').value.trim();
+
+    if (!name) { alert('Name required'); return; }
+
+    var actionConfig = { severity: severity };
+    if (titleTemplate) actionConfig.titleTemplate = titleTemplate;
+    if (messageTemplate) actionConfig.messageTemplate = messageTemplate;
+
+    var body = { name: name, description: description, action: action, actionConfig: actionConfig };
+
+    if (editingId) {
+      fetch('/api/webhooks/' + editingId, { method: 'PATCH', headers: hdr(), body: JSON.stringify(body) })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { if (d.error) { alert(d.error); return; } toggleCreate(); loadWebhooks(); });
+    } else {
+      fetch('/api/webhooks', { method: 'POST', headers: hdr(), body: JSON.stringify(body) })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { if (d.error) { alert(d.error); return; } toggleCreate(); loadWebhooks(); });
+    }
+  };
+
+  window.editWebhook = function(id) {
+    fetch('/api/webhooks/' + id, { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(wh) {
+        editingId = id;
+        document.getElementById('wh-name').value = wh.name || '';
+        document.getElementById('wh-action').value = wh.action || 'notification';
+        document.getElementById('wh-description').value = wh.description || '';
+        document.getElementById('cfg-severity').value = (wh.actionConfig || {}).severity || 'info';
+        document.getElementById('cfg-title').value = (wh.actionConfig || {}).titleTemplate || '';
+        document.getElementById('cfg-message').value = (wh.actionConfig || {}).messageTemplate || '';
+        document.getElementById('form-title').textContent = 'Edit: ' + wh.name;
+        document.getElementById('wh-create').classList.add('visible');
+        updateConfigFields();
+      });
+  };
+
+  window.deleteWebhook = function(id) {
+    if (!confirm('Delete this webhook?')) return;
+    fetch('/api/webhooks/' + id, { method: 'DELETE', headers: hdr() })
+      .then(function() { loadWebhooks(); });
+  };
+
+  window.toggleWebhook = function(id, enabled) {
+    fetch('/api/webhooks/' + id, { method: 'PATCH', headers: hdr(), body: JSON.stringify({ enabled: enabled }) })
+      .then(function() { loadWebhooks(); });
+  };
+
+  window.testWebhook = function(id) {
+    // Get the full webhook details including secret
+    fetch('/api/webhooks/' + id, { headers: hdr() })
+      .then(function(r) { return r.json(); })
+      .then(function(wh) {
+        // Fire a test payload
+        return fetch(wh.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Webhook-Secret': wh.secret },
+          body: JSON.stringify({ title: 'Test Alert', message: 'This is a test from the webhook UI', severity: 'info', source: 'test', alertname: 'TestAlert', description: 'Webhook test fire' })
+        });
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        alert('Test result: ' + JSON.stringify(d));
+        loadWebhooks();
+      })
+      .catch(function(e) { alert('Test failed: ' + e.message); });
+  };
+
+  loadWebhooks();
+})();
+</script>
+</body>
+</html>

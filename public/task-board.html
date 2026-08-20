@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="manifest" href="/manifest.json">
+  <title>Task Board — RightAPI Forge</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;height:100vh;display:flex;flex-direction:column}
+    .nav{background:#1a1a2e;color:white;padding:14px 24px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+    .nav h1{font-size:18px}
+    .nav-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+    button{padding:8px 16px;border:none;border-radius:4px;cursor:pointer;font-size:13px}
+    .btn{background:#007bff;color:white}.btn-sec{background:#6c757d;color:white}
+    .btn-sm{padding:5px 10px;font-size:12px}
+    .board{display:flex;gap:16px;padding:20px;overflow-x:auto;flex:1;align-items:flex-start}
+    .column{background:white;border-radius:10px;min-width:280px;max-width:300px;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;flex-direction:column;max-height:calc(100vh - 120px)}
+    .col-header{padding:14px 16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:white;border-radius:10px 10px 0 0}
+    .col-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+    .col-count{background:#e9ecef;color:#666;padding:2px 8px;border-radius:10px;font-size:12px}
+    .col-body{padding:10px;overflow-y:auto;flex:1;min-height:80px}
+    .col-body.drag-over{background:#f0f7ff}
+    .task-card{background:white;border:1px solid #e8ecf0;border-radius:8px;padding:12px;margin-bottom:10px;cursor:grab;transition:box-shadow .15s,transform .15s;position:relative}
+    .task-card:active{cursor:grabbing}
+    .task-card.dragging{opacity:.5;transform:scale(.98)}
+    .task-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.12)}
+    .task-card.priority-critical{border-left:3px solid #dc3545}
+    .task-card.priority-high{border-left:3px solid #fd7e14}
+    .task-card.priority-medium{border-left:3px solid #007bff}
+    .task-card.priority-low{border-left:3px solid #6c757d}
+    .task-title{font-size:13px;font-weight:600;margin-bottom:6px;line-height:1.4}
+    .task-meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;align-items:center}
+    .tag{display:inline-block;padding:2px 7px;border-radius:8px;font-size:10px;background:#f0f2f5;color:#555}
+    .tag.agent{background:#cce5ff;color:#004085}
+    .badge{display:inline-block;padding:2px 8px;border-radius:8px;font-size:10px;font-weight:600}
+    .badge-critical{background:#f8d7da;color:#721c24}
+    .badge-high{background:#ffe5d0;color:#873300}
+    .badge-medium{background:#cce5ff;color:#004085}
+    .badge-low{background:#e2e3e5;color:#383d41}
+    .task-actions{position:absolute;top:8px;right:8px;display:none;gap:4px}
+    .task-card:hover .task-actions{display:flex}
+    .task-action-btn{width:24px;height:24px;border-radius:4px;border:none;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;background:#f0f2f5}
+    .task-action-btn:hover{background:#e2e6ea}
+    .add-card{padding:10px;border-top:1px solid #eee}
+    .add-btn{width:100%;padding:8px;background:none;border:1px dashed #ddd;border-radius:6px;color:#999;cursor:pointer;font-size:13px;text-align:center}
+    .add-btn:hover{background:#f8f9fa;color:#555}
+    .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+    .modal.open{display:flex}
+    .modal-box{background:white;border-radius:8px;padding:24px;width:90%;max-width:520px}
+    .modal-title{font-size:18px;font-weight:600;margin-bottom:16px}
+    .form-row{margin-bottom:12px}
+    .form-row label{display:block;font-size:13px;font-weight:500;margin-bottom:4px;color:#555}
+    .form-row input,.form-row select,.form-row textarea{width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px}
+    .form-row textarea{height:70px;resize:vertical}
+    .form-actions{display:flex;gap:8px;margin-top:16px}
+    .nlp-row{display:flex;gap:8px;margin-bottom:16px}
+    .nlp-input{flex:1;padding:9px 12px;border:2px solid #007bff;border-radius:6px;font-size:13px}
+    .ws-badge{font-size:11px;padding:3px 8px;border-radius:10px;background:#d4edda;color:#155724}
+  </style>
+</head>
+<body>
+
+<div class="nav">
+  <h1>📋 Task Board</h1>
+  <span class="ws-badge" id="wsBadge">⚡ Live</span>
+  <div class="nav-actions">
+    <button class="btn" onclick="openAddModal()">➕ New Task</button>
+    <button class="btn-sec" onclick="loadBoard()">↻ Refresh</button>
+  </div>
+</div>
+
+<!-- NLP Quick Add -->
+<div style="background:#fff;border-bottom:1px solid #e8ecf0;padding:10px 20px;display:flex;gap:8px">
+  <input class="nlp-input" id="nlpBar" placeholder="🤖 Describe a task in natural language and press Enter — AI will parse it automatically..." onkeydown="if(event.key==='Enter')nlpCreate()">
+  <button class="btn" onclick="nlpCreate()">AI Create</button>
+</div>
+
+<div class="board" id="board">
+  <!-- Columns injected by JS -->
+</div>
+
+<!-- Add/Edit Task Modal -->
+<div id="taskModal" class="modal">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle">New Task</div>
+    <div class="form-row"><label>Title *</label><input id="tTitle" placeholder="Task title"></div>
+    <div class="form-row"><label>Description</label><textarea id="tDesc" placeholder="Optional details"></textarea></div>
+    <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div><label>Priority</label>
+        <select id="tPriority">
+          <option value="medium">Medium</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="low">Low</option>
+        </select>
+      </div>
+      <div><label>Assigned Agent</label>
+        <select id="tAgent">
+          <option value="">Unassigned</option>
+          <option value="alice">Alice (SysAdmin)</option>
+          <option value="bob">Bob (SysAdmin)</option>
+          <option value="charlie">Charlie (Security)</option>
+          <option value="diana">Diana (DBA)</option>
+          <option value="eve">Eve (DevOps)</option>
+          <option value="director">IT Director</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row"><label>Status</label>
+      <select id="tStatus">
+        <option value="pending">Pending</option>
+        <option value="in-progress">In Progress</option>
+        <option value="review">Review</option>
+        <option value="done">Done</option>
+      </select>
+    </div>
+    <div class="form-actions">
+      <button class="btn" onclick="saveTask()">Save</button>
+      <button class="btn-sec" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLUMNS = [
+  { id: 'pending', label: '⏳ Pending', color: '#6c757d' },
+  { id: 'in-progress', label: '🔄 In Progress', color: '#007bff' },
+  { id: 'review', label: '🔍 Review', color: '#fd7e14' },
+  { id: 'done', label: '✅ Done', color: '#28a745' }
+];
+
+// Local task storage (would sync with API in production)
+let tasks = JSON.parse(localStorage.getItem('itops-tasks') || '[]');
+let editingId = null;
+let draggedId = null;
+
+// ── Board Render ─────────────────────────────────────────────────────────────
+
+function renderBoard() {
+  const board = document.getElementById('board');
+  board.innerHTML = COLUMNS.map(col => {
+    const colTasks = tasks.filter(t => t.status === col.id);
+    return '<div class="column" ondragover="onDragOver(event,\'' + col.id + '\')" ondrop="onDrop(event,\'' + col.id + '\')" ondragleave="onDragLeave(event)">' +
+      '<div class="col-header">' +
+        '<div class="col-title"><span style="color:' + col.color + '">■</span> ' + col.label + '</div>' +
+        '<span class="col-count">' + colTasks.length + '</span>' +
+      '</div>' +
+      '<div class="col-body" id="col-' + col.id + '">' +
+        colTasks.map(task => renderCard(task)).join('') +
+      '</div>' +
+      '<div class="add-card"><button class="add-btn" onclick="openAddModal(\'' + col.id + '\')">+ Add task</button></div>' +
+    '</div>';
+  }).join('');
+}
+
+function renderCard(task) {
+  return '<div class="task-card priority-' + task.priority + '" draggable="true" ' +
+    'ondragstart="onDragStart(event,\'' + task.id + '\')" ondragend="onDragEnd(event)" ' +
+    'id="card-' + task.id + '">' +
+    '<div class="task-actions">' +
+      '<button class="task-action-btn" title="Edit" onclick="editTask(\'' + task.id + '\')">✏️</button>' +
+      '<button class="task-action-btn" title="Delete" onclick="deleteTask(\'' + task.id + '\')">🗑</button>' +
+    '</div>' +
+    '<div class="task-title">' + esc(task.title) + '</div>' +
+    (task.desc ? '<div style="font-size:12px;color:#666;margin-bottom:6px;line-height:1.4">' + esc(task.desc.slice(0,80)) + (task.desc.length > 80 ? '...' : '') + '</div>' : '') +
+    '<div class="task-meta">' +
+      '<span class="badge badge-' + task.priority + '">' + task.priority + '</span>' +
+      (task.agent ? '<span class="tag agent">→ ' + esc(task.agent) + '</span>' : '') +
+      (task.skills ? task.skills.slice(0,2).map(s => '<span class="tag">' + esc(s) + '</span>').join('') : '') +
+    '</div>' +
+    '<div style="font-size:11px;color:#ccc;margin-top:6px;text-align:right">' + timeAgo(task.createdAt) + '</div>' +
+  '</div>';
+}
+
+// ── Drag & Drop ───────────────────────────────────────────────────────────────
+
+function onDragStart(e, id) {
+  draggedId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  setTimeout(() => document.getElementById('card-' + id)?.classList.add('dragging'), 0);
+}
+
+function onDragEnd(e) {
+  if (draggedId) document.getElementById('card-' + draggedId)?.classList.remove('dragging');
+  draggedId = null;
+}
+
+function onDragOver(e, colId) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.getElementById('col-' + colId)?.classList.add('drag-over');
+}
+
+function onDragLeave(e) {
+  e.currentTarget.querySelector('.col-body')?.classList.remove('drag-over');
+}
+
+function onDrop(e, colId) {
+  e.preventDefault();
+  document.getElementById('col-' + colId)?.classList.remove('drag-over');
+  if (!draggedId) return;
+  const task = tasks.find(t => t.id === draggedId);
+  if (task && task.status !== colId) {
+    task.status = colId;
+    task.updatedAt = new Date().toISOString();
+    saveTasks();
+    renderBoard();
+    // Publish via WS
+    fetch('/api/ws/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'task:updated', payload: { id: task.id, status: colId } }) });
+  }
+}
+
+// ── Task CRUD ─────────────────────────────────────────────────────────────────
+
+function openAddModal(status = 'pending') {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'New Task';
+  document.getElementById('tTitle').value = '';
+  document.getElementById('tDesc').value = '';
+  document.getElementById('tPriority').value = 'medium';
+  document.getElementById('tAgent').value = '';
+  document.getElementById('tStatus').value = status;
+  document.getElementById('taskModal').classList.add('open');
+  setTimeout(() => document.getElementById('tTitle').focus(), 100);
+}
+
+function editTask(id) {
+  const task = tasks.find(t => t.id === id);
+  if (!task) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Task';
+  document.getElementById('tTitle').value = task.title;
+  document.getElementById('tDesc').value = task.desc || '';
+  document.getElementById('tPriority').value = task.priority;
+  document.getElementById('tAgent').value = task.agent || '';
+  document.getElementById('tStatus').value = task.status;
+  document.getElementById('taskModal').classList.add('open');
+}
+
+function saveTask() {
+  const title = document.getElementById('tTitle').value.trim();
+  if (!title) { alert('Title required'); return; }
+  const taskData = {
+    title,
+    desc: document.getElementById('tDesc').value.trim(),
+    priority: document.getElementById('tPriority').value,
+    agent: document.getElementById('tAgent').value,
+    status: document.getElementById('tStatus').value
+  };
+
+  if (editingId) {
+    const idx = tasks.findIndex(t => t.id === editingId);
+    if (idx >= 0) tasks[idx] = { ...tasks[idx], ...taskData, updatedAt: new Date().toISOString() };
+  } else {
+    const task = { ...taskData, id: 'task-' + Date.now(), createdAt: new Date().toISOString() };
+    tasks.push(task);
+    fetch('/api/ws/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'task:created', payload: task }) });
+  }
+
+  saveTasks();
+  renderBoard();
+  closeModal();
+}
+
+function deleteTask(id) {
+  if (!confirm('Delete this task?')) return;
+  tasks = tasks.filter(t => t.id !== id);
+  saveTasks();
+  renderBoard();
+}
+
+async function nlpCreate() {
+  const text = document.getElementById('nlpBar').value.trim();
+  if (!text) return;
+  document.getElementById('nlpBar').value = '';
+
+  try {
+    const data = await fetch('/api/ai/parse-task', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    }).then(r => r.json());
+
+    const p = data.parsed;
+    const r = data.routing;
+    const task = {
+      id: 'task-' + Date.now(),
+      title: p.title,
+      desc: p.description,
+      priority: p.priority,
+      agent: r?.agentName || '',
+      skills: p.suggestedSkills,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      source: 'ai-nlp'
+    };
+
+    tasks.push(task);
+    saveTasks();
+    renderBoard();
+    fetch('/api/ws/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'task:created', payload: task }) });
+  } catch(e) {
+    alert('AI parse failed: ' + e.message);
+  }
+}
+
+function loadBoard() { renderBoard(); }
+
+function saveTasks() { localStorage.setItem('itops-tasks', JSON.stringify(tasks)); }
+function closeModal() { document.getElementById('taskModal').classList.remove('open'); editingId = null; }
+
+// ── WebSocket ────────────────────────────────────────────────────────────────
+
+function connectWs() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws = new WebSocket(proto + '//' + location.host + '/ws');
+  const badge = document.getElementById('wsBadge');
+
+  ws.onopen = () => { badge.textContent = '⚡ Live'; badge.style.background = '#d4edda'; badge.style.color = '#155724'; };
+  ws.onclose = () => { badge.textContent = '○ Offline'; badge.style.background = '#f8d7da'; badge.style.color = '#721c24'; setTimeout(connectWs, 3000); };
+  ws.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
+    } catch(err) {}
+  };
+}
+
+function timeAgo(d) {
+  const diff = (Date.now() - new Date(d).getTime()) / 1000;
+  if (diff < 60) return Math.floor(diff) + 's ago';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+function esc(s) { const d = document.createElement('div'); d.textContent = String(s||''); return d.innerHTML; }
+
+// Init with sample tasks if empty
+if (!tasks.length) {
+  const now = new Date().toISOString();
+  tasks = [
+    { id: 'task-1', title: 'Check server health', desc: 'Run diagnostics on all production nodes', priority: 'high', agent: 'alice', status: 'in-progress', createdAt: now },
+    { id: 'task-2', title: 'SSL certificate renewal', desc: 'api.example.com expires in 7 days', priority: 'critical', agent: 'charlie', status: 'pending', createdAt: now },
+    { id: 'task-3', title: 'Weekly backup verification', desc: null, priority: 'medium', agent: 'diana', status: 'done', createdAt: now },
+    { id: 'task-4', title: 'Deploy v2.1.0 to staging', desc: null, priority: 'medium', agent: 'eve', status: 'review', createdAt: now },
+    { id: 'task-5', title: 'Database index optimization', desc: 'Slow query analysis for users table', priority: 'high', agent: 'diana', status: 'pending', createdAt: now }
+  ];
+  saveTasks();
+}
+
+renderBoard();
+connectWs();
+</script>
+<script src="/sidebar.js"></script>
+</body>
+</html>

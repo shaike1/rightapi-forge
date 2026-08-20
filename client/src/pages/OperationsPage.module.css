@@ -1,0 +1,92 @@
+.statsRow { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.twoCol { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; }
+.sectionTitle { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text3); margin-bottom: 12px; }
+
+/* Task feed */
+.taskFeed { display: flex; flex-direction: column; }
+.taskRow {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  transition: background 0.2s;
+  animation: slideIn 0.3s ease;
+}
+.taskRow:last-child { border-bottom: none; }
+.taskRow:hover { background: var(--bg3); }
+@keyframes slideIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.fadeOut { opacity: 0; transition: opacity 0.5s; }
+
+.badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.badgePending { background: color-mix(in srgb, var(--warning) 15%, transparent); color: var(--warning); }
+.badgeAssigned { background: color-mix(in srgb, var(--info, var(--accent)) 15%, transparent); color: var(--info, var(--accent)); }
+.badgeInProgress { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.badgeCompleted { background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success); }
+.badgeFailed { background: color-mix(in srgb, var(--danger) 15%, transparent); color: var(--danger); }
+.badgeGray { background: var(--bg3); color: var(--text2); }
+
+.taskTitle { flex: 1; font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.taskMeta { font-size: 11px; color: var(--text3); white-space: nowrap; }
+.taskElapsed { font-size: 11px; color: var(--text3); white-space: nowrap; min-width: 36px; text-align: right; }
+
+/* Reassign dropdown */
+.reassignWrap { position: relative; flex-shrink: 0; }
+.reassignBtn { padding: 3px 8px; font-size: 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg3); color: var(--text2); cursor: pointer; }
+.reassignBtn:hover { background: var(--bg4); color: var(--text); }
+.reassignDropdown {
+  position: absolute; right: 0; top: 100%; margin-top: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  z-index: 100; min-width: 160px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.reassignOption { display: block; width: 100%; padding: 7px 12px; text-align: left; font-size: 12px; color: var(--text); background: none; border: none; cursor: pointer; }
+.reassignOption:hover { background: var(--bg3); }
+
+/* Agent activity */
+.agentList { display: flex; flex-direction: column; gap: 2px; }
+.agentRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.agentRow:last-child { border-bottom: none; }
+.agentName { font-weight: 600; min-width: 100px; color: var(--text); }
+.agentTask { flex: 1; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agentCount { font-size: 11px; color: var(--text3); white-space: nowrap; }
+
+.empty { padding: 32px 16px; text-align: center; color: var(--text3); font-size: 13px; }
+.liveIndicator { font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, var(--text3) 15%, transparent); color: var(--text3); }
+.liveIndicator[data-connected="true"] { background: color-mix(in srgb, var(--success) 15%, transparent); color: var(--success); }
+.headerRow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+
+@media (max-width: 900px) {
+  .twoCol { grid-template-columns: 1fr; }
+}
+
+/* ── Table wrapper ─────────────────────────────────────────────────────────── */
+.tableWrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Mobile responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .statsRow {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .headerRow {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .taskRow {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .taskTitle {
+    white-space: normal;
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+}

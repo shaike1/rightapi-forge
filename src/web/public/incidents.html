@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT Ops — Incidents</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0f0f1a;
+    --card:      #1a1a2e;
+    --card2:     #16213e;
+    --accent:    #4f8ef7;
+    --accent-h:  #3a7ae8;
+    --border:    #2a2a4a;
+    --text:      #e2e8f0;
+    --muted:     #8892a4;
+    --success:   #22c55e;
+    --warn:      #f59e0b;
+    --danger:    #ef4444;
+    --radius:    8px;
+    --radius-lg: 12px;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── Header ── */
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-title {
+    font-size: 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -0.3px;
+  }
+
+  .header-title span { opacity: .85; }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: var(--radius);
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: opacity .15s, transform .1s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  .btn-primary  { background: var(--accent);  color: #fff; }
+  .btn-primary:hover:not(:disabled)  { background: var(--accent-h); }
+  .btn-danger   { background: #dc2626; color: #fff; }
+  .btn-danger:hover:not(:disabled)   { background: #b91c1c; }
+  .btn-warn     { background: #ea580c; color: #fff; }
+  .btn-warn:hover:not(:disabled)     { background: #c2410c; }
+  .btn-success  { background: #16a34a; color: #fff; }
+  .btn-success:hover:not(:disabled)  { background: #15803d; }
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover:not(:disabled) { color: var(--text); border-color: #4a4a6a; background: #ffffff08; }
+
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+  .btn-xs { padding: 3px 8px;  font-size: 11px; border-radius: 5px; }
+
+  /* ── Stats bar ── */
+  #stats-bar {
+    display: flex;
+    gap: 12px;
+    padding: 16px 24px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .stat-chip {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 110px;
+  }
+
+  .stat-chip .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .stat-chip .value { font-size: 22px; font-weight: 700; color: var(--text); }
+  .stat-chip.open   .value { color: var(--danger); }
+  .stat-chip.crit   .value { color: #f97316; }
+  .stat-chip.avg    .value { color: var(--accent); }
+
+  /* ── Toolbar ── */
+  #toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  select, input[type="text"] {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  select:focus, input[type="text"]:focus { border-color: var(--accent); }
+  select option { background: #1a1a2e; }
+
+  .toolbar-spacer { flex: 1; }
+
+  .ws-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    display: inline-block;
+    transition: background .3s;
+  }
+  .ws-dot.connected { background: var(--success); box-shadow: 0 0 6px var(--success); }
+  .ws-dot.error     { background: var(--danger); }
+
+  /* ── Main content ── */
+  #main { padding: 20px 24px; }
+
+  /* ── Table wrapper ── */
+  .table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead th {
+    background: var(--card2);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  tbody tr.incident-row {
+    border-bottom: 1px solid var(--border);
+    transition: background .12s;
+    cursor: default;
+  }
+  tbody tr.incident-row:last-child { border-bottom: none; }
+  tbody tr.incident-row:hover { background: #ffffff05; }
+  tbody tr.incident-row.highlighted { animation: pulse-row 1.5s ease-out; }
+
+  @keyframes pulse-row {
+    0%   { background: #4f8ef720; }
+    100% { background: transparent; }
+  }
+
+  tbody td {
+    padding: 10px 14px;
+    vertical-align: middle;
+  }
+
+  .id-cell { color: var(--muted); font-size: 12px; font-family: monospace; }
+
+  .title-cell { max-width: 220px; }
+  .title-text {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    max-width: 220px;
+  }
+  .source-tag {
+    font-size: 11px;
+    color: var(--muted);
+    background: #ffffff0a;
+    border-radius: 4px;
+    padding: 1px 5px;
+    margin-top: 2px;
+    display: inline-block;
+  }
+
+  /* ── Severity badges ── */
+  .badge-sev {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+  }
+  .sev-critical { background: #dc2626; color: #fff; }
+  .sev-high     { background: #ea580c; color: #fff; }
+  .sev-medium   { background: #ca8a04; color: #fff; }
+  .sev-low      { background: #2563eb; color: #fff; }
+
+  /* ── Status badges ── */
+  .badge-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    border: 1.5px solid;
+  }
+  .st-open        { color: #ef4444; border-color: #ef4444; }
+  .st-investigating { color: #f97316; border-color: #f97316; }
+  .st-mitigating  { color: #eab308; border-color: #eab308; }
+  .st-resolved    { color: #22c55e; border-color: #22c55e; }
+  .st-closed      { color: #6b7280; border-color: #6b7280; }
+
+  /* ── SLA cell ── */
+  .sla-breached { color: #ef4444; font-weight: 700; }
+  .sla-warn     { color: #f97316; font-weight: 600; }
+  .sla-ok       { color: #22c55e; }
+
+  /* ── Age cell ── */
+  .age-cell { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+  /* ── Assigned cell ── */
+  .assigned-cell {
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  /* ── Actions cell ── */
+  .actions-cell { white-space: nowrap; }
+  .actions-cell .btn + .btn { margin-left: 4px; }
+
+  /* ── Timeline row ── */
+  tr.timeline-row td {
+    padding: 0;
+    background: #0d0d1c;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .timeline-panel {
+    padding: 16px 20px 16px 50px;
+    border-top: 1px solid var(--border);
+  }
+
+  .timeline-panel h4 {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .timeline-list { list-style: none; position: relative; }
+  .timeline-list::before {
+    content: '';
+    position: absolute;
+    left: 7px; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+
+  .tl-item {
+    position: relative;
+    padding: 0 0 14px 28px;
+    font-size: 12px;
+  }
+  .tl-item:last-child { padding-bottom: 0; }
+
+  .tl-dot {
+    position: absolute;
+    left: 0; top: 4px;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--card2);
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px;
+  }
+  .tl-dot.created      { border-color: var(--accent); }
+  .tl-dot.escalated    { border-color: #f97316; }
+  .tl-dot.resolved     { border-color: var(--success); }
+  .tl-dot.closed       { border-color: var(--muted); }
+  .tl-dot.note         { border-color: #a855f7; }
+  .tl-dot.status_change { border-color: var(--warn); }
+
+  .tl-time { color: var(--muted); margin-right: 6px; }
+  .tl-actor { color: var(--accent); }
+  .tl-msg { color: var(--text); }
+
+  .timeline-loading, .timeline-empty {
+    color: var(--muted); font-size: 12px; padding: 8px 0;
+  }
+
+  /* ── Empty / loading states ── */
+  .table-message {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .table-message .icon { font-size: 36px; display: block; margin-bottom: 12px; }
+  .spinner {
+    display: inline-block;
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Modal overlay ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.65);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.6);
+    animation: modal-in .18s ease-out;
+  }
+  @keyframes modal-in {
+    from { opacity: 0; transform: scale(.95) translateY(8px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .modal .modal-sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    margin-bottom: 6px;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    background: var(--card2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .15s;
+    resize: vertical;
+  }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus { border-color: var(--accent); }
+  .form-group textarea { min-height: 80px; }
+
+  .modal-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 24px;
+  }
+
+  /* ── Toast ── */
+  #toast-container {
+    position: fixed;
+    bottom: 20px; right: 20px;
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  .toast {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    font-size: 13px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    animation: toast-in .2s ease-out;
+    max-width: 320px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .toast.success { border-left: 3px solid var(--success); }
+  .toast.error   { border-left: 3px solid var(--danger); }
+  .toast.info    { border-left: 3px solid var(--accent); }
+
+  /* ── Auth overlay ── */
+  #auth-overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #auth-overlay.hidden { display: none; }
+
+  .auth-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 40px;
+    text-align: center;
+    max-width: 340px;
+    width: 100%;
+  }
+  .auth-card h2 { font-size: 20px; margin-bottom: 8px; }
+  .auth-card p  { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    #main { padding: 12px; }
+    #stats-bar, #toolbar { padding: 12px; }
+    thead th:nth-child(7),
+    tbody td:nth-child(7),
+    thead th:nth-child(8),
+    tbody td:nth-child(8) { display: none; }
+  }
+  @media (max-width: 600px) {
+    .title-text { max-width: 120px; }
+    thead th:nth-child(6),
+    tbody td:nth-child(6) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Auth Overlay ── -->
+<div id="auth-overlay">
+  <div class="auth-card">
+    <div style="font-size:36px;margin-bottom:12px">🔐</div>
+    <h2>IT Ops — Incidents</h2>
+    <p>Authenticating, please wait…</p>
+    <div class="spinner"></div>
+    <p id="auth-error" style="color:#ef4444;margin-top:16px;display:none"></p>
+  </div>
+</div>
+
+<!-- ── Header ── -->
+<header>
+  <div class="header-title">
+    <span>🚨</span>
+    <span>IT Ops — Incidents</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="ws-dot" id="ws-dot" title="WebSocket status"></span>
+    <span id="ws-label" style="font-size:11px;color:var(--muted)">connecting…</span>
+    <button class="btn btn-primary" onclick="openNewModal()">+ New Incident</button>
+  </div>
+</header>
+
+<!-- ── Stats Bar ── -->
+<div id="stats-bar">
+  <div class="stat-chip open">
+    <span class="label">Open</span>
+    <span class="value" id="stat-open">—</span>
+  </div>
+  <div class="stat-chip crit">
+    <span class="label">Critical</span>
+    <span class="value" id="stat-critical">—</span>
+  </div>
+  <div class="stat-chip">
+    <span class="label">Investigating</span>
+    <span class="value" id="stat-investigating" style="color:var(--warn)">—</span>
+  </div>
+  <div class="stat-chip avg">
+    <span class="label">Avg Resolution</span>
+    <span class="value" id="stat-avg">—</span>
+  </div>
+  <div class="stat-chip">
+    <span class="label">Resolved Today</span>
+    <span class="value" id="stat-resolved" style="color:var(--success)">—</span>
+  </div>
+  <div class="stat-chip">
+    <span class="label">SLA Breached</span>
+    <span class="value" id="stat-breached" style="color:#ef4444">—</span>
+  </div>
+</div>
+
+<!-- ── Toolbar ── -->
+<div id="toolbar">
+  <select id="filter-status" onchange="applyFilters()">
+    <option value="">All Statuses</option>
+    <option value="open" selected>Open</option>
+    <option value="investigating">Investigating</option>
+    <option value="mitigating">Mitigating</option>
+    <option value="resolved">Resolved</option>
+    <option value="closed">Closed</option>
+  </select>
+  <select id="filter-severity" onchange="applyFilters()">
+    <option value="">All Severities</option>
+    <option value="critical">Critical</option>
+    <option value="high">High</option>
+    <option value="medium">Medium</option>
+    <option value="low">Low</option>
+  </select>
+  <input type="text" id="filter-search" placeholder="Search title…" oninput="applyFilters()" style="width:180px">
+  <div class="toolbar-spacer"></div>
+  <span id="last-refresh" style="font-size:11px;color:var(--muted)"></span>
+  <button class="btn btn-ghost btn-sm" onclick="loadAll()">🔄 Refresh</button>
+</div>
+
+<!-- ── Main Table ── -->
+<div id="main">
+  <div class="table-wrap">
+    <table id="incidents-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Title / Source</th>
+          <th>Severity</th>
+          <th>Status</th>
+          <th>Age</th>
+          <th>SLA</th>
+          <th>Assigned</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="incidents-tbody">
+        <tr>
+          <td colspan="8">
+            <div class="table-message"><div class="spinner"></div></div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── New / Edit Incident Modal ── -->
+<div class="modal-overlay" id="modal-new">
+  <div class="modal">
+    <h3>🆕 New Incident</h3>
+    <p class="modal-sub">Report a new incident to the ops team</p>
+    <div class="form-group">
+      <label>Title <span style="color:#ef4444">*</span></label>
+      <input type="text" id="new-title" placeholder="Brief description of the issue">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="new-desc" placeholder="Detailed description, impact, steps to reproduce…"></textarea>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label>Severity</label>
+        <select id="new-severity">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Assigned To</label>
+        <input type="text" id="new-assigned" placeholder="Username or email">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-new')">Cancel</button>
+      <button class="btn btn-primary" onclick="submitNewIncident()">Create Incident</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Action Modal (escalate / resolve / note) ── -->
+<div class="modal-overlay" id="modal-action">
+  <div class="modal">
+    <h3 id="action-title">Action</h3>
+    <p class="modal-sub" id="action-sub"></p>
+    <div class="form-group">
+      <label id="action-label">Message</label>
+      <textarea id="action-input" rows="4" placeholder="Enter details…"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-action')">Cancel</button>
+      <button class="btn btn-primary" id="action-submit" onclick="submitAction()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast Container ── -->
+<div id="toast-container"></div>
+
+<script>
+'use strict';
+
+// ────────────────────────────────────────────────────────────────
+// State
+// ────────────────────────────────────────────────────────────────
+let authToken = sessionStorage.getItem('itops_token') || null;
+let allIncidents = [];
+let expandedRows = new Set();   // incident IDs with timeline open
+let activeAction = null;        // { id, type, btnEl }
+let wsConn = null;
+let refreshTimer = null;
+
+const SEV_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
+
+// SLA minutes by severity (fallback if not from API)
+const SLA_DEFAULTS = { critical: 60, high: 240, medium: 480, low: 1440 };
+
+// ────────────────────────────────────────────────────────────────
+// Bootstrap
+// ────────────────────────────────────────────────────────────────
+(async function init() {
+  if (!authToken) {
+    await doLogin();
+  } else {
+    hideAuthOverlay();
+    loadAll();
+    loadStats();
+    connectWS();
+    scheduleRefresh();
+  }
+})();
+
+async function doLogin() {
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'admin', password: '1234' })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    authToken = data.token || data.accessToken || data.access_token;
+    if (!authToken) throw new Error('No token in response');
+    sessionStorage.setItem('itops_token', authToken);
+    hideAuthOverlay();
+    loadAll();
+    loadStats();
+    connectWS();
+    scheduleRefresh();
+  } catch (err) {
+    const el = document.getElementById('auth-error');
+    el.textContent = `Auth failed: ${err.message}`;
+    el.style.display = 'block';
+    document.querySelector('.auth-card p').textContent = 'Authentication error.';
+    document.querySelector('.auth-card .spinner').style.display = 'none';
+  }
+}
+
+function hideAuthOverlay() {
+  document.getElementById('auth-overlay').classList.add('hidden');
+}
+
+// ────────────────────────────────────────────────────────────────
+// API helpers
+// ────────────────────────────────────────────────────────────────
+async function apiFetch(path, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${authToken}`,
+    ...(options.headers || {})
+  };
+  const res = await fetch(path, { ...options, headers });
+  if (res.status === 401) {
+    sessionStorage.removeItem('itops_token');
+    authToken = null;
+    document.getElementById('auth-overlay').classList.remove('hidden');
+    throw new Error('Session expired — please reload');
+  }
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(body || `HTTP ${res.status}`);
+  }
+  const ct = res.headers.get('content-type') || '';
+  return ct.includes('application/json') ? res.json() : res.text();
+}
+
+// ────────────────────────────────────────────────────────────────
+// Data loading
+// ────────────────────────────────────────────────────────────────
+async function loadAll() {
+  const statusFilter = document.getElementById('filter-status').value;
+  const qs = statusFilter ? `?status=${encodeURIComponent(statusFilter)}` : '';
+  try {
+    const data = await apiFetch(`/api/incidents${qs}`);
+    allIncidents = Array.isArray(data) ? data
+                 : (data.incidents || data.data || []);
+    renderTable();
+    document.getElementById('last-refresh').textContent =
+      'Updated ' + new Date().toLocaleTimeString();
+  } catch (err) {
+    showEmptyState('⚠️', 'Failed to load incidents: ' + err.message);
+  }
+}
+
+async function loadStats() {
+  try {
+    const s = await apiFetch('/api/incidents/stats');
+    setText('stat-open',         s.open          ?? s.openCount      ?? '—');
+    setText('stat-critical',     s.critical      ?? s.criticalCount  ?? '—');
+    setText('stat-investigating', s.investigating ?? '—');
+    setText('stat-resolved',     s.resolvedToday ?? s.resolved       ?? '—');
+    setText('stat-breached',     s.slaBreached   ?? s.breached       ?? '—');
+    if (s.avgResolutionMinutes != null) {
+      const h = Math.floor(s.avgResolutionMinutes / 60);
+      const m = s.avgResolutionMinutes % 60;
+      setText('stat-avg', h > 0 ? `${h}h ${m}m` : `${m}m`);
+    } else if (s.avgResolution != null) {
+      setText('stat-avg', s.avgResolution);
+    } else {
+      setText('stat-avg', '—');
+    }
+  } catch (_) {
+    // stats are non-critical, silently ignore
+  }
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Filters & render
+// ────────────────────────────────────────────────────────────────
+function applyFilters() {
+  renderTable();
+}
+
+function getFiltered() {
+  const sev    = document.getElementById('filter-severity').value;
+  const search = document.getElementById('filter-search').value.trim().toLowerCase();
+  return allIncidents.filter(inc => {
+    if (sev    && inc.severity !== sev) return false;
+    if (search && !((inc.title || '').toLowerCase().includes(search))) return false;
+    return true;
+  });
+}
+
+function renderTable() {
+  const tbody = document.getElementById('incidents-tbody');
+  const list  = getFiltered();
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8">
+      <div class="table-message">
+        <span class="icon">📭</span>
+        No incidents match the current filters.
+      </div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = '';
+  list.forEach(inc => {
+    const rowEl = buildIncidentRow(inc);
+    tbody.appendChild(rowEl);
+    if (expandedRows.has(inc.id || inc._id)) {
+      const tlRow = document.createElement('tr');
+      tlRow.className = 'timeline-row';
+      tlRow.id = `tl-row-${inc.id || inc._id}`;
+      tlRow.innerHTML = `<td colspan="8">
+        <div class="timeline-panel" id="tl-panel-${inc.id || inc._id}">
+          <div class="timeline-loading">Loading timeline…</div>
+        </div></td>`;
+      tbody.appendChild(tlRow);
+      fetchTimeline(inc.id || inc._id);
+    }
+  });
+}
+
+function buildIncidentRow(inc) {
+  const id  = inc.id || inc._id || '';
+  const tr  = document.createElement('tr');
+  tr.className = 'incident-row';
+  tr.id = `row-${id}`;
+  tr.dataset.id = id;
+
+  const ageMin  = computeAgeMinutes(inc);
+  const slaMin  = inc.slaMinutes || SLA_DEFAULTS[inc.severity] || 480;
+  const slaLeft = slaMin - ageMin;
+
+  tr.innerHTML = `
+    <td class="id-cell">${shortId(id)}</td>
+    <td class="title-cell">
+      <span class="title-text" title="${esc(inc.title || '')}">${esc(inc.title || '—')}</span>
+      ${inc.source ? `<span class="source-tag">${esc(inc.source)}</span>` : ''}
+    </td>
+    <td>${sevBadge(inc.severity)}</td>
+    <td>${statusBadge(inc.status)}</td>
+    <td class="age-cell">${formatAge(ageMin)}</td>
+    <td>${slaBadge(slaLeft)}</td>
+    <td class="assigned-cell" title="${esc(inc.assignedTo || '')}">${esc(inc.assignedTo || '—')}</td>
+    <td class="actions-cell">${buildActions(inc)}</td>
+  `;
+
+  return tr;
+}
+
+function buildActions(inc) {
+  const id = inc.id || inc._id;
+  const st = (inc.status || '').toLowerCase();
+  const parts = [];
+
+  if (st !== 'resolved' && st !== 'closed') {
+    parts.push(`<button class="btn btn-warn btn-xs" onclick="openAction('${id}','escalate',this)">⬆ Escalate</button>`);
+  }
+  if (st !== 'resolved' && st !== 'closed') {
+    parts.push(`<button class="btn btn-success btn-xs" onclick="openAction('${id}','resolve',this)">✔ Resolve</button>`);
+  }
+  if (st === 'resolved') {
+    parts.push(`<button class="btn btn-ghost btn-xs" onclick="openAction('${id}','close',this)">✖ Close</button>`);
+  }
+  parts.push(`<button class="btn btn-ghost btn-xs" onclick="openAction('${id}','note',this)">📝 Note</button>`);
+  parts.push(`<button class="btn btn-ghost btn-xs" onclick="toggleTimeline('${id}',this)">▼ Timeline</button>`);
+
+  return parts.join(' ');
+}
+
+// ────────────────────────────────────────────────────────────────
+// Timeline
+// ────────────────────────────────────────────────────────────────
+async function toggleTimeline(id, btn) {
+  const tbody = document.getElementById('incidents-tbody');
+  const existingRow = document.getElementById(`tl-row-${id}`);
+
+  if (existingRow) {
+    existingRow.remove();
+    expandedRows.delete(id);
+    btn.textContent = '▼ Timeline';
+    return;
+  }
+
+  expandedRows.add(id);
+  btn.textContent = '▲ Timeline';
+
+  const incRow = document.getElementById(`row-${id}`);
+  const tlRow  = document.createElement('tr');
+  tlRow.className = 'timeline-row';
+  tlRow.id = `tl-row-${id}`;
+  tlRow.innerHTML = `<td colspan="8">
+    <div class="timeline-panel" id="tl-panel-${id}">
+      <div class="timeline-loading">⏳ Loading timeline…</div>
+    </div></td>`;
+  incRow.after(tlRow);
+
+  await fetchTimeline(id);
+}
+
+async function fetchTimeline(id) {
+  const panel = document.getElementById(`tl-panel-${id}`);
+  if (!panel) return;
+  try {
+    const inc = await apiFetch(`/api/incidents/${id}`);
+    const events = inc.timeline || inc.events || inc.history || [];
+    renderTimeline(panel, inc, events);
+  } catch (err) {
+    panel.innerHTML = `<div class="timeline-empty">⚠️ ${esc(err.message)}</div>`;
+  }
+}
+
+function renderTimeline(panel, inc, events) {
+  if (!events.length) {
+    panel.innerHTML = `
+      <h4>📋 Timeline — ${esc(inc.title || inc.id || '')}</h4>
+      <div class="timeline-empty">No timeline entries yet.</div>`;
+    return;
+  }
+
+  const items = events.map(ev => {
+    const type = (ev.type || ev.action || 'note').toLowerCase();
+    const ts   = ev.timestamp || ev.createdAt || ev.time || '';
+    const actor = ev.actor || ev.user || ev.performedBy || '';
+    const msg   = ev.message || ev.description || ev.note || ev.reason || ev.resolution || '';
+    return `<li class="tl-item">
+      <div class="tl-dot ${type}" title="${type}"></div>
+      <span class="tl-time">${formatTs(ts)}</span>
+      ${actor ? `<span class="tl-actor">${esc(actor)}</span> ` : ''}
+      <span class="tl-msg">${esc(msg || type)}</span>
+    </li>`;
+  }).join('');
+
+  panel.innerHTML = `
+    <h4>📋 Timeline — ${esc(inc.title || inc.id || '')}
+      <span style="color:var(--muted);font-weight:400;margin-left:8px">${events.length} event${events.length !== 1 ? 's' : ''}</span>
+    </h4>
+    <ul class="timeline-list">${items}</ul>`;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Modals
+// ────────────────────────────────────────────────────────────────
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Close on backdrop click
+document.querySelectorAll('.modal-overlay').forEach(ov => {
+  ov.addEventListener('click', e => {
+    if (e.target === ov) ov.classList.remove('open');
+  });
+});
+
+function openNewModal() {
+  document.getElementById('new-title').value = '';
+  document.getElementById('new-desc').value  = '';
+  document.getElementById('new-severity').value = 'medium';
+  document.getElementById('new-assigned').value = '';
+  openModal('modal-new');
+  setTimeout(() => document.getElementById('new-title').focus(), 80);
+}
+
+async function submitNewIncident() {
+  const title    = document.getElementById('new-title').value.trim();
+  const desc     = document.getElementById('new-desc').value.trim();
+  const severity = document.getElementById('new-severity').value;
+  const assigned = document.getElementById('new-assigned').value.trim();
+
+  if (!title) { showToast('Title is required.', 'error'); return; }
+
+  const payload = { title, description: desc, severity };
+  if (assigned) payload.assignedTo = assigned;
+
+  try {
+    await apiFetch('/api/incidents', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    closeModal('modal-new');
+    showToast('Incident created.', 'success');
+    loadAll();
+    loadStats();
+  } catch (err) {
+    showToast('Create failed: ' + err.message, 'error');
+  }
+}
+
+const ACTION_CONFIG = {
+  escalate: {
+    title: '⬆ Escalate Incident',
+    sub:   'Provide a reason for escalation',
+    label: 'Reason for escalation',
+    ph:    'Describe why this needs escalation…',
+    btnClass: 'btn-warn',
+    btnText:  'Escalate',
+    required: true
+  },
+  resolve: {
+    title: '✔ Resolve Incident',
+    sub:   'Summarize the resolution',
+    label: 'Resolution summary',
+    ph:    'Describe how the incident was resolved…',
+    btnClass: 'btn-success',
+    btnText:  'Mark Resolved',
+    required: true
+  },
+  close: {
+    title: '✖ Close Incident',
+    sub:   'Confirm you want to close this incident',
+    label: 'Closing note (optional)',
+    ph:    'Any final notes…',
+    btnClass: 'btn-ghost',
+    btnText:  'Close Incident',
+    required: false
+  },
+  note: {
+    title: '📝 Add Note',
+    sub:   'Add a note to the incident timeline',
+    label: 'Note',
+    ph:    'Enter your note…',
+    btnClass: 'btn-primary',
+    btnText:  'Add Note',
+    required: true
+  }
+};
+
+function openAction(id, type, btnEl) {
+  const cfg = ACTION_CONFIG[type];
+  if (!cfg) return;
+  activeAction = { id, type };
+
+  document.getElementById('action-title').textContent  = cfg.title;
+  document.getElementById('action-sub').textContent    = cfg.sub;
+  document.getElementById('action-label').textContent  = cfg.label;
+  document.getElementById('action-input').placeholder  = cfg.ph;
+  document.getElementById('action-input').value        = '';
+
+  const submitBtn = document.getElementById('action-submit');
+  submitBtn.textContent = cfg.btnText;
+  submitBtn.className   = `btn ${cfg.btnClass}`;
+
+  // Hide textarea for close if not needed
+  const fgroup = document.querySelector('#modal-action .form-group');
+  fgroup.style.display = (type === 'close') ? 'block' : 'block';
+
+  openModal('modal-action');
+  setTimeout(() => document.getElementById('action-input').focus(), 80);
+}
+
+async function submitAction() {
+  if (!activeAction) return;
+  const { id, type } = activeAction;
+  const cfg = ACTION_CONFIG[type];
+  const msg = document.getElementById('action-input').value.trim();
+
+  if (cfg.required && !msg) {
+    showToast(`${cfg.label} is required.`, 'error');
+    return;
+  }
+
+  let path = `/api/incidents/${id}`;
+  let body = null;
+
+  if (type === 'escalate') { path += '/escalate'; body = { reason: msg }; }
+  else if (type === 'resolve') { path += '/resolve'; body = { resolution: msg }; }
+  else if (type === 'close')   { path += '/close';   body = msg ? { note: msg } : {}; }
+  else if (type === 'note')    { path += '/note';    body = { message: msg }; }
+
+  const submitBtn = document.getElementById('action-submit');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting…';
+
+  try {
+    await apiFetch(path, {
+      method: 'POST',
+      body: body ? JSON.stringify(body) : undefined
+    });
+    closeModal('modal-action');
+    showToast(`Action "${type}" completed.`, 'success');
+    // Refresh timeline if expanded
+    if (expandedRows.has(id)) {
+      const panel = document.getElementById(`tl-panel-${id}`);
+      if (panel) {
+        panel.innerHTML = '<div class="timeline-loading">Refreshing…</div>';
+        await fetchTimeline(id);
+      }
+    }
+    loadAll();
+    loadStats();
+  } catch (err) {
+    showToast(`Failed: ${err.message}`, 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = cfg ? cfg.btnText : 'Submit';
+  }
+}
+
+// ────────────────────────────────────────────────────────────────
+// WebSocket
+// ────────────────────────────────────────────────────────────────
+function connectWS() {
+  try {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    wsConn = new WebSocket(`${proto}//${location.host}`);
+
+    wsConn.addEventListener('open', () => {
+      setWsDot('connected', 'Live');
+    });
+
+    wsConn.addEventListener('message', e => {
+      try {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'incident_updated') {
+          handleWsIncidentUpdate(msg);
+        }
+      } catch (_) {}
+    });
+
+    wsConn.addEventListener('close', () => {
+      setWsDot('', 'Disconnected');
+      // Attempt reconnect after 5s
+      setTimeout(connectWS, 5000);
+    });
+
+    wsConn.addEventListener('error', () => {
+      setWsDot('error', 'WS Error');
+    });
+  } catch (_) {
+    setWsDot('error', 'WS N/A');
+  }
+}
+
+function setWsDot(cls, label) {
+  const dot = document.getElementById('ws-dot');
+  const lbl = document.getElementById('ws-label');
+  dot.className = 'ws-dot' + (cls ? ' ' + cls : '');
+  lbl.textContent = label;
+}
+
+async function handleWsIncidentUpdate(msg) {
+  const id = msg.id || msg.incidentId;
+  if (id) {
+    // Try to update just this row
+    try {
+      const updated = await apiFetch(`/api/incidents/${id}`);
+      const idx = allIncidents.findIndex(i => (i.id || i._id) === id);
+      if (idx >= 0) {
+        allIncidents[idx] = updated.incident || updated;
+      } else {
+        allIncidents.unshift(updated.incident || updated);
+      }
+      renderTable();
+      // Highlight updated row
+      const row = document.getElementById(`row-${id}`);
+      if (row) {
+        row.classList.remove('highlighted');
+        void row.offsetWidth; // reflow
+        row.classList.add('highlighted');
+      }
+      // Refresh open timeline
+      if (expandedRows.has(id)) fetchTimeline(id);
+    } catch (_) {
+      loadAll();
+    }
+  } else {
+    loadAll();
+  }
+  loadStats();
+}
+
+// ────────────────────────────────────────────────────────────────
+// Auto-refresh
+// ────────────────────────────────────────────────────────────────
+function scheduleRefresh() {
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(() => {
+    loadAll();
+    loadStats();
+  }, 30000);
+}
+
+// ────────────────────────────────────────────────────────────────
+// Toast
+// ────────────────────────────────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icon}</span><span>${esc(msg)}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ────────────────────────────────────────────────────────────────
+// Helper / formatters
+// ────────────────────────────────────────────────────────────────
+function esc(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function shortId(id) {
+  if (!id) return '—';
+  const s = String(id);
+  return s.length > 8 ? '#' + s.slice(-6) : '#' + s;
+}
+
+function computeAgeMinutes(inc) {
+  const created = inc.createdAt || inc.created_at || inc.openedAt;
+  if (!created) return 0;
+  return Math.floor((Date.now() - new Date(created).getTime()) / 60000);
+}
+
+function formatAge(minutes) {
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+function formatTs(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d)) return ts;
+  const now = new Date();
+  const diffMs = now - d;
+  if (diffMs < 60000) return 'just now';
+  if (diffMs < 3600000) return `${Math.floor(diffMs/60000)}m ago`;
+  if (diffMs < 86400000) return `${Math.floor(diffMs/3600000)}h ago`;
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function slaBadge(minutesLeft) {
+  if (minutesLeft < 0) {
+    return `<span class="sla-breached">🔴 BREACHED</span>`;
+  }
+  if (minutesLeft < 30) {
+    return `<span class="sla-warn">🟠 ${minutesLeft}m</span>`;
+  }
+  const h = Math.floor(minutesLeft / 60);
+  const m = minutesLeft % 60;
+  const label = h > 0 ? `${h}h ${m}m` : `${m}m`;
+  return `<span class="sla-ok">🟢 ${label}</span>`;
+}
+
+function sevBadge(sev) {
+  const s = (sev || 'low').toLowerCase();
+  return `<span class="badge-sev sev-${s}">${s}</span>`;
+}
+
+function statusBadge(status) {
+  const s = (status || 'open').toLowerCase().replace(/\s+/g, '');
+  const classMap = {
+    open: 'st-open',
+    investigating: 'st-investigating',
+    mitigating: 'st-mitigating',
+    resolved: 'st-resolved',
+    closed: 'st-closed'
+  };
+  const cls = classMap[s] || 'st-open';
+  return `<span class="badge-status ${cls}">${status || 'open'}</span>`;
+}
+
+function showEmptyState(icon, msg) {
+  document.getElementById('incidents-tbody').innerHTML = `
+    <tr><td colspan="8">
+      <div class="table-message">
+        <span class="icon">${icon}</span>
+        ${esc(msg)}
+      </div></td></tr>`;
+}
+
+// Keyboard: Escape closes modals
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+  }
+});
+</script>
+</body>
+</html>
