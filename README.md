@@ -55,6 +55,8 @@ docker ps
 
 ### Access Points
 
+- **Product overview:** http://localhost:19123/
+- **Operations console:** http://localhost:19123/app/
 - **Dashboard:** http://localhost:19123/dashboard
 - **Tool Builder:** http://localhost:19123/app/tool-builder
 - **Settings:** http://localhost:19123/settings.html

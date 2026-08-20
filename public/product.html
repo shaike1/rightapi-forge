@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0d0f">
+  <meta name="description" content="RightAPI Forge is a self-hosted platform for governed AI operations, incident response, runbook automation, and secure internal-tool delivery.">
+  <meta name="rightapi-source" content="https://github.com/shaike1/rightapi-forge">
+  <meta property="og:title" content="RightAPI Forge">
+  <meta property="og:description" content="Governed AI operations and internal-tool delivery, on infrastructure you control.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/rightapi-forge-operations-hero.png">
+  <title>RightAPI Forge | Governed AI Operations</title>
+  <link rel="icon" href="/icons/icon-192.png">
+  <link rel="stylesheet" href="/product.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="RightAPI Forge home">
+      <span class="brand-mark" aria-hidden="true">R</span>
+      <span>RightAPI Forge</span>
+    </a>
+    <nav class="site-nav" aria-label="Primary navigation">
+      <a href="#platform">Platform</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#governance">Governance</a>
+      <a href="#deploy">Deploy</a>
+      <a href="https://github.com/shaike1/rightapi-forge">GitHub</a>
+    </nav>
+    <a class="header-action" href="/app/">Open Console <span aria-hidden="true">&rarr;</span></a>
+  </header>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <img class="hero-image" src="/rightapi-forge-operations-hero.png" alt="Enterprise operations control room showing incident response, runbook execution, infrastructure health, agent coordination, approvals, and deployment status." width="1792" height="1024">
+      <div class="hero-shade" aria-hidden="true"></div>
+      <div class="hero-content">
+        <p class="eyebrow">Self-hosted governed AI operations</p>
+        <h1 id="hero-title">RightAPI Forge</h1>
+        <p class="hero-lede">Operate infrastructure, resolve incidents, automate runbooks, and deliver internal tools through one approval-controlled platform.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="/app/">Open Console <span aria-hidden="true">&rarr;</span></a>
+          <a class="button button-secondary" href="https://github.com/shaike1/rightapi-forge">View source</a>
+        </div>
+        <p class="hero-note">Community source under AGPL-3.0-or-later. Commercial licensing available.</p>
+      </div>
+      <a class="hero-next" href="#platform">Explore the platform <span aria-hidden="true">&darr;</span></a>
+    </section>
+
+    <section class="proof-bar" aria-label="Platform attributes">
+      <div><strong>Self-hosted</strong><span>Your network, credentials, and data</span></div>
+      <div><strong>Governed</strong><span>RBAC, approvals, policy, and audit</span></div>
+      <div><strong>Reversible</strong><span>Versioned releases and rollback</span></div>
+      <div><strong>Inspectable</strong><span>Open source with release evidence</span></div>
+    </section>
+
+    <section class="section section-intro" id="platform">
+      <div class="section-heading">
+        <p class="eyebrow">One operational control plane</p>
+        <h2>AI that can act, with controls operators can trust.</h2>
+      </div>
+      <div class="intro-copy">
+        <p>RightAPI Forge brings agent coordination, infrastructure operations, incident management, workflow automation, and internal-tool generation into the same governed runtime.</p>
+        <p>Every consequential action moves through explicit identity, policy, approval, execution, evidence, and rollback boundaries. Models assist the work; the platform owns the controls.</p>
+      </div>
+    </section>
+
+    <section class="capability-grid" aria-label="Core platform capabilities">
+      <article class="capability">
+        <span class="capability-index">01</span>
+        <h3>Operations agents</h3>
+        <p>Coordinate specialized agents across infrastructure, security, incidents, monitoring, and service delivery with bounded tools and budgets.</p>
+        <a href="/app/agents">Inspect agents <span aria-hidden="true">&rarr;</span></a>
+      </article>
+      <article class="capability">
+        <span class="capability-index">02</span>
+        <h3>Incident command</h3>
+        <p>Detect, triage, escalate, remediate, verify, and document operational incidents in one attributable timeline.</p>
+        <a href="/app/incidents">View incidents <span aria-hidden="true">&rarr;</span></a>
+      </article>
+      <article class="capability">
+        <span class="capability-index">03</span>
+        <h3>Runbooks and workflows</h3>
+        <p>Turn operational knowledge into repeatable execution with approvals, conditions, recovery paths, and persisted run history.</p>
+        <a href="/app/runbooks">Open runbooks <span aria-hidden="true">&rarr;</span></a>
+      </article>
+      <article class="capability">
+        <span class="capability-index">04</span>
+        <h3>Internal-tool builder</h3>
+        <p>Generate full-stack operational tools from typed specifications, preview them in isolation, and promote only after quality and security gates pass.</p>
+        <a href="/app/tool-builder">Build a tool <span aria-hidden="true">&rarr;</span></a>
+      </article>
+    </section>
+
+    <section class="execution-band" aria-labelledby="execution-title">
+      <div class="execution-copy">
+        <p class="eyebrow">Governed execution lifecycle</p>
+        <h2 id="execution-title">From intent to verified outcome.</h2>
+        <p>Autonomy is useful only when execution stays observable and recoverable. The platform records who requested a change, which policy allowed it, what ran, and how the result was verified.</p>
+      </div>
+      <ol class="execution-steps">
+        <li><span>01</span><strong>Understand</strong><small>Typed intent and operational context</small></li>
+        <li><span>02</span><strong>Plan</strong><small>Tools, targets, risk, and rollback</small></li>
+        <li><span>03</span><strong>Approve</strong><small>Policy and human decision gates</small></li>
+        <li><span>04</span><strong>Execute</strong><small>Bounded action with live evidence</small></li>
+        <li><span>05</span><strong>Verify</strong><small>Health, audit, and reversible release</small></li>
+      </ol>
+    </section>
+
+    <section class="section architecture" id="architecture">
+      <div class="section-heading">
+        <p class="eyebrow">System architecture</p>
+        <h2>A platform boundary around every model and tool.</h2>
+        <p>Providers are replaceable. Governance, identity, operational state, and evidence remain inside the system you control.</p>
+      </div>
+      <div class="architecture-map" role="img" aria-label="Architecture showing operators and systems entering the RightAPI Forge control plane, which governs agents, workflows, tool execution, operational stores, and external infrastructure.">
+        <div class="map-column map-inputs">
+          <span class="map-label">Inputs</span>
+          <div>Operators</div>
+          <div>Alerts and events</div>
+          <div>Service requests</div>
+          <div>APIs and integrations</div>
+        </div>
+        <div class="map-flow" aria-hidden="true">&rarr;</div>
+        <div class="map-core">
+          <span class="map-label">RightAPI Forge control plane</span>
+          <div class="core-row"><strong>Identity and RBAC</strong><strong>Policy and approvals</strong></div>
+          <div class="core-row"><strong>Agent orchestration</strong><strong>Runbooks and workflows</strong></div>
+          <div class="core-row"><strong>Tool sandbox</strong><strong>Audit and evidence</strong></div>
+        </div>
+        <div class="map-flow" aria-hidden="true">&rarr;</div>
+        <div class="map-column map-outputs">
+          <span class="map-label">Controlled systems</span>
+          <div>Servers and clusters</div>
+          <div>Cloud and SaaS</div>
+          <div>Data and credentials</div>
+          <div>Generated tools</div>
+        </div>
+      </div>
+      <div class="provider-line">
+        <span>Provider-flexible model routing</span>
+        <span>OpenAI-compatible endpoints</span>
+        <span>Primary and fallback health control</span>
+        <span>Model alignment checks</span>
+      </div>
+    </section>
+
+    <section class="section governance" id="governance">
+      <div class="governance-copy">
+        <p class="eyebrow">Governance by construction</p>
+        <h2>Controls live below the generated code.</h2>
+        <p>Tooling and agent outputs inherit the platform's security boundary instead of implementing their own ad hoc controls.</p>
+        <a class="text-link" href="https://github.com/shaike1/rightapi-forge/blob/main/SECURITY.md">Read the security model <span aria-hidden="true">&rarr;</span></a>
+      </div>
+      <dl class="governance-list">
+        <div><dt>Authentication and RBAC</dt><dd>Tenant-aware identity and permission enforcement for operators, agents, APIs, and generated tools.</dd></div>
+        <div><dt>Credential isolation</dt><dd>Secrets stay in controlled stores and are injected only at approved execution boundaries.</dd></div>
+        <div><dt>Approval-controlled change</dt><dd>Risk-aware gates protect destructive actions, deployments, and sensitive targets.</dd></div>
+        <div><dt>Attributable audit</dt><dd>Requests, decisions, tool calls, releases, and rollbacks produce durable evidence.</dd></div>
+      </dl>
+    </section>
+
+    <section class="release-evidence" aria-label="Current release evidence">
+      <div class="release-title">
+        <span class="status-light" aria-hidden="true"></span>
+        <div><strong>v1.0.0-rc.3</strong><span>Public release candidate</span></div>
+      </div>
+      <div><strong>1,353</strong><span>automated tests</span></div>
+      <div><strong>0</strong><span>known dependency vulnerabilities</span></div>
+      <div><strong>Signed</strong><span>evidence and container attestations</span></div>
+      <a href="https://github.com/shaike1/rightapi-forge/releases/tag/v1.0.0-rc.3">Inspect release <span aria-hidden="true">&rarr;</span></a>
+    </section>
+
+    <section class="section deploy" id="deploy">
+      <div class="section-heading">
+        <p class="eyebrow">Deploy on infrastructure you control</p>
+        <h2>Start with source or a signed container.</h2>
+      </div>
+      <div class="deploy-options">
+        <article>
+          <span class="capability-index">Community</span>
+          <h3>Build from source</h3>
+          <p>Run the full platform under AGPL-3.0-or-later, inspect every control, and adapt it to your environment.</p>
+          <code>git clone https://github.com/shaike1/rightapi-forge</code>
+          <a class="button button-dark" href="https://github.com/shaike1/rightapi-forge#quick-start">Installation guide</a>
+        </article>
+        <article>
+          <span class="capability-index">Release candidate</span>
+          <h3>Pull the container</h3>
+          <p>Use the published Linux image with SBOMs, release evidence, and GitHub attestations attached to the release.</p>
+          <code>docker pull ghcr.io/shaike1/rightapi-forge:1.0.0-rc.3</code>
+          <a class="button button-dark" href="https://github.com/shaike1/rightapi-forge/releases/tag/v1.0.0-rc.3">Release evidence</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="commercial">
+      <div>
+        <p class="eyebrow">Commercial use</p>
+        <h2>Need private terms, implementation support, or a governed rollout?</h2>
+      </div>
+      <div class="commercial-action">
+        <p>Commercial licensing and deployment discussions are handled directly by Right API.</p>
+        <a class="button button-primary" href="mailto:info@right-api.com">Contact info@right-api.com</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="brand footer-brand" href="/"><span class="brand-mark" aria-hidden="true">R</span><span>RightAPI Forge</span></a>
+    <p>Governed AI operations and internal-tool delivery.</p>
+    <nav aria-label="Footer navigation">
+      <a href="https://github.com/shaike1/rightapi-forge">Source</a>
+      <a href="https://github.com/shaike1/rightapi-forge/blob/main/PRIVACY.md">Privacy</a>
+      <a href="https://github.com/shaike1/rightapi-forge/blob/main/TRADEMARKS.md">Trademarks</a>
+      <a href="mailto:info@right-api.com">Contact</a>
+    </nav>
+  </footer>
+</body>
+</html>

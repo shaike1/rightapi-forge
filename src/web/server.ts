@@ -11336,12 +11336,7 @@ app.get('/dashboard', (_req, res) => {
   res.sendFile('dashboard-legacy.html', { root: 'public' });
 });
 app.get('/', (_req, res) => {
-  // Root now lands users on the React app at /app/. The terminal UI
-  // (public/tui.html) is intentionally still on disk and reachable
-  // directly via /tui.html through the static middleware, so anyone
-  // who needs the legacy interface can still get to it. 302 (not 301)
-  // because browsers cache 301s aggressively — keeping this reversible.
-  res.redirect(302, '/app/');
+  res.sendFile('product.html', { root: 'public' });
 });
 
 

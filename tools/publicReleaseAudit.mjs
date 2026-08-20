@@ -77,7 +77,15 @@ if (publishMode && !fs.existsSync(path.join(root, 'LICENSE'))) {
   issue('publication-policy', 'LICENSE', 'license file is required before publication');
 }
 if (publishMode) {
-  for (const required of ['COMMERCIAL.md', 'NOTICE', 'PRIVACY.md', 'TRADEMARKS.md']) {
+  for (const required of [
+    'COMMERCIAL.md',
+    'NOTICE',
+    'PRIVACY.md',
+    'TRADEMARKS.md',
+    'public/product.html',
+    'public/product.css',
+    'public/rightapi-forge-operations-hero.png',
+  ]) {
     if (!fs.existsSync(path.join(root, required))) {
       issue('publication-policy', required, 'approved public legal notice is required before publication');
     }
