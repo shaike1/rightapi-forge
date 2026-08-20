@@ -7,6 +7,7 @@
 // import { Microsoft365Skill } from './Microsoft365Skill.js';
 
 import type { Skill, SkillCategory, Command } from '../types/index.js';
+import path from 'node:path';
 import { InfrastructureSkill } from './InfrastructureSkill.js';
 import { MonitoringSkill } from './MonitoringSkill.js';
 import { DeploymentSkill } from './DeploymentSkill.js';
@@ -101,8 +102,9 @@ export class SkillManager {
     const sshSkill = new SSHSkill();
     const webSkill = new WebSkill();
     const jiraSkill = new JiraSkill();
+    const dataDir = process.env.DATA_DIR || '/data/itops-agents';
     const incidentManager = new IncidentManager(
-      new SqliteIncidentStore(process.env.INCIDENT_DB_PATH || '/data/itops-agents/incidents.db')
+      new SqliteIncidentStore(process.env.INCIDENT_DB_PATH || path.join(dataDir, 'incidents.db'))
     );
     const serviceDeskSkill = new ServiceDeskSkill(incidentManager);
     // IncidentSkill gets the same IncidentManager so timeline notes the agent

@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 const args = process.argv.slice(2);
@@ -20,7 +21,12 @@ checks.push(runNpm('server-build', ['run', 'build']));
 checks.push(runNpm('client-build', ['--prefix', 'client', 'run', 'build']));
 const testFiles = listFiles(path.join(root, 'dist')).filter(file => file.endsWith('.test.js'));
 if (testFiles.length === 0) fail('server build emitted no test files');
-const testCheck = run('tests', process.execPath, ['--test', 'dist/**/*.test.js'], parseTests, { NODE_ENV: 'test' });
+const testDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rightapi-release-tests-'));
+const testCheck = run('tests', process.execPath, ['--test', 'dist/**/*.test.js'], parseTests, {
+  NODE_ENV: 'test',
+  DATA_DIR: testDataDir,
+});
+fs.rmSync(testDataDir, { recursive: true, force: true });
 testCheck.summary.files = testFiles.length;
 checks.push(testCheck);
 checks.push(runNpm('module-boundaries', ['run', 'check:boundaries']));
