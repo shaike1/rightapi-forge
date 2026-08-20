@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="RightAPI Forge product documentation: quick start, architecture, security, operations, API, and deployment.">
+  <title>Documentation | RightAPI Forge</title>
+  <link rel="icon" href="/icons/icon-192.png">
+  <link rel="stylesheet" href="/product.css">
+</head>
+<body class="docs-page">
+  <a class="skip-link" href="#docs-main">Skip to documentation</a>
+  <header class="site-header">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">R</span><span>RightAPI Forge</span></a>
+    <nav class="site-nav" aria-label="Documentation navigation">
+      <a href="#start">Quick start</a><a href="#operate">Operate</a><a href="#secure">Security</a><a href="#reference">Reference</a>
+    </nav>
+    <a class="header-action" href="/app/">Open Console <span aria-hidden="true">&rarr;</span></a>
+  </header>
+  <main class="docs-shell" id="docs-main">
+    <aside class="docs-index" aria-label="On this page">
+      <span>Documentation</span>
+      <a href="#start">Quick start</a><a href="#architecture">Architecture</a><a href="#operate">Operations</a><a href="#secure">Security</a><a href="#reference">Reference</a>
+    </aside>
+    <article class="docs-content">
+      <header class="docs-hero">
+        <p class="eyebrow">Product documentation</p>
+        <h1>Deploy, govern, and operate RightAPI Forge.</h1>
+        <p>Start with a single Docker deployment, then connect identity, providers, infrastructure, and operational controls as your environment grows.</p>
+      </header>
+      <section id="start"><p class="doc-number">01</p><div><h2>Quick start</h2><p>Clone the public repository, create the environment file, and launch the signed application stack.</p><pre><code>git clone https://github.com/shaike1/rightapi-forge
+cd rightapi-forge
+cp .env.example .env
+docker compose up -d</code></pre><p>Open the product site at port <code>19123</code>, then enter the console through <code>/app/</code>.</p></div></section>
+      <section id="architecture"><p class="doc-number">02</p><div><h2>Architecture</h2><p>The control plane keeps identity, policy, approvals, execution, persistence, and evidence separate from model providers. Providers can change without moving the operational trust boundary.</p><ul><li>Express API and React operations console</li><li>Tenant-aware RBAC and credential isolation</li><li>Agents, runbooks, workflows, and bounded tool execution</li><li>SQLite-backed operational stores and exportable release evidence</li></ul></div></section>
+      <section id="operate"><p class="doc-number">03</p><div><h2>Operate</h2><p>Begin with health checks and a backup policy before connecting production targets. Use approval gates for any action that can alter infrastructure or deploy generated code.</p><div class="docs-links"><a href="https://github.com/shaike1/rightapi-forge/blob/main/docs/USER_GUIDE.md">User guide</a><a href="https://github.com/shaike1/rightapi-forge/blob/main/docs/DEPLOYMENT.md">Deployment</a><a href="https://github.com/shaike1/rightapi-forge/blob/main/docs/RECOVERY_DRILL.md">Recovery drill</a></div></div></section>
+      <section id="secure"><p class="doc-number">04</p><div><h2>Security</h2><p>Keep the console behind trusted identity, store secrets outside source control, restrict tool targets, and review audit evidence before promoting releases.</p><div class="docs-links"><a href="https://github.com/shaike1/rightapi-forge/blob/main/SECURITY.md">Security policy</a><a href="https://github.com/shaike1/rightapi-forge/blob/main/PRIVACY.md">Privacy</a><a href="https://github.com/shaike1/rightapi-forge/blob/main/docs/PUBLIC_RELEASE_AUDIT.md">Release audit</a></div></div></section>
+      <section id="reference"><p class="doc-number">05</p><div><h2>Reference</h2><p>The running deployment exposes an OpenAPI explorer. The source repository contains the complete API, developer, integration, and multitenancy references.</p><div class="docs-links"><a href="/api/docs/">Live API explorer</a><a href="https://github.com/shaike1/rightapi-forge/blob/main/docs/API_REFERENCE.md">API reference</a><a href="https://github.com/shaike1/rightapi-forge/blob/main/docs/DEVELOPER_GUIDE.md">Developer guide</a><a href="https://github.com/shaike1/rightapi-forge/blob/main/docs/INTEGRATIONS.md">Integrations</a></div></div></section>
+    </article>
+  </main>
+  <footer class="site-footer"><a class="brand footer-brand" href="/"><span class="brand-mark" aria-hidden="true">R</span><span>RightAPI Forge</span></a><p>Documentation for the governed operations platform.</p><nav><a href="https://github.com/shaike1/rightapi-forge">Source</a><a href="mailto:info@right-api.com">Support</a></nav></footer>
+</body>
+</html>

@@ -7,6 +7,9 @@ const root = process.cwd();
 const productHtml = path.join(root, 'public', 'product.html');
 const productCss = path.join(root, 'public', 'product.css');
 const productHero = path.join(root, 'public', 'rightapi-forge-operations-hero.png');
+const productRunbooks = path.join(root, 'public', 'rightapi-forge-runbooks.png');
+const productBuilder = path.join(root, 'public', 'rightapi-forge-tool-builder.png');
+const productDocs = path.join(root, 'public', 'product-docs.html');
 const serverSource = path.join(root, 'src', 'web', 'server.ts');
 
 test('root route serves the public product page separately from the console', () => {
@@ -16,6 +19,7 @@ test('root route serves the public product page separately from the console', ()
   assert.doesNotMatch(source, /app\.get\('\/', \(_req, res\) => \{[\s\S]{0,300}res\.redirect\(302, '\/app\/'\)/);
   assert.match(source, /app\.get\("\/app",/);
   assert.match(source, /app\.get\("\/app\/\*",/);
+  assert.match(source, /app\.get\('\/docs'/);
 });
 
 test('public product page defines the platform and exposes primary actions', () => {
@@ -29,6 +33,10 @@ test('public product page defines the platform and exposes primary actions', () 
   assert.match(html, /href="\/app\/"/);
   assert.match(html, /github\.com\/shaike1\/rightapi-forge/);
   assert.match(html, /mailto:info@right-api\.com/);
+  assert.match(html, /data-demo-form/);
+  assert.match(html, /rightapi-forge-runbooks\.png/);
+  assert.match(html, /rightapi-forge-tool-builder\.png/);
+  assert.match(readFileSync(productDocs, 'utf8'), /Deploy, govern, and operate RightAPI Forge/);
 });
 
 test('public product page ships local presentation assets', () => {
@@ -38,4 +46,6 @@ test('public product page ships local presentation assets', () => {
   assert.match(css, /@media \(max-width: 640px\)/);
   assert.match(css, /prefers-reduced-motion/);
   assert.ok(statSync(productHero).size > 100_000, 'hero image should be a substantive raster asset');
+  assert.ok(statSync(productRunbooks).size > 80_000, 'runbook screenshot should be a substantive raster asset');
+  assert.ok(statSync(productBuilder).size > 80_000, 'builder screenshot should be a substantive raster asset');
 });

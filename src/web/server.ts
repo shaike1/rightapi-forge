@@ -259,6 +259,7 @@ import {
 } from './securityMiddleware.js';
 import { sanitiseBodyMiddleware } from './validation.js';
 import { errorHandler, installCrashGuards } from './errorMiddleware.js';
+import { createPublicDemoRouter } from './publicDemoApi.js';
 import { aiProxyGuard, AIProxyBreakerOpenError } from '../ai/AIProxyGuard.js';
 import { SmtpService } from '../notifications/SmtpService.js';
 import { EmailService } from '../notifications/EmailService.js';
@@ -6777,6 +6778,11 @@ app.use('/api/auth/register', authLimiterTight);
 app.use('/api/chat',          aiLimiter);
 app.use('/api/incidents/:id/analyze', aiLimiter);
 app.use('/api/', globalLimiter);
+app.use('/api/public', createPublicDemoRouter({
+  dataRoot: process.env.DATA_DIR || '/data/itops-agents',
+  recipient: process.env.PUBLIC_DEMO_RECIPIENT || 'info@right-api.com',
+  notify: (subject, body, recipients) => smtpService.sendAlert(subject, body, recipients),
+}));
 app.use('/api/codex-bridge', (req, res, next) => {
   const auth = validateAuthFromHeader(req.header('authorization') || undefined, 'tools.execute.safe');
   if (!auth.ok) {
@@ -11337,6 +11343,9 @@ app.get('/dashboard', (_req, res) => {
 });
 app.get('/', (_req, res) => {
   res.sendFile('product.html', { root: 'public' });
+});
+app.get('/docs', (_req, res) => {
+  res.sendFile('product-docs.html', { root: 'public' });
 });
 
 

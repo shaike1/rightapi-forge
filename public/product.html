@@ -13,6 +13,7 @@
   <title>RightAPI Forge | Governed AI Operations</title>
   <link rel="icon" href="/icons/icon-192.png">
   <link rel="stylesheet" href="/product.css">
+  <script src="/product.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -24,10 +25,11 @@
     </a>
     <nav class="site-nav" aria-label="Primary navigation">
       <a href="#platform">Platform</a>
+      <a href="#product">Product</a>
       <a href="#architecture">Architecture</a>
       <a href="#governance">Governance</a>
       <a href="#deploy">Deploy</a>
-      <a href="https://github.com/shaike1/rightapi-forge">GitHub</a>
+      <a href="/docs">Docs</a>
     </nav>
     <a class="header-action" href="/app/">Open Console <span aria-hidden="true">&rarr;</span></a>
   </header>
@@ -47,6 +49,23 @@
         <p class="hero-note">Community source under AGPL-3.0-or-later. Commercial licensing available.</p>
       </div>
       <a class="hero-next" href="#platform">Explore the platform <span aria-hidden="true">&darr;</span></a>
+    </section>
+
+    <section class="product-evidence" id="product" aria-labelledby="product-title">
+      <div class="product-copy">
+        <p class="eyebrow">The running product</p>
+        <h2 id="product-title">Operational work stays visible.</h2>
+        <p>These views come from the deployed RightAPI Forge console. Operators can review live runbook gates, inspect generated tools, and trace release state without leaving the control plane.</p>
+        <a class="text-link" href="/docs">Read product documentation <span aria-hidden="true">&rarr;</span></a>
+      </div>
+      <figure class="product-shot product-shot-wide">
+        <img src="/rightapi-forge-runbooks.png" alt="RightAPI Forge runbook console showing active service recovery runs waiting for approval." width="1440" height="900" loading="lazy">
+        <figcaption><strong>Approval-controlled runbooks</strong><span>Live execution state, attribution, and explicit approval gates.</span></figcaption>
+      </figure>
+      <figure class="product-shot">
+        <img src="/rightapi-forge-tool-builder.png" alt="RightAPI Forge tool builder showing versioned operational tools and release health." width="1440" height="900" loading="lazy">
+        <figcaption><strong>Governed tool delivery</strong><span>Catalog, revision, release, health, and usage in one view.</span></figcaption>
+      </figure>
     </section>
 
     <section class="proof-bar" aria-label="Platform attributes">
@@ -196,15 +215,23 @@
       </div>
     </section>
 
-    <section class="commercial">
+    <section class="commercial" id="demo">
       <div>
         <p class="eyebrow">Commercial use</p>
         <h2>Need private terms, implementation support, or a governed rollout?</h2>
       </div>
-      <div class="commercial-action">
-        <p>Commercial licensing and deployment discussions are handled directly by Right API.</p>
-        <a class="button button-primary" href="mailto:info@right-api.com">Contact info@right-api.com</a>
-      </div>
+      <form class="demo-form" data-demo-form>
+        <div class="form-grid">
+          <label><span>Name</span><input name="name" autocomplete="name" required minlength="2"></label>
+          <label><span>Work email</span><input type="email" name="email" autocomplete="email" required></label>
+          <label><span>Company</span><input name="company" autocomplete="organization" required minlength="2"></label>
+          <label><span>Team size</span><select name="teamSize"><option value="">Select</option><option>1-10</option><option>11-50</option><option>51-200</option><option>201-1000</option><option>1000+</option></select></label>
+        </div>
+        <label><span>What do you want to operate or automate?</span><textarea name="useCase" required minlength="20" rows="4"></textarea></label>
+        <label class="form-honeypot" aria-hidden="true"><span>Website</span><input name="website" tabindex="-1" autocomplete="off"></label>
+        <div class="form-submit"><button class="button button-primary" type="submit">Request a demo</button><p>Or email <a href="mailto:info@right-api.com">info@right-api.com</a></p></div>
+        <p class="form-status" data-demo-status aria-live="polite"></p>
+      </form>
     </section>
   </main>
 
@@ -213,6 +240,7 @@
     <p>Governed AI operations and internal-tool delivery.</p>
     <nav aria-label="Footer navigation">
       <a href="https://github.com/shaike1/rightapi-forge">Source</a>
+      <a href="/docs">Documentation</a>
       <a href="https://github.com/shaike1/rightapi-forge/blob/main/PRIVACY.md">Privacy</a>
       <a href="https://github.com/shaike1/rightapi-forge/blob/main/TRADEMARKS.md">Trademarks</a>
       <a href="mailto:info@right-api.com">Contact</a>

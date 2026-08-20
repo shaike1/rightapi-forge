@@ -84,7 +84,11 @@ if (publishMode) {
     'TRADEMARKS.md',
     'public/product.html',
     'public/product.css',
+    'public/product.js',
+    'public/product-docs.html',
     'public/rightapi-forge-operations-hero.png',
+    'public/rightapi-forge-runbooks.png',
+    'public/rightapi-forge-tool-builder.png',
   ]) {
     if (!fs.existsSync(path.join(root, required))) {
       issue('publication-policy', required, 'approved public legal notice is required before publication');
